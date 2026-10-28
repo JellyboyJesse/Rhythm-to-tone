@@ -17,7 +17,7 @@ A web instrument where a looped rhythm, sped up, becomes a tone whose timbre is 
 
    Do not use `eval`/`new Function`: some hosts block it.
 2. **`effParams(S, t, step, E)`** turns saved state into the values in force at time `t`. It works in three layers: base values, then sequencer locks for the current step, then LFOs. It fills `E` in place, so it creates no garbage on the audio thread. Keep it allocation-free.
-3. **`Engine`.** One phase clock and four rings. Each hit starts a Gaussian-windowed sine grain at its exact sub-sample time. Grains run by recurrence, and each keeps the F and σ it started with. A ring's rotation offset (`off`) shifts its phase, and hits crossed by rotation alone are skipped. The engine counts loops for the sequencer's Loops clock. A soft limiter only acts above 0.8.
+3. **`Engine`.** One phase clock and four rings. Each hit starts a Gaussian-windowed sine grain at its exact sub-sample time. Grains run by recurrence, and each keeps the F and σ it started with. A ring's rotation offset (`off`) shifts its phase, and hits crossed by rotation alone are skipped. The engine counts loops for the sequencer's Loops clock. The output gain (volume x density) glides over about 4 ms so volume jumps never click, then a 3 ms look-ahead peak limiter (`limit`, ceiling 0.89) whose gain is exactly 1 below the ceiling, so the maths stays exact. Start and Stop fade the master `GainNode` over 40 ms. There is no DynamicsCompressor.
 4. **Page side.** Constants, `LFOSPEC`, `state` with `sanitizeState`/`sanitizeSeq`, and the message `bus`. The bus uses BroadcastChannel and also does direct `postMessage` to a popup or opener, de-duplicated by message id.
 5. **`mountSequencer(host, opts)`.** The sequencer view, used in its own window (`#sequencer`) or docked in the instrument.
 6. **`initInstrument()`.** The instrument view, audio start, visual mirror, drawing and readouts.
@@ -42,9 +42,14 @@ Bus messages (keep them small and JSON-serialisable):
 
 ## The look
 
-A worn plate from an old science textbook. The light theme is aged parchment with faded Prussian blue, ochre, vermilion and verdigris inks. The dark theme is a star atlas in night blue and gold. Fonts: IM Fell English (display), EB Garamond (body), Courier Prime (numbers), with Georgia/serif fallbacks for offline use.
+A worn plate from an old science textbook. The light theme is aged parchment with faded Prussian blue, ochre, vermilion and verdigris inks. The dark theme is a star atlas in night blue and gold. This is the Celestial Atlas Edition III look, in layers: the base tokens, then the `celestial-atlas` and `celestial-atlas-refinement` style blocks (presentation only), then `edition-iii-fixes`.
+
+- Fonts: EB Garamond 12 (OFL), upright and italic, embedded as `AtlasSerif` so the app works offline. `--display`, `--body` and `--mono` all point to it; numbers use lining, tabular figures (`font-variant-numeric`). There is no Google Fonts link any more.
+- Colour tokens live only in the three standard blocks at the top (`:root`, `prefers-color-scheme: dark` guarded by `:not([data-theme="light"])`, and `[data-theme="dark"]`). Don't add token blocks in later layers: that is what broke system dark mode once. Light-theme inks are chosen to reach 4.5:1 on `--sheet`, `--panel` and `--soft`.
+- The theme switch (`#themeToggle`, `#themeToggleSeq`) stores `rit-theme` in localStorage. It is an action button naming the theme it switches to, so it has no `aria-pressed`.
 
 - Extra tokens: `--sheet` (translucent plate), `--frame`/`--frame2` (double rules), `--brass*` (Start button and slider knobs), `--stain`/`--fox`/`--edge`/`--burn` (paper wear), `--grain` and `--star` (small data-URI SVGs, one per theme).
+- Ornaments drawn with CSS `content` use the `"…" / ""` form so screen readers skip them.
 - Paper wear is static CSS backgrounds plus one fixed edge shadow. Don't add live SVG filters or animated textures: they cost too much on the phone and the 4 GB laptop.
 - Decoration is never interactive: the running head, the colophon and the corner stars are `aria-hidden` or backgrounds.
 - Panels are plates I to VI in the same order on phone and laptop: loop, speed, rings, harmonics, circles, click and fusion.
@@ -56,7 +61,7 @@ A worn plate from an old science textbook. The light theme is aged parchment wit
 
 1. Syntax-check the script:
    ```
-   node -e "const s=require('fs').readFileSync('index.html','utf8');new Function(s.split('<script>')[1].split('</script>')[0])"
+   node -e "const s=require('fs').readFileSync('index.html','utf8');new Function(s.split('<script>').find(x=>x.includes('WORKLET_SRC')).split('</script>')[0])"
    ```
 2. Serve the repo (`python3 -m http.server 8765`) and run `node tests/check.cjs`. It must print `ALL CHECKS PASSED`.
 3. Look at the screenshots in `tests/out/` for anything visual you changed.
