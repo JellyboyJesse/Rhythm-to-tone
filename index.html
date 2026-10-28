@@ -7,52 +7,99 @@
 <title>Rhythm Into Tone</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap">
 <style>
-/* Layout: an instrument panel. A sticky transport bar on top; left column = the loop (wheel, speed, rings); right column = what the loop is made of (spectrum, circles) and the click/fusion controls. Every control has an LFO drawer. The sequencer is a second view of the same file (#sequencer) or a docked panel. Stacks to one column on phones. */
+/* Layout: an instrument panel. A sticky transport bar on top; left column = the loop (wheel, speed, rings); right column = what the loop is made of (spectrum, circles) and the click/fusion controls. Every control has an LFO drawer. The sequencer is a second view of the same file (#sequencer) or a docked panel. Stacks to one column on phones.
+   Style: a worn plate from an old science textbook. Light theme = aged parchment with faded Prussian blue, ochre, vermilion and verdigris inks; dark theme = a star atlas in night blue and gold. Paper grain, stains, frames and corner stars are CSS backgrounds or aria-hidden SVG only: nothing decorative can be focused or tapped. */
 :root{
-  --bg:#E8ECF1; --panel:#F6F8FA; --ink:#172031; --muted:#566275; --line:#C6CFDA; --soft:#DDE3EA;
-  --accent:#2C52CF; --r1:#2C52CF; --r2:#B97A12; --r3:#AE3576; --r4:#18806F; --warn:#AD4329; --lfo:#7A3FC4; --ok:#18806F;
-  --shadow:0 6px 18px -12px rgba(23,32,49,.45);
-  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
-  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --bg:#E7D9B6; --panel:#F3EAD0; --sheet:rgba(246,238,216,.62); --ink:#2B2117; --muted:#5B4C3A; --line:#B9A47A; --soft:#E6D8B3;
+  --frame:#6B5A40; --frame2:rgba(107,90,64,.45);
+  --accent:#2C4A86; --r1:#2C4A86; --r2:#8A5B0B; --r3:#A3321F; --r4:#2F6A5C; --warn:#9E2A1A; --lfo:#6B3A7A; --ok:#2F6A5C;
+  --brass:#B8893A; --brass-hi:#E6C27E; --brass-lo:#6E4F1C; --on-brass:#2B2117;
+  --stain:rgba(125,80,25,.17); --fox:rgba(130,80,25,.24); --edge:rgba(110,70,20,.2);
+  --burn:inset 0 0 70px rgba(100,62,18,.34),inset 0 0 10px rgba(90,55,15,.3);
+  --shadow:0 4px 14px -10px rgba(60,40,10,.6);
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .2 0 0 0 0 .07 0 0 0 .5 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4Z' fill='%236B5A40'/%3E%3C/svg%3E");
+  --display:"IM Fell English",Georgia,"Noto Serif",serif;
+  --body:"EB Garamond",Georgia,"Noto Serif",serif;
+  --mono:"Courier Prime","Courier New",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0E1219; --panel:#161B24; --ink:#E2E7EF; --muted:#95A1B4; --line:#2B3342; --soft:#1E2530;
-  --accent:#7E9CFF; --r1:#7E9CFF; --r2:#E6AC48; --r3:#E37DB5; --r4:#4CC6B1; --warn:#F08B6F; --lfo:#B88CFF; --ok:#4CC6B1;
-  --shadow:0 6px 18px -10px rgba(0,0,0,.8); color-scheme:dark}}
+  --bg:#0B1430; --panel:#121E3E; --sheet:rgba(18,30,62,.66); --ink:#ECDFB8; --muted:#A9B0C3; --line:#34436E; --soft:#1A2852;
+  --frame:#9C7E3E; --frame2:rgba(201,160,74,.38);
+  --accent:#D9B45A; --r1:#D9B45A; --r2:#8FB1E8; --r3:#E28E74; --r4:#9CCCA6; --warn:#F08B6F; --lfo:#BCA8F2; --ok:#9CCCA6;
+  --brass:#C9A04A; --brass-hi:#F0D592; --brass-lo:#7A5C22; --on-brass:#0B1430;
+  --stain:rgba(220,190,120,.07); --fox:rgba(212,174,85,.16); --edge:rgba(0,0,0,.35);
+  --burn:inset 0 0 80px rgba(0,0,0,.55),inset 0 0 10px rgba(0,0,0,.5);
+  --shadow:0 4px 14px -8px rgba(0,0,0,.8);
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .93 0 0 0 0 .87 0 0 0 0 .7 0 0 0 .3 -.09'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4Z' fill='%23C9A04A'/%3E%3C/svg%3E");
+  color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0E1219; --panel:#161B24; --ink:#E2E7EF; --muted:#95A1B4; --line:#2B3342; --soft:#1E2530;
-  --accent:#7E9CFF; --r1:#7E9CFF; --r2:#E6AC48; --r3:#E37DB5; --r4:#4CC6B1; --warn:#F08B6F; --lfo:#B88CFF; --ok:#4CC6B1;
-  --shadow:0 6px 18px -10px rgba(0,0,0,.8); color-scheme:dark}
+  --bg:#0B1430; --panel:#121E3E; --sheet:rgba(18,30,62,.66); --ink:#ECDFB8; --muted:#A9B0C3; --line:#34436E; --soft:#1A2852;
+  --frame:#9C7E3E; --frame2:rgba(201,160,74,.38);
+  --accent:#D9B45A; --r1:#D9B45A; --r2:#8FB1E8; --r3:#E28E74; --r4:#9CCCA6; --warn:#F08B6F; --lfo:#BCA8F2; --ok:#9CCCA6;
+  --brass:#C9A04A; --brass-hi:#F0D592; --brass-lo:#7A5C22; --on-brass:#0B1430;
+  --stain:rgba(220,190,120,.07); --fox:rgba(212,174,85,.16); --edge:rgba(0,0,0,.35);
+  --burn:inset 0 0 80px rgba(0,0,0,.55),inset 0 0 10px rgba(0,0,0,.5);
+  --shadow:0 4px 14px -8px rgba(0,0,0,.8);
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .93 0 0 0 0 .87 0 0 0 0 .7 0 0 0 .3 -.09'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4Z' fill='%23C9A04A'/%3E%3C/svg%3E");
+  color-scheme:dark}
 
 *{box-sizing:border-box}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 img{max-width:100%}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.45;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+body{background-color:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.42;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;
+  /* aged paper: grain, three tide-line stains, foxing spots, darkened corners (painted once, scrolls with the page) */
+  background-image:var(--grain),
+    radial-gradient(ellipse 230px 160px at 84% 7%,transparent 66%,var(--stain) 71%,transparent 77%),
+    radial-gradient(ellipse 280px 220px at 8% 44%,transparent 64%,var(--stain) 70%,transparent 76%),
+    radial-gradient(ellipse 200px 140px at 88% 82%,transparent 66%,var(--stain) 71%,transparent 77%),
+    radial-gradient(circle at 13% 17%,var(--fox) 0 2px,transparent 7px),
+    radial-gradient(circle at 74% 29%,var(--fox) 0 2px,transparent 6px),
+    radial-gradient(circle at 92% 58%,var(--fox) 0 3px,transparent 9px),
+    radial-gradient(circle at 23% 71%,var(--fox) 0 2px,transparent 7px),
+    radial-gradient(circle at 61% 93%,var(--fox) 0 3px,transparent 9px),
+    radial-gradient(ellipse at 0 0,var(--edge),transparent 42%),
+    radial-gradient(ellipse at 100% 100%,var(--edge),transparent 46%)}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:25;box-shadow:var(--burn)}   /* burnt page edges */
 .wrap{max-width:1180px;margin:0 auto;display:grid;gap:16px}
-h1{font-family:var(--display);font-weight:700;font-size:clamp(26px,4vw,36px);line-height:1.05;margin:0;letter-spacing:-.01em;text-wrap:balance}
-.lede{margin:6px 0 0;color:var(--muted);max-width:66ch}
-h2{font-family:var(--display);font-weight:600;font-size:17px;margin:0;letter-spacing:.005em}
-.hint{color:var(--muted);font-size:12.5px;margin:0;max-width:66ch}
-.sub{color:var(--muted);font-size:12.5px}
+h1{font-family:var(--display);font-style:italic;font-weight:400;font-size:clamp(28px,7.5vw,42px);line-height:1;margin:0;letter-spacing:.02em;text-transform:uppercase;text-wrap:balance}
+.lede{margin:8px 0 0;color:var(--muted);max-width:66ch;font-style:italic}
+h2{font-family:var(--display);font-style:italic;font-weight:400;font-size:21px;line-height:1.15;margin:0}
+.hint{color:var(--muted);font-size:14px;margin:0;max-width:66ch;font-style:italic}
+.cap{margin:0;text-align:center;font-style:italic;font-size:14px;color:var(--muted)}
+.sub{color:var(--muted);font-size:13.5px}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .spread{justify-content:space-between}
-button{font:500 13px var(--body);color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:7px;padding:6px 10px;cursor:pointer;touch-action:manipulation}
-button:hover{border-color:var(--muted)}
+button{font:500 14px var(--body);color:var(--ink);background:var(--soft);border:1px solid var(--frame);border-radius:2px;padding:5px 10px;cursor:pointer;touch-action:manipulation;
+  box-shadow:inset 0 0 0 1px var(--panel),inset 0 0 0 2px var(--frame2)}   /* engraved double rule */
+button:hover{border-color:var(--ink)}
 button:focus-visible,input:focus-visible,select:focus-visible,canvas:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
-.lbl{font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink);box-shadow:none}
+.lbl{font:600 12px var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* plates: double-ruled frames with a star in each corner */
+header,.panel{background-color:var(--sheet);border:1px solid var(--frame);border-radius:2px;outline:1px solid var(--frame2);outline-offset:-5px;
+  background-image:var(--star),var(--star),var(--star),var(--star);background-repeat:no-repeat;background-size:9px 9px;
+  background-position:left 2px top 2px,right 2px top 2px,left 2px bottom 2px,right 2px bottom 2px}
+header{padding:12px 18px 18px;outline-offset:-6px}
+.runhead{display:flex;justify-content:flex-end;font:400 12px var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.colophon{display:flex;justify-content:center;color:var(--frame);padding:4px 0 0}
+.colophon svg{width:min(280px,82%);height:auto;overflow:visible}
 
 /* transport bar */
-.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
-#start{font:600 14px var(--body);padding:8px 16px;background:var(--accent);color:var(--panel);border-color:var(--accent);min-width:118px}
-#start[data-on="true"]{background:var(--panel);color:var(--accent)}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 10px;
+  background-color:var(--panel);background-image:var(--grain);border:1px solid var(--frame);border-radius:2px;outline:1px solid var(--frame2);outline-offset:-5px;box-shadow:var(--shadow)}
+#start{font:600 15px var(--body);padding:8px 16px;min-width:118px;color:var(--on-brass);border-color:var(--brass-lo);
+  background:linear-gradient(to bottom,var(--brass-hi),var(--brass) 40%,var(--brass) 70%,var(--brass-lo));box-shadow:inset 0 0 0 1px var(--brass-hi)}
+#start[data-on="true"]{background:var(--panel);color:var(--ink);border-color:var(--brass);box-shadow:inset 0 0 0 1px var(--panel),inset 0 0 0 2px var(--brass)}
 .now{display:flex;align-items:center;gap:8px;min-width:0}
 .now .mono{font-size:15px;font-weight:500;white-space:nowrap}
 .topbar .grow{flex:1 1 0}
@@ -60,9 +107,9 @@ button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-colo
 #tbPlay[aria-pressed="true"]{background:var(--lfo);border-color:var(--lfo);color:var(--panel)}
 .sm{display:none}
 @media (max-width:560px){.seqctl .lbl{display:none}.sm{display:inline}.lg{display:none}.topbar{gap:6px 8px}#start{min-width:0}}
-.toast{padding:8px 12px;border-radius:8px;border:1px solid var(--warn);color:var(--warn);background:var(--panel);font-size:13px}
+.toast{padding:8px 12px;border-radius:2px;border:1px solid var(--warn);color:var(--warn);background:var(--panel);font-size:14px}
 
-.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 12px;border:1px solid var(--frame);border-radius:2px;background-color:var(--sheet)}
 .bar .lbl{color:var(--lfo)}
 .bar label{display:flex;align-items:center;gap:6px;font-size:13px}
 .bar .grow{flex:1 1 0}
@@ -72,86 +119,108 @@ button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-colo
 @media (max-width:860px){
   .cols{grid-template-columns:minmax(0,1fr)}
   .col{display:contents}
-  #pLoop{order:1}#pSpeed{order:2}#pRings{order:3}#pSound{order:4}#pSpec{order:5}#pCirc{order:6}
+  #pLoop{order:1}#pSpeed{order:2}#pRings{order:3}#pSpec{order:4}#pCirc{order:5}#pSound{order:6}   /* plates I to VI */
 }
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;min-width:0}
+.panel{padding:14px;display:grid;gap:10px;min-width:0}
 canvas{display:block;width:100%}
 #wheel{aspect-ratio:1/1;max-width:440px;margin:0 auto}
 #spec{height:210px}
 #circ{height:230px}
 .readout{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;font-family:var(--mono);font-variant-numeric:tabular-nums}
 .big{font-size:26px;font-weight:500}
-.zone{font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+.zone{font:600 12px var(--body);letter-spacing:.1em;text-transform:uppercase;padding:2px 9px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
 .zone[data-z="Tone"]{color:var(--accent)}
 .zone[data-z="Blur"]{color:var(--r3)}
 .zone[data-z="Rhythm"]{color:var(--r4)}
-input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
-#speed{height:28px}
+/* sliders: an engraved rule with a brass knob */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:26px;margin:2px 0;background:transparent;
+  --thumb:var(--brass);--thumb-hi:var(--brass-hi);--thumb-lo:var(--brass-lo);--tw:20px}
+input[type=range]::-webkit-slider-runnable-track{height:3px;background:var(--frame)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:var(--tw);height:var(--tw);margin-top:calc((3px - var(--tw)) / 2);border-radius:50%;
+  border:1px solid var(--thumb-lo);background:radial-gradient(circle at 35% 30%,var(--thumb-hi),var(--thumb) 55%,var(--thumb-lo))}
+input[type=range]::-moz-range-track{height:3px;background:var(--frame)}
+input[type=range]::-moz-range-progress{height:3px;background:var(--accent)}
+input[type=range]::-moz-range-thumb{width:var(--tw);height:var(--tw);border-radius:50%;border:1px solid var(--thumb-lo);
+  background:radial-gradient(circle at 35% 30%,var(--thumb-hi),var(--thumb) 55%,var(--thumb-lo))}
+#speed{height:30px}
 .ticks{display:flex;justify-content:space-between;font:11px var(--mono);color:var(--muted)}
 .check{display:flex;align-items:center;gap:6px;font-size:13px}
 
 /* rings */
 .rings{display:grid;gap:10px}
-.ring{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 12px;padding:10px;border-radius:8px;border:1px solid var(--line);border-left:4px solid var(--c)}
+.ring{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 12px;padding:10px;border-radius:2px;border:1px solid var(--line);border-left:4px solid var(--c)}
 .ring[data-off="true"]>.ctl,.ring[data-off="true"] .pat{opacity:.45}
 .ring .head{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .ring .head label{display:flex;align-items:center;gap:6px;font-weight:600}
-.ring .head input{accent-color:var(--c);width:16px;height:16px}
+.ring .head input{accent-color:var(--c);width:18px;height:18px}
 .pat{font-family:var(--mono);font-size:13px;letter-spacing:.12em;color:var(--c);overflow-wrap:anywhere}
 .ring .lvl{grid-column:1/-1}
 
 /* controls */
-.ctl{display:grid;gap:2px;font-size:12px;color:var(--muted);min-width:0;align-content:start}
+.ctl{display:grid;gap:2px;font-size:13.5px;color:var(--muted);min-width:0;align-content:start}
 .ctl .top{display:flex;align-items:center;gap:6px;min-width:0;min-height:20px}
 .ctl .top .lab,.ctl .top label{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ctl output{font-family:var(--mono);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ctl output.mod,.stepper output.mod{color:var(--lfo)}
-.lfob{font:600 10px var(--mono);letter-spacing:.04em;padding:1px 5px;border-radius:5px;background:transparent;color:var(--muted);border:1px solid var(--line);flex:none}
+.lfob{font:700 10px var(--mono);letter-spacing:.06em;padding:1px 5px;border-radius:2px;background:transparent;color:var(--muted);border:1px solid var(--line);flex:none;box-shadow:none}
 .lfob[data-active="true"]{background:var(--lfo);border-color:var(--lfo);color:var(--panel)}
 .lfob[aria-expanded="true"]{outline:1px solid var(--lfo);outline-offset:1px}
-.stepper{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--panel);width:max-content;max-width:100%}
-.stepper button{border:0;border-radius:0;padding:3px 10px;font:600 15px var(--mono);background:var(--soft);line-height:1.2}
-.stepper output{min-width:3.6ch;text-align:center;padding:3px 4px;font:500 13px var(--mono);color:var(--ink);align-self:center}
+.stepper{display:inline-flex;align-items:stretch;border:1px solid var(--frame);border-radius:2px;overflow:hidden;background:var(--panel);width:max-content;max-width:100%}
+.stepper button{border:0;border-radius:0;padding:3px 10px;font:700 15px var(--mono);background:var(--soft);line-height:1.2;box-shadow:none}
+.stepper output{min-width:3.6ch;text-align:center;padding:3px 4px;font:400 14px var(--mono);color:var(--ink);align-self:center}
 .ctls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 18px}
-.lfo{grid-column:1/-1;display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);align-items:end;gap:6px 14px;padding:8px 10px;border-radius:8px;background:var(--soft);border:1px dashed var(--lfo)}
-.lfo .ttl{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--lfo)}
-.lfo .ttl button{font:500 12px var(--body);letter-spacing:0;text-transform:none;padding:2px 8px}
-.lfo input[type=range]{accent-color:var(--lfo)}
+.lfo{grid-column:1/-1;display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);align-items:end;gap:6px 14px;padding:8px 10px;border-radius:2px;background:var(--soft);border:1px dashed var(--lfo)}
+.lfo .ttl{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--lfo)}
+.lfo .ttl button{font:500 13px var(--body);letter-spacing:0;text-transform:none;padding:2px 8px}
+.lfo input[type=range],.fld input[type=range]{--thumb:var(--lfo);--thumb-hi:var(--lfo);--thumb-lo:var(--ink)}
 @media (max-width:520px){.lfo{grid-template-columns:minmax(0,1fr)}}
-.shapes{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:7px;overflow:hidden}
-.shapes button{border:0;border-radius:0;padding:4px 7px;font:500 11px var(--mono);background:var(--panel)}
+.shapes{display:inline-flex;flex-wrap:wrap;border:1px solid var(--frame);border-radius:2px;overflow:hidden}
+.shapes button{border:0;border-radius:0;padding:4px 7px;font:400 12px var(--mono);background:var(--panel);box-shadow:none}
 .shapes button[aria-pressed="true"]{background:var(--lfo);color:var(--panel)}
-.warn{color:var(--warn);font-size:12.5px;margin:0}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
-.seg button{border:0;border-radius:0}
+.warn{color:var(--warn);font-size:14px;margin:0}
+.seg{display:inline-flex;border:1px solid var(--frame);border-radius:2px;overflow:hidden;flex:none}
+.seg button{border:0;border-radius:0;box-shadow:none}
 
 /* sequencer */
 .seqbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:end}
-.fld{display:grid;gap:3px;font-size:12px;color:var(--muted);min-width:0}
-.fld input[type=number]{width:76px;font:500 14px var(--mono);padding:5px 6px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink)}
-.fld input[type=range]{width:130px;accent-color:var(--lfo)}
+.fld{display:grid;gap:3px;font-size:13.5px;color:var(--muted);min-width:0}
+.fld input[type=number]{width:76px;font:400 15px var(--mono);padding:5px 6px;border:1px solid var(--frame);border-radius:2px;background:var(--panel);color:var(--ink)}
+.fld input[type=range]{width:130px}
 .fld output{font-family:var(--mono);color:var(--ink)}
-.playbtn{font:600 14px var(--body);padding:8px 18px;min-width:92px}
+.playbtn{font:600 15px var(--body);padding:8px 18px;min-width:92px}
 .playbtn[aria-pressed="true"]{background:var(--lfo);border-color:var(--lfo);color:var(--panel)}
-.chip{font:500 12px var(--body);padding:3px 9px;border-radius:99px;background:var(--soft);border:1px solid var(--line);color:var(--muted)}
+.chip{font:500 13px var(--body);padding:2px 10px;border-radius:99px;background:var(--soft);border:1px solid var(--line);color:var(--muted)}
 .chip[data-state="ok"]{color:var(--ok);border-color:currentColor}
 .chip[data-state="warn"]{color:var(--warn);border-color:currentColor}
 .lanes{display:grid;gap:10px}
 .lane{display:grid;gap:4px;min-width:0}
-.lhead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12.5px;min-height:30px}
+.lhead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px;min-height:30px}
 .lhead .lname{font-weight:600;color:var(--ink)}
-.lhead select{font:500 13px var(--body);padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);max-width:100%}
+.lhead select{font:500 14px var(--body);padding:4px 6px;border:1px solid var(--frame);border-radius:2px;background:var(--panel);color:var(--ink);max-width:100%}
 .lhead output{font-family:var(--mono);color:var(--ink);margin-left:auto;font-size:12px}
-.lhead .mini{font-size:12px;padding:3px 8px}
-.lane canvas{height:84px;border-radius:7px;background:var(--soft);touch-action:none;cursor:crosshair}
+.lhead .mini{font-size:13px;padding:3px 8px}
+.lane canvas{height:84px;border-radius:2px;background:var(--soft);touch-action:none;cursor:crosshair}
 .lane canvas.trig{height:66px;cursor:pointer}
 #seqOnly .lede{max-width:70ch}
+
+/* Android and other touch screens: bigger targets (layout only, nothing changes for mouse users) */
+@media (pointer:coarse){
+  button{min-height:40px}
+  .stepper button{min-height:36px}
+  .lfob{min-height:26px;padding:2px 7px}
+  .lfo .ttl button{min-height:34px}
+  .ctl .top{min-height:28px}
+  input[type=range]{height:34px;--tw:26px}
+  input[type=checkbox]{width:20px;height:20px}
+  .ring .head input{width:22px;height:22px}
+}
 </style>
 </head>
 <body>
 
 <div class="wrap" id="app">
   <header>
+    <div class="runhead" aria-hidden="true">Plate I</div>
     <h1>Rhythm Into Tone</h1>
     <p class="lede">Build a loop as a rhythm, then speed it up until it fuses into one tone. The harmonic bars and circles are calculated from the same loop you hear. Every control has an LFO, and the sequencer can change any of them step by step.</p>
   </header>
@@ -185,15 +254,16 @@ input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
   <div class="cols">
     <div class="col">
       <section class="panel" id="pLoop" aria-label="Loop">
-        <div class="row spread"><h2>The loop</h2>
+        <div class="row spread"><h2>I. The loop</h2>
           <div class="row" id="presets"></div>
         </div>
         <canvas id="wheel" aria-label="Rhythm wheel showing each ring's hits and playhead"></canvas>
+        <p class="cap">Fig. 1. The loop. Each ring is one voice, its dots are the hits, and the stroke is the playhead. The outer scale is the loop's phase.</p>
       </section>
 
       <section class="panel" id="pSpeed" aria-label="Speed">
         <div class="row spread">
-          <h2>Speed</h2>
+          <h2>II. Speed</h2>
           <div class="row"><span class="zone" id="zone" data-z="Rhythm">Rhythm</span><button type="button" class="lfob" data-key="speed" aria-expanded="false" aria-label="LFO for speed">LFO</button></div>
         </div>
         <div class="readout"><span class="big" id="rbig">2.00 s</span><span class="sub" id="rsub"></span></div>
@@ -212,7 +282,7 @@ input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
       </section>
 
       <section class="panel" id="pRings" aria-label="Rings">
-        <h2>Rings</h2>
+        <h2>III. Rings</h2>
         <p class="hint">Each ring spreads its hits as evenly as possible over its steps (a Euclidean rhythm). A ring with equal steps and hits is a plain pulse. An LFO on Rotate turns the ring smoothly, between steps.</p>
         <div class="rings" id="rings"></div>
       </section>
@@ -221,27 +291,29 @@ input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
     <div class="col">
       <section class="panel" id="pSpec" aria-label="Spectrum">
         <div class="row spread">
-          <h2>Harmonics</h2>
+          <h2>IV. Harmonics</h2>
           <div class="seg" role="group" aria-label="Spectrum view">
             <button type="button" id="vRhythm" aria-pressed="true">Rhythm DFT</button>
             <button type="button" id="vHeard" aria-pressed="false">Heard spectrum</button>
           </div>
         </div>
         <canvas id="spec" aria-label="Harmonic spectrum of the loop"></canvas>
+        <p class="cap">Fig. 2. The loop's harmonics, calculated from its hits.</p>
         <p class="hint" id="specHint"></p>
       </section>
 
       <section class="panel" id="pCirc" aria-label="Circles">
         <div class="row spread">
-          <h2>The loop as circles</h2>
+          <h2>V. The loop as circles</h2>
           <div class="ctl" style="min-width:150px"><div class="top"><label for="nc">Circles</label><output id="ncv">16</output></div><input type="range" id="nc" min="1" max="48" value="16"></div>
         </div>
         <canvas id="circ" aria-label="Fourier circles drawing the rhythm pattern"></canvas>
+        <p class="cap">Fig. 3. Circles chained end to end draw the loop.</p>
         <p class="hint">Circle n spins n times per loop. Its size and starting angle come from the pattern's nth Fourier coefficient. Chained together, the circles draw the pattern: each spike is a hit. More circles give sharper hits.</p>
       </section>
 
       <section class="panel" id="pSound" aria-label="Click and fusion">
-        <h2>Click and fusion</h2>
+        <h2>VI. Click and fusion</h2>
         <div class="ctls" id="soundCtls"></div>
         <div class="row"><button type="button" id="resync">Re-align rings</button><span class="sub" id="engineNote"></span></div>
         <p class="warn" id="dropWarn" hidden>Too many overlapping clicks: some were dropped. Shorten the click or slow down.</p>
@@ -249,10 +321,22 @@ input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
       </section>
     </div>
   </div>
+  <footer class="colophon" aria-hidden="true">
+    <svg viewBox="0 0 280 56" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+      <path d="M8 28H96M184 28H272"/>
+      <path d="M96 28l4-3 4 3-4 3zM176 28l4-3 4 3-4 3z" fill="currentColor"/>
+      <path d="M62 18a10 10 0 1 0 0 20a13 13 0 0 1 0-20z" fill="currentColor" stroke="none"/>
+      <path d="M218 18a10 10 0 1 1 0 20a13 13 0 0 0 0-20z" fill="currentColor" stroke="none"/>
+      <circle cx="140" cy="28" r="9"/><circle cx="140" cy="28" r="3.2" fill="currentColor"/>
+      <path d="M140 6v8M140 42v8M118 28h8M154 28h8M124.4 12.4l5.7 5.7M149.9 37.9l5.7 5.7M124.4 43.6l5.7-5.7M149.9 18.1l5.7-5.7"/>
+      <path d="M131 9.2l2 4.3M147 9.2l-2 4.3M131 46.8l2-4.3M147 46.8l-2-4.3M121.2 19l4.3 2M158.8 19l-4.3 2M121.2 37l4.3-2M158.8 37l-4.3-2" stroke-width=".8"/>
+    </svg>
+  </footer>
 </div>
 
 <div class="wrap" id="seqOnly" hidden>
   <header>
+    <div class="runhead" aria-hidden="true">Plate II</div>
     <h1>Rhythm Into Tone</h1>
     <p class="lede">Sequencer window. It plays the instrument page open in your other window or tab. Keep that page open with its sound started.</p>
   </header>
@@ -571,7 +655,7 @@ function exampleSeq(name){
 /* theme tokens & canvas helpers */
 let T={};
 function readTokens(){const cs=getComputedStyle(document.documentElement);
-  ['--ink','--muted','--line','--soft','--panel','--accent','--r1','--r2','--r3','--r4','--warn','--lfo','--mono','--ok'].forEach(k=>T[k]=cs.getPropertyValue(k).trim());}
+  ['--ink','--muted','--line','--soft','--panel','--accent','--r1','--r2','--r3','--r4','--warn','--lfo','--mono','--body','--ok'].forEach(k=>T[k]=cs.getPropertyValue(k).trim());}
 readTokens();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readTokens);
 new MutationObserver(readTokens).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
@@ -951,9 +1035,25 @@ function initInstrument(){
   function zoneOf(E){if(E.speed>=20)return'Tone';if(E.speed*hitsPerLoop(E)>=15)return'Blur';return'Rhythm';}
 
   /* --- drawing --- */
+  /* the dial around the wheel: a phase scale like the degree band of an old star chart.
+     Ticks every 1/72 of the loop, bold every 1/12, labels at 0, ¼, ½, ¾ (phase runs clockwise from the top, as the hits do). */
+  function drawDial(g,cx,cy,M,R){
+    const o=M-5,b=R+8,lr=(b+o-3)/2;
+    g.strokeStyle=T['--line'];g.lineWidth=1;
+    for(const r of [o,o-3,b]){g.beginPath();g.arc(cx,cy,r,0,Math.PI*2);g.stroke();}
+    for(let i=0;i<72;i++){if(i%18===0)continue;
+      const a=i/72*2*Math.PI-Math.PI/2,big=i%6===0,r2=b+(big?7:3.5);
+      g.strokeStyle=big?T['--muted']:T['--line'];g.beginPath();g.moveTo(cx+Math.cos(a)*b,cy+Math.sin(a)*b);g.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2);g.stroke();}
+    g.fillStyle=T['--muted'];g.font=`italic 14px ${T['--body']||'serif'}`;g.textAlign='center';g.textBaseline='middle';
+    ['0','¼','½','¾'].forEach((t,k)=>{const a=k/4*2*Math.PI-Math.PI/2;g.fillText(t,cx+Math.cos(a)*lr,cy+Math.sin(a)*lr);});
+    g.textBaseline='alphabetic';g.fillStyle=T['--accent'];
+    for(let k=0;k<4;k++){const a=(k+0.5)/4*2*Math.PI-Math.PI/2,x=cx+Math.cos(a)*lr,y=cy+Math.sin(a)*lr,s=3.4,t=s*0.28;
+      g.beginPath();g.moveTo(x,y-s);g.lineTo(x+t,y-t);g.lineTo(x+s,y);g.lineTo(x+t,y+t);g.lineTo(x,y+s);g.lineTo(x-t,y+t);g.lineTo(x-s,y);g.lineTo(x-t,y-t);g.closePath();g.fill();}
+  }
   function drawWheel(E){
     const {g,w,h}=fit($('#wheel'));g.clearRect(0,0,w,h);
-    const cx=w/2,cy=h/2,R=Math.min(w,h)/2-14;
+    const M=Math.min(w,h)/2,cx=w/2,cy=h/2,R=M-34;
+    drawDial(g,cx,cy,M,R);
     const act=E.rings.map((r,i)=>({r,i})).filter(o=>o.r.on);
     const n=Math.max(1,act.length),inner=R*0.3,gap=(R-inner)/n;
     const blur=ui.calm?clamp((vis.f-0.6)/0.6,0,1):clamp((vis.f-1.5)/6,0,1);

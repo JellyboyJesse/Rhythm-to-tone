@@ -39,6 +39,17 @@ Bus messages (keep them small and JSON-serialisable):
 - Starting audio: create the `AudioContext` and call `resume()` inside the tap (iOS). Fall back to the ScriptProcessor engine when AudioWorklet is missing.
 - Messages to the engine must be sent straight away, not on `requestAnimationFrame`, because the instrument tab may be in the background while the sequencer window is used.
 - Colours only through the CSS tokens (`T[...]` in canvas code), never literals. The `[hidden]` rule must stay, because many hidden elements have their own `display`.
+
+## The look
+
+A worn plate from an old science textbook. The light theme is aged parchment with faded Prussian blue, ochre, vermilion and verdigris inks. The dark theme is a star atlas in night blue and gold. Fonts: IM Fell English (display), EB Garamond (body), Courier Prime (numbers), with Georgia/serif fallbacks for offline use.
+
+- Extra tokens: `--sheet` (translucent plate), `--frame`/`--frame2` (double rules), `--brass*` (Start button and slider knobs), `--stain`/`--fox`/`--edge`/`--burn` (paper wear), `--grain` and `--star` (small data-URI SVGs, one per theme).
+- Paper wear is static CSS backgrounds plus one fixed edge shadow. Don't add live SVG filters or animated textures: they cost too much on the phone and the 4 GB laptop.
+- Decoration is never interactive: the running head, the colophon and the corner stars are `aria-hidden` or backgrounds.
+- Panels are plates I to VI in the same order on phone and laptop: loop, speed, rings, harmonics, circles, click and fusion.
+- The dial around the wheel (`drawDial`) is a true phase scale (0, ¼, ½, ¾ of the loop, clockwise from the top, like the hits), not an ornament with made-up divisions.
+- On touch screens (`pointer: coarse`) buttons, steppers, sliders and checkboxes get bigger targets. Desktop sizes are unchanged.
 - Keep the standalone document head: charset, viewport with `viewport-fit=cover`, and the safe-area padding.
 
 ## Checking work before pushing
