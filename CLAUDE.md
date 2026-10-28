@@ -57,6 +57,10 @@ A worn plate from an old science textbook. The light theme is aged parchment wit
 - On touch screens (`pointer: coarse`) buttons, steppers, sliders and checkboxes get bigger targets. Desktop sizes are unchanged.
 - Keep the standalone document head: charset, viewport with `viewport-fit=cover`, and the safe-area padding.
 
+## The Android app
+
+`.github/workflows/build-apk.yml` wraps `index.html` in an Android app with Capacitor 6 (same setup as Solfège Pulses) on every push to `main` or `style/atlas-parchment`, and publishes `rhythm-into-tone.apk` as a GitHub Release (`build-N`). The build copies `index.html` into `www/`; never edit `www/` or `android/` (both are generated and ignored). `debug.keystore` signs every build the same way so updates install over the old app. In the app `window.Capacitor` exists: there is no popup window, so "New window" is hidden and the sequencer docks. Everything must work offline (fonts are embedded; no network requests).
+
 ## Checking work before pushing
 
 1. Syntax-check the script:

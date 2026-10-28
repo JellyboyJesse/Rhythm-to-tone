@@ -1230,6 +1230,9 @@ function initInstrument(){
   function showDock(show){const d=$('#dock');d.hidden=!show;$('#seqDock').setAttribute('aria-expanded',show);setText('#seqDock',show?'Hide':'Show here');
     if(show&&!docked){docked=true;mountSequencer(d,{docked:true});}}
   $('#seqDock').onclick=()=>showDock($('#dock').hidden);
+  /* inside the Android app there is no second window: the sequencer is shown on the page instead */
+  const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+  if(NATIVE)$('#seqWin').hidden=true;
   $('#seqWin').onclick=()=>{
     let w=null;try{w=window.open(location.href.split('#')[0]+'#sequencer','rit-sequencer','popup=yes,width=1040,height=780');}catch(e){}
     if(!w){toast('The browser did not open a new window, so the sequencer is shown on this page instead.');showDock(true);return;}
