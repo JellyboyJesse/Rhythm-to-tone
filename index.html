@@ -421,6 +421,12 @@ header::after{content:"✶";content:"✶" / ""}
 }
 </style>
 
+<style id="own-click">
+.ownclick{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding-top:4px;border-top:1px dotted var(--frame2)}
+.ownclick .sub{font-style:italic}
+.ring .ownctl{grid-column:1/-1}
+#vowels button{min-width:42px;font-style:italic;font-size:16px}
+</style>
 </head>
 <body>
 
@@ -490,6 +496,8 @@ header::after{content:"✶";content:"✶" / ""}
       <section class="panel" id="pRings" aria-label="Rings">
         <h2>III. Rings</h2>
         <p class="hint">Each ring spreads its hits as evenly as possible over its steps (a Euclidean rhythm). A ring with equal steps and hits is a plain pulse. An LFO on Rotate turns the ring smoothly, between steps.</p>
+        <div class="row" id="vowels"><span class="lbl">Vowels</span></div>
+        <p class="hint">A vowel sets three rings to the same pulse, each with its own click at one formant of the vowel. Speed it up into a pitch and the tone sings. Turn on Own click on any ring to give it a formant of its own.</p>
         <div class="rings" id="rings"></div>
       </section>
     </div>
@@ -523,7 +531,7 @@ header::after{content:"✶";content:"✶" / ""}
         <div class="ctls" id="soundCtls"></div>
         <div class="row"><button type="button" id="resync">Re-align rings</button><span class="sub" id="engineNote"></span></div>
         <p class="warn" id="dropWarn" hidden>Too many overlapping clicks: some were dropped. Shorten the click or slow down.</p>
-        <p class="hint">Click pitch sets a formant. It stays fixed in Hz while the loop pitch moves, like a vowel. Each click keeps the pitch and length it had when it started, so LFOs on the click change it hit by hit. Detune gives each ring a slightly different speed, so the tone splits into separate beating voices. Shared vibrato wobbles every ring together, which helps the ear hear one sound.</p>
+        <p class="hint">Click pitch sets a formant. It stays fixed in Hz while the loop pitch moves, like a vowel. Each click keeps the pitch and length it had when it started, so LFOs on the click change it hit by hit. Detune gives each ring a slightly different speed, so the tone splits into separate beating voices. Shared vibrato wobbles every ring together, which helps the ear hear one sound. A ring with Own click turned on ignores these two sliders and uses its own.</p>
       </section>
     </div>
   </div>
@@ -582,6 +590,8 @@ function lockVal(key,u){
     case 'vol':return u;
   }
   const k=key.slice(2);
+  if(k==='F')return 60*Math.pow(4000/60,u);
+  if(k==='sigma')return 0.2*Math.pow(40,u);
   if(k==='steps')return 1+Math.round(u*15);
   if(k==='hits')return Math.round(u*16);
   if(k==='rot')return u*16;
@@ -589,14 +599,15 @@ function lockVal(key,u){
 }
 function newEff(){
   const rings=[];
-  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level']});
+  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,F:700,sigma:1.2,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level','r'+i+'F','r'+i+'sigma']});
   return{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6,gate:true,glide:false,rings};
 }
 /* base values -> sequencer locks -> LFOs. Fills E in place (no allocation, safe for the audio thread) */
 function effParams(S,t,step,E){
   const B=S.base,L=S.lfo||{},q=S.seq;
   let sp=B.speed,F=B.F,sg=B.sigma,det=B.det,vib=B.vib,vol=B.vol;
-  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;}
+  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;
+    o.F=typeof r.F==='number'?r.F:-1;o.sigma=typeof r.sigma==='number'?r.sigma:-1;}   /* -1: the ring follows the main click */
   E.gate=true;E.glide=false;
   if(step>=0&&q){
     E.gate=q.gate[step]!==false;E.glide=!!q.glide[step];
@@ -608,7 +619,7 @@ function effParams(S,t,step,E){
         case 'speed':sp=v;break;case 'F':F=v;break;case 'sigma':sg=v;break;
         case 'det':det=v;break;case 'vib':vib=v;break;case 'vol':vol=v;break;
         default:{const o=E.rings[+ln.key[1]],k=ln.key.slice(2);
-          if(k==='steps')o.steps=v;else if(k==='hits')o.hits=v;else if(k==='rot')o.rotf=v;else o.level=v;}
+          if(k==='steps')o.steps=v;else if(k==='hits')o.hits=v;else if(k==='rot')o.rotf=v;else if(k==='F')o.F=v;else if(k==='sigma')o.sigma=v;else o.level=v;}
       }
     }
   }
@@ -625,6 +636,9 @@ function effParams(S,t,step,E){
     const R=o.rotf+lfoAmt(L,o.k[2],t),Ri=Math.floor(R);
     o.steps=steps;o.hits=hits;o.rot=((Ri%steps)+steps)%steps;o.off=(R-Ri)/steps;
     o.level=clamp(o.level+lfoAmt(L,o.k[3],t),0,1);
+    /* a ring's own click (or a sequencer lock on it) takes its LFOs; a ring that follows the main click uses it exactly */
+    o.F=o.F<0?E.F:clamp(o.F*Math.pow(2,lfoAmt(L,o.k[4],t)),40,9000);
+    o.sigma=o.sigma<0?E.sigma:clamp(o.sigma*Math.pow(2,lfoAmt(L,o.k[5],t)),0.1,20);
   }
   return E;
 }
@@ -701,9 +715,9 @@ class Engine{
       }
     }
   }
-  spawn(age,amp){
+  spawn(age,amp,F,sg){
     if(this.gN>=this.MAX){this.dropped++;return;}
-    const s=this.E.sigma/1000,F=this.E.F,sr=this.sr,D=1/sr,a=1/(s*s);
+    const s=sg/1000,sr=this.sr,D=1/sr,a=1/(s*s);
     const tau=age*D-3*s,k=this.gN++;
     this.gG[k]=Math.exp(-0.5*tau*tau*a);this.gQ[k]=Math.exp(-tau*D*a-0.5*D*D*a);this.gQQ[k]=Math.exp(-D*D*a);
     const th=2*Math.PI*F*tau,w=2*Math.PI*F*D;
@@ -729,7 +743,7 @@ class Engine{
         if(!P.length){if(r.ph>=1)r.ph-=1;continue;}
         let tg=r.base+P[r.next];
         while(tg<=r.ph){
-          if(E.gate&&r.amp>0)this.spawn((r.ph-tg)/inc,r.amp);
+          if(E.gate&&r.amp>0){const er=E.rings[ri];this.spawn((r.ph-tg)/inc,r.amp,er.F,er.sigma);}
           r.next++;if(r.next>=P.length){r.next=0;r.base+=1;}
           tg=r.base+P[r.next];
         }
@@ -746,8 +760,8 @@ class Engine{
       this.gain+=(E.vol*this.comp-this.gain)*this.kGain;
       out[i]=this.limit(s*this.gain*0.5);
     }
-    if(this.ready){let hits=0;for(const r of this.rings)hits+=r.pos.length;
-      const overlap=Math.exp(this.lf)*hits*6*this.E.sigma/1000;this.comp+=(1/Math.sqrt(1+overlap)-this.comp)*0.3;}
+    if(this.ready){let ov=0;for(let i=0;i<4;i++)ov+=this.rings[i].pos.length*this.E.rings[i].sigma;   /* each ring's hits x its click length */
+      const overlap=Math.exp(this.lf)*ov*6/1000;this.comp+=(1/Math.sqrt(1+overlap)-this.comp)*0.3;}
   }
   report(){const r=[];for(const x of this.rings)r.push(frac(x.ph+x.off));return{m:this.master,r,f:Math.exp(this.lf),d:this.dropped,t:this.t,step:this.step};}
 }
@@ -782,6 +796,8 @@ for(let i=0;i<4;i++){
   LFOSPEC['r'+i+'hits']={name:`Ring ${i+1} hits`,max:8,step:1,fmt:v=>'±'+v.toFixed(0)+' hits'};
   LFOSPEC['r'+i+'rot']={name:`Ring ${i+1} rotate`,max:8,step:0.05,fmt:v=>'±'+v.toFixed(2)+' steps'};
   LFOSPEC['r'+i+'level']={name:`Ring ${i+1} level`,max:1,step:0.01,fmt:v=>'±'+Math.round(v*100)+'%'};
+  LFOSPEC['r'+i+'F']={name:`Ring ${i+1} click pitch`,max:3,step:0.01,fmt:v=>'±'+v.toFixed(2)+' oct'};
+  LFOSPEC['r'+i+'sigma']={name:`Ring ${i+1} click length`,max:3,step:0.01,fmt:v=>'±'+v.toFixed(2)+' oct'};
 }
 const SHAPES=[['sine','Sin'],['tri','Tri'],['saw','Saw'],['square','Sqr'],['random','S&H'],['drift','Drift']],SHAPE_IDS=SHAPES.map(s=>s[0]);
 function hashKey(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return(h>>>0)/4294967296;}
@@ -793,7 +809,8 @@ function noteName(f,short){const m=69+12*Math.log2(f/440),r=Math.round(m),c=Math
 const fmtHz=f=>f>=1000?(f/1000).toFixed(2)+' kHz':f>=100?f.toFixed(0)+' Hz':f.toFixed(1)+' Hz';
 const snapSemi=f=>440*Math.pow(2,Math.round(12*Math.log2(f/440))/12);
 
-function defaultRings(){return[{on:true,steps:1,hits:1,rot:0,level:1},{on:true,steps:2,hits:2,rot:0,level:1},{on:true,steps:3,hits:3,rot:0,level:1},{on:true,steps:4,hits:4,rot:0,level:1}];}
+/* F and sigma: a ring's own click pitch (Hz) and length (ms); null = follow the main click */
+function defaultRings(){return[[1,1],[2,2],[3,3],[4,4]].map(([n,k])=>({on:true,steps:n,hits:k,rot:0,level:1,F:null,sigma:null}));}
 const blank=()=>Array(16).fill(null);
 function defaultSeq(){return{playing:false,steps:8,bpm:96,div:2,swing:0,clock:'tempo',loopsPerStep:1,glideTime:0.12,
   gate:Array(16).fill(true),glide:Array(16).fill(false),
@@ -815,7 +832,7 @@ function sanitizeState(o){
   const B=o.base||{};
   d.base={speed:num(B.speed,SMIN,SMAX,0.5),F:num(B.F,60,4000,700),sigma:num(B.sigma,0.2,8,1.2),det:num(B.det,0,30,0),vib:num(B.vib,0,60,0),vol:num(B.vol,0,1,0.6)};
   if(Array.isArray(o.rings))d.rings=d.rings.map((r,i)=>{const x=o.rings[i]||{};const steps=Math.round(num(x.steps,1,16,r.steps));
-    return{on:typeof x.on==='boolean'?x.on:r.on,steps,hits:Math.round(num(x.hits,0,steps,Math.min(r.hits,steps))),rot:Math.round(num(x.rot,0,steps-1,0)),level:num(x.level,0,1,1)};});
+    return{on:typeof x.on==='boolean'?x.on:r.on,steps,hits:Math.round(num(x.hits,0,steps,Math.min(r.hits,steps))),rot:Math.round(num(x.rot,0,steps-1,0)),level:num(x.level,0,1,1),F:num(x.F,60,4000,null),sigma:num(x.sigma,0.2,8,null)};});
   if(o.lfo&&typeof o.lfo==='object')for(const k in o.lfo){if(!LFOSPEC[k])continue;const l=o.lfo[k]||{};
     d.lfo[k]={shape:SHAPE_IDS.includes(l.shape)?l.shape:'sine',rate:num(l.rate,0.02,20,0.2),depth:num(l.depth,0,LFOSPEC[k].max,0),seed:hashKey(k)};}
   d.seq=sanitizeSeq(o.seq);d.seq.playing=false;
@@ -837,20 +854,22 @@ function fmtLock(key,u,full){
     case 'vol':return Math.round(v*100)+'%';
   }
   const k=key.slice(2);
+  if(k==='F')return full?fmtHz(v):String(Math.round(v));
+  if(k==='sigma')return v.toFixed(1)+(full?' ms':'');
   if(k==='steps'||k==='hits')return String(v);
   if(k==='rot')return v.toFixed(1);
   return Math.round(v*100)+'%';
 }
 function quantU(key,u,snap){
   if(snap&&key==='speed'){const f=snapSemi(lockVal('speed',u));return clamp(Math.log(f/0.25)/Math.log(4000),0,1);}
-  if(snap&&key==='F'){const f=snapSemi(lockVal('F',u));return clamp(Math.log(f/60)/Math.log(4000/60),0,1);}
+  if(snap&&(key==='F'||/^r\dF$/.test(key))){const f=snapSemi(lockVal('F',u));return clamp(Math.log(f/60)/Math.log(4000/60),0,1);}
   const k=key.slice(2);
   if(key[0]==='r'&&k==='steps')return Math.round(u*15)/15;
   if(key[0]==='r'&&k==='hits')return Math.round(u*16)/16;
   return u;
 }
 const LANE_OPTIONS=`<option value="">None</option><optgroup label="Loop"><option value="speed">Speed / pitch</option></optgroup><optgroup label="Click"><option value="F">Click pitch</option><option value="sigma">Click length</option><option value="vol">Volume</option></optgroup><optgroup label="Fusion"><option value="det">Detune</option><option value="vib">Vibrato</option></optgroup>`
-  +[0,1,2,3].map(i=>`<optgroup label="Ring ${i+1}"><option value="r${i}steps">Ring ${i+1} steps</option><option value="r${i}hits">Ring ${i+1} hits</option><option value="r${i}rot">Ring ${i+1} rotate</option><option value="r${i}level">Ring ${i+1} level</option></optgroup>`).join('');
+  +[0,1,2,3].map(i=>`<optgroup label="Ring ${i+1}"><option value="r${i}steps">Ring ${i+1} steps</option><option value="r${i}hits">Ring ${i+1} hits</option><option value="r${i}rot">Ring ${i+1} rotate</option><option value="r${i}level">Ring ${i+1} level</option><option value="r${i}F">Ring ${i+1} click pitch</option><option value="r${i}sigma">Ring ${i+1} click length</option></optgroup>`).join('');
 function exampleSeq(name){
   const s=defaultSeq(),pad=a=>{const v=blank();a.forEach((x,i)=>v[i]=x);return v;};
   const uS=f=>Math.log(f/0.25)/Math.log(4000),uF=f=>Math.log(f/60)/Math.log(4000/60),nf=m=>440*Math.pow(2,(m-69)/12);
@@ -986,7 +1005,7 @@ function mountSequencer(host,opts){
     setTextEl(q('[data-r=lps]'),String(seq.loopsPerStep));setTextEl(q('[data-r=len]'),String(seq.steps));
     q('[data-r=swing]').value=Math.round(seq.swing*100);setTextEl(q('[data-r=swv]'),Math.round(seq.swing*100)+'%');
     q('[data-r=glide]').value=Math.round(seq.glideTime*1000);setTextEl(q('[data-r=glv]'),Math.round(seq.glideTime*1000)+' ms');
-    laneEls.forEach((L,j)=>{const ln=seq.lanes[j];L.sel.value=ln.key;L.snapl.hidden=!(ln.key==='speed'||ln.key==='F');L.snap.checked=!!ln.snap;});
+    laneEls.forEach((L,j)=>{const ln=seq.lanes[j];L.sel.value=ln.key;L.snapl.hidden=!(ln.key==='speed'||ln.key==='F'||/^r\dF$/.test(ln.key));L.snap.checked=!!ln.snap;});
   }
   function syncTransport(){
     const pb=q('[data-r=play]');pb.setAttribute('aria-pressed',st.playing);setTextEl(pb,st.playing?'Stop':'Play');
@@ -1124,9 +1143,34 @@ function initInstrument(){
     makeStepper(d,{id:`r${i}hits`,key:`r${i}hits`,label:'Hits',onStep:s=>{const r=R();r.hits=clamp(r.hits+s,0,r.steps);changed();}});
     makeStepper(d,{id:`r${i}rot`,key:`r${i}rot`,label:'Rotate',onStep:s=>{const r=R();r.rot=((r.rot+s)%r.steps+r.steps)%r.steps;changed();}});
     makeCtl(d,{id:`r${i}level`,key:`r${i}level`,label:'Level',min:0,max:100,value:100,oninput:v=>{R().level=v/100;changed();}}).classList.add('lvl');
-    ['steps','hits','rot','level'].forEach(k=>makeLfoPanel(d,`r${i}${k}`));
+    /* own click: this ring's clicks get their own pitch and length (a formant of its own) instead of following the main click */
+    const own=document.createElement('div');own.className='ownclick';
+    own.innerHTML=`<label class="check"><input type="checkbox" id="r${i}own"> Own click</label><span class="sub" id="r${i}ownNote">Follows the main click</span>`;
+    d.appendChild(own);
+    d.querySelector(`#r${i}own`).onchange=e=>{const r=R();
+      if(e.target.checked){r.F=state.base.F;r.sigma=state.base.sigma;}
+      else{r.F=null;r.sigma=null;['F','sigma'].forEach(k=>{const p=$(`#lfo-r${i}${k}`);if(p)p.hidden=true;});}
+      syncRingUI();changed();};
+    makeCtl(d,{id:`r${i}F`,key:`r${i}F`,label:'Click pitch',min:0,max:1000,value:0,oninput:v=>{R().F=Fmap(v);changed();}}).classList.add('ownctl');
+    makeCtl(d,{id:`r${i}S`,key:`r${i}sigma`,label:'Click length',min:0,max:1000,value:0,oninput:v=>{R().sigma=Smap(v);changed();}}).classList.add('ownctl');
+    ['steps','hits','rot','level','F','sigma'].forEach(k=>makeLfoPanel(d,`r${i}${k}`));
   }
-  function syncRingUI(){state.rings.forEach((r,i)=>{$('#ring'+i).dataset.off=!r.on;$(`#r${i}on`).checked=r.on;$(`#r${i}level`).value=Math.round(r.level*100);});}
+  function syncRingUI(){state.rings.forEach((r,i)=>{$('#ring'+i).dataset.off=!r.on;$(`#r${i}on`).checked=r.on;$(`#r${i}level`).value=Math.round(r.level*100);
+    const own=typeof r.F==='number';$(`#r${i}own`).checked=own;$(`#r${i}ownNote`).hidden=own;
+    $$(`#ring${i} .ownctl`).forEach(el=>el.hidden=!own);
+    if(own){$(`#r${i}F`).value=FmapInv(r.F);$(`#r${i}S`).value=SmapInv(r.sigma);}});}
+
+  /* vowels: three rings on the same pulse, each click at one formant of the vowel (pitch = formant frequency, length from its bandwidth,
+     level from its strength). This is how FOF voice synthesis works: the grains repeat at the sung pitch and their pitch is the vowel. */
+  const VOWELS=[['a',[[730,80,1],[1090,90,0.5],[2440,120,0.32]]],['e',[[530,60,1],[1840,100,0.45],[2480,120,0.36]]],
+    ['i',[[270,60,1],[2290,100,0.32],[3010,120,0.3]]],['o',[[570,70,1],[840,80,0.6],[2410,120,0.22]]],['u',[[300,60,1],[870,80,0.4],[2240,120,0.18]]]];
+  VOWELS.forEach(([name,fs])=>{const b=document.createElement('button');b.type='button';b.textContent=name;b.setAttribute('aria-label',`Vowel ${name}`);
+    b.onclick=()=>{state.rings.forEach((r,i)=>{const fm=fs[i];
+        if(fm){r.on=true;r.steps=1;r.hits=1;r.rot=0;r.level=fm[2];r.F=fm[0];r.sigma=Math.round(125/fm[1]*100)/100;}else r.on=false;});
+      /* click length (ms) = 0.375 / (3 x bandwidth): a Gaussian click's spectrum falls off far faster than a real vocal resonance,
+         so at the textbook width each formant would catch only one harmonic and sound like a whistle. Three times as wide keeps several. */
+      if(state.base.speed<40)setSpeed(110);syncRingUI();changed();};
+    $('#vowels').appendChild(b);});
 
   /* --- speed --- */
   const speedEl=$('#speed');
@@ -1155,7 +1199,7 @@ function initInstrument(){
   $('#nc').oninput=e=>{ui.nc=+e.target.value;setText('#ncv',String(ui.nc));};
   $('#calm').onchange=e=>{ui.calm=e.target.checked;};
   $('#clearLfo').onclick=()=>{Object.values(state.lfo).forEach(l=>l.depth=0);Object.keys(LFOSPEC).forEach(syncLfoUI);changed();};
-  $('#scatter').onclick=()=>{const keys=Object.keys(LFOSPEC).filter(k=>k!=='vol'&&!(k[0]==='r'&&!state.rings[+k[1]].on));
+  $('#scatter').onclick=()=>{const keys=Object.keys(LFOSPEC).filter(k=>k!=='vol'&&!(k[0]==='r'&&!state.rings[+k[1]].on)&&!(/^r\d(F|sigma)$/.test(k)&&typeof state.rings[+k[1]].F!=='number'));
     for(let n=0;n<4&&keys.length;n++){const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0],L=ensureLfo(k),sp=LFOSPEC[k];
       L.shape=SHAPES[Math.floor(Math.random()*SHAPES.length)][0];L.rate=rateMap(150+Math.random()*600);
       L.depth=+(sp.max*(0.15+Math.random()*0.35)).toFixed(sp.step<1?2:0)||sp.step;syncLfoUI(k);}
@@ -1263,9 +1307,18 @@ function initInstrument(){
     if(!D){const pos=ringPos({on:true,steps:er.steps,hits:er.hits,rot:er.rot}),n=er.steps,re=new Float64Array(n),im=new Float64Array(n);
       for(let k=0;k<n;k++)for(const p of pos){const a=2*Math.PI*k*p;re[k]+=Math.cos(a);im[k]-=Math.sin(a);}
       D={re,im,n};dftCache.set(key,D);}return D;}
-  function coefs(E){const act=E.rings.filter(r=>r.on&&r.hits>0&&r.level>0).map(r=>({D:ringDFT(r),l:r.level,off:r.off}));
+  function coefs(E){const act=E.rings.map((r,i)=>({r,i})).filter(o=>o.r.on&&o.r.hits>0&&o.r.level>0)
+      .map(({r,i})=>({D:ringDFT(r),l:r.level,off:r.off,F:r.F,s:r.sigma/1000,hits:r.hits,i}));
     let c0=0;E.rings.forEach(r=>{if(r.on)c0+=r.level*r.hits;});
-    return{c0,at(n){let re=0,im=0;for(const o of act){const k=n%o.D.n,dr=o.D.re[k],di=o.D.im[k];
+    let hd=0;for(const o of act)hd+=o.l*o.hits*o.s;
+    return{c0,act,hd,
+    /* what reaches the speaker at harmonic n of loop rate f: each ring's pattern coefficient x its own click spectrum
+       (a Gaussian-windowed sine at F, length s, starting 3s after the hit), summed with phase. 1 = every click in phase at its own peak. */
+    heard(n,f){let re=0,im=0;const nu=n*f;for(const o of act){const k=n%o.D.n,dr=o.D.re[k],di=o.D.im[k],q=2*Math.PI*Math.PI*o.s*o.s;
+      const gv=o.s*(Math.exp(-q*(nu-o.F)**2)-Math.exp(-q*(nu+o.F)**2));if(Math.abs(gv)<1e-12*o.s)continue;
+      const a=-2*Math.PI*(n*o.off+nu*3*o.s),c=Math.cos(a),sn=Math.sin(a);re+=o.l*gv*(dr*c-di*sn);im+=o.l*gv*(dr*sn+di*c);}
+      return hd>0?Math.hypot(re,im)/hd:0;},
+    at(n){let re=0,im=0;for(const o of act){const k=n%o.D.n,dr=o.D.re[k],di=o.D.im[k];
       if(o.off){const a=-2*Math.PI*n*o.off,c=Math.cos(a),s=Math.sin(a);re+=o.l*(dr*c-di*s);im+=o.l*(dr*s+di*c);}else{re+=o.l*dr;im+=o.l*di;}}return[re,im];}};}
   function hitsPerLoop(E){const act=E.rings.filter(r=>r.on&&r.hits>0);
     if(Math.abs(E.det)>0.05||act.some(r=>r.off))return act.reduce((a,r)=>a+r.hits,0);
@@ -1312,7 +1365,7 @@ function initInstrument(){
     g.fillText(z==='Tone'?noteName(E.speed,true):z,cx,cy+4);
     g.fillStyle=T['--muted'];g.font=font(11);g.fillText(z==='Tone'?fmtHz(E.speed):(1/E.speed).toFixed(2)+' s',cx,cy+22);
   }
-  const Gmag=(nu,E)=>{const s=E.sigma/1000,k=2*Math.PI*Math.PI*s*s;return Math.abs(Math.exp(-k*(nu-E.F)**2)-Math.exp(-k*(nu+E.F)**2));};
+  const Gmag=(nu,F,s)=>{const k=2*Math.PI*Math.PI*s*s;return Math.abs(Math.exp(-k*(nu-F)**2)-Math.exp(-k*(nu+F)**2));};
   function drawSpec(E,C){
     const {g,w,h}=fit($('#spec'));g.clearRect(0,0,w,h);
     const pl=34,pr=8,pt=10,pb=22,W=w-pl-pr,H=h-pt-pb,labels=['0','.25','.5','.75','1'];
@@ -1331,21 +1384,25 @@ function initInstrument(){
       hint='Bar n shows how strongly the pattern repeats n times per loop, from 0 (not at all) to 1 (every hit lines up). Once the loop is fast enough to be a pitch, bar n is the strength of harmonic n.';
     }else{
       const f=vis.f,lo=30,hi=Math.min(8000,audio.sr/2),X=nu=>pl+Math.log(nu/lo)/Math.log(hi/lo)*W;
-      let Gm=Gmag(E.F,E);for(let i=0;i<=120;i++)Gm=Math.max(Gm,Gmag(lo*Math.pow(hi/lo,i/120),E));
+      const own=C.act.some(o=>Math.abs(o.F-E.F)>1e-6||Math.abs(o.s-E.sigma/1000)>1e-9);
       const cols=new Float32Array(Math.ceil(W)+1);
       const n0=Math.max(1,Math.ceil(lo/f)),nTop=Math.floor(hi/f),n1=Math.min(nTop,n0+3000);
-      for(let n=n0;n<=n1;n++){const c=C.at(n),v=Math.min(1,Math.hypot(c[0],c[1])/C.c0*Gmag(n*f,E)/Gm);
+      for(let n=n0;n<=n1;n++){const v=Math.min(1,C.heard(n,f));
         const xi=Math.round(X(n*f)-pl);if(xi>=0&&xi<cols.length&&v>cols[xi])cols[xi]=v;}
       g.fillStyle=T['--accent'];
       for(let i=0;i<cols.length;i++)if(cols[i]>0.002)g.fillRect(pl+i-0.75,pt+H-cols[i]*H,1.5,cols[i]*H);
-      g.strokeStyle=T['--r3'];g.setLineDash([4,3]);g.lineWidth=1.2;g.beginPath();
-      for(let i=0;i<=200;i++){const nu=lo*Math.pow(hi/lo,i/200),y=pt+H-Gmag(nu,E)/Gm*H;i?g.lineTo(X(nu),y):g.moveTo(X(nu),y);}
-      g.stroke();g.setLineDash([]);
+      /* dashed: each click's own spectrum, as the most its ring can add (one curve when every ring follows the main click) */
+      const curves=own?C.act.map(o=>({F:o.F,s:o.s,k:o.l*o.hits*o.s/C.hd,col:T[RC[o.i]]})):[{F:E.F,s:E.sigma/1000,k:1,col:T['--r3']}];
+      g.setLineDash([4,3]);g.lineWidth=1.2;
+      for(const cv of curves){g.strokeStyle=cv.col;g.beginPath();
+        for(let i=0;i<=240;i++){const nu=lo*Math.pow(hi/lo,i/240),y=pt+H-Math.min(1,cv.k*Gmag(nu,cv.F,cv.s))*H;i?g.lineTo(X(nu),y):g.moveTo(X(nu),y);}
+        g.stroke();}
+      g.setLineDash([]);
       if(f>=lo){g.strokeStyle=T['--ink'];g.globalAlpha=detuned?0.15:0.6;g.beginPath();g.moveTo(X(f),pt);g.lineTo(X(f),pt+H);g.stroke();g.globalAlpha=detuned?0.25:1;
         g.fillStyle=T['--ink'];g.textAlign='left';g.fillText('loop rate',Math.min(X(f)+4,pl+W-56),pt+10);}
       g.fillStyle=T['--muted'];g.textAlign='center';
       [50,100,200,500,1000,2000,5000].forEach(nu=>{if(nu<hi)g.fillText(nu>=1000?nu/1000+'k':String(nu),X(nu),h-6);});
-      hint='Lines are the harmonics that reach the speaker: the pattern\'s strength at each harmonic multiplied by the click\'s own spectrum (dashed curve). ';
+      hint=own?'Lines are the harmonics that reach the speaker: each ring\'s pattern times its own click spectrum (dashed curves, in the ring colours), added together. ':'Lines are the harmonics that reach the speaker: the pattern\'s strength at each harmonic multiplied by the click\'s own spectrum (dashed curve). ';
       if(f<20)hint+=`At ${f<1?f.toFixed(2):f.toFixed(1)} loops/s the harmonics are only that many Hz apart, too close to hear as a pitch, so you hear the rhythm instead.`;
       if(nTop>n1)hint+=` Showing harmonics up to ${fmtHz(n1*f)}.`;
       if(E.vib>0)hint+=' Vibrato smears each harmonic slightly.';
@@ -1394,6 +1451,7 @@ function initInstrument(){
       setOut(`r${i}steps`,String(r.steps),M(`r${i}steps`));setOut(`r${i}hits`,String(r.hits),M(`r${i}hits`));
       setOut(`r${i}rot`,M(`r${i}rot`)?(r.rot+r.off*r.steps).toFixed(1):String(r.rot),M(`r${i}rot`));
       setOut(`r${i}level`,Math.round(r.level*100)+'%',M(`r${i}level`));
+      setOut(`r${i}F`,fmtHz(r.F),M(`r${i}F`));setOut(`r${i}S`,r.sigma.toFixed(2)+' ms',M(`r${i}sigma`));
       setText(`#r${i}pat`,euclidPattern(r.steps,r.hits,r.rot).map(x=>x?'x':'·').join(''));});
     const z=zoneOf(E),hpl=hitsPerLoop(E),f=E.speed;
     for(const id of ['#zone','#tbZone']){setText(id,z);$(id).dataset.z=z;}

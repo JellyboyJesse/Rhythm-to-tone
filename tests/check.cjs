@@ -57,6 +57,37 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   check('rest steps are silent',m.rest===0,m.rest);
   for(const s of m.stress)check(`stress at ${s.sp} loops/s: finite and within limiter`,s.bad===0&&s.peak<=1.0001,'peak '+s.peak.toFixed(3));
 
+  /* 1b. per-ring clicks: the engine's harmonics match each ring's pattern x its own click spectrum, summed with phase
+         (the formula the Heard spectrum view draws); rings without their own click follow the main click exactly */
+  const pr=await inst.evaluate(()=>{
+    const sr=48000,f=100,N=sr,meas=out=>{const H=[];for(let n=1;n<=24;n++){let re=0,im=0;for(let i=sr/2;i<N;i++){const a=2*Math.PI*n*f*i/sr;re+=out[i]*Math.cos(a);im+=out[i]*Math.sin(a);}H.push(Math.hypot(re,im));}return H;};
+    const run=S=>{const e=new Engine(sr);applyMsg(e,{S,jump:true});const out=new Float32Array(N);for(let i=0;i<N;i+=128)e.render(out.subarray(i,i+128),128,i/sr);return out;};
+    const S=JSON.parse(JSON.stringify(state));S.base.speed=f;S.base.F=700;S.base.sigma=1.2;S.base.vol=0.3;S.lfo={};S.seq.playing=false;
+    S.rings=[{on:true,steps:1,hits:1,rot:0,level:1,F:500,sigma:1.5},{on:true,steps:2,hits:2,rot:0,level:0.7,F:1500,sigma:0.8},{on:false,steps:1,hits:0,rot:0,level:1,F:null,sigma:null},{on:false,steps:1,hits:0,rot:0,level:1,F:null,sigma:null}];
+    const H=meas(run(S));
+    const rings=[[1,1,500,1.5],[2,0.7,1500,0.8]];
+    const P=H.map((_,i)=>{const n=i+1,nu=n*f;let re=0,im=0;for(const [m,l,F,ms] of rings){const s=ms/1000,D=n%m===0?m:0,q=2*Math.PI*Math.PI*s*s,g=s*(Math.exp(-q*(nu-F)**2)-Math.exp(-q*(nu+F)**2)),a=-2*Math.PI*nu*3*s;re+=l*D*g*Math.cos(a);im+=l*D*g*Math.sin(a);}return Math.hypot(re,im);});
+    const mh=Math.max(...H),mp=Math.max(...P);let err=0;H.forEach((h,i)=>err=Math.max(err,Math.abs(h/mh-P[i]/mp)));
+    /* following: F null must give the same sound as no F key at all (old saved patches) */
+    const A=JSON.parse(JSON.stringify(S));A.rings=[1,2,3,4].map(n=>({on:true,steps:n,hits:n,rot:0,level:1,F:null,sigma:null}));
+    const B=JSON.parse(JSON.stringify(A));B.rings.forEach(r=>{delete r.F;delete r.sigma;});
+    const a=run(A),b=run(B);let diff=0;for(let i=0;i<N;i++)diff=Math.max(diff,Math.abs(a[i]-b[i]));
+    /* and the page's own heard-spectrum maths agrees with the same formula */
+    const old=sanitizeState({rings:[{on:true,steps:3,hits:2,F:99999,sigma:'x'}]});
+    return{err,diff,clampF:old.rings[0].F,badSigma:old.rings[0].sigma};});
+  check('per-ring clicks: engine harmonics match pattern x own click spectrum',pr.err<0.01,'max error '+pr.err.toFixed(4));
+  check('rings without their own click sound exactly as before',pr.diff===0,pr.diff);
+  check('saved per-ring clicks are range-checked',pr.clampF===4000&&pr.badSigma===null,pr.clampF+' / '+pr.badSigma);
+  await inst.click('#vowels button[aria-label="Vowel a"]');await inst.waitForTimeout(200);
+  const vw=await inst.evaluate(()=>({F:state.rings.map(r=>r.F),on:state.rings.map(r=>r.on),speed:state.base.speed,shown:!document.querySelector('#ring0 .ownctl').hidden}));
+  check('vowel a sets three formant rings and a sung pitch',vw.F[0]===730&&vw.F[1]===1090&&vw.F[2]===2440&&!vw.on[3]&&vw.speed>=40&&vw.shown,JSON.stringify(vw));
+  await inst.click('#vHeard');await inst.waitForTimeout(300);
+  check('heard spectrum explains the per-ring clicks',/own click spectrum/.test(await inst.textContent('#specHint')));
+  await inst.click('#vRhythm');
+  await inst.click('#r0own');await inst.waitForTimeout(150);
+  check('turning Own click off makes the ring follow the main click again',(await inst.evaluate(()=>state.rings[0].F===null&&document.querySelector('#ring0 .ownctl').hidden)));
+  await inst.click('#reset');await inst.click('#reset');await inst.waitForTimeout(200);
+
   /* 2. sound starts on the AudioWorklet */
   await inst.click('#start');await inst.waitForTimeout(800);
   const note=await inst.textContent('#engineNote');
