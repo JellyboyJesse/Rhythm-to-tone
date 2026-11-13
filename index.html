@@ -102,7 +102,9 @@ canvas{display:block;width:100%}
 .dotbox p{margin:0}
 #dotEd{display:grid;gap:8px}
 .dottl{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase}
-.dotctls{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 18px}
+.dotctls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 18px}
+.dotbox .lfo{background:var(--bg);grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.dotbox .lfo .shapes{grid-column:1/-1;width:max-content;max-width:100%}
 .dotbox input[type=range]{--sl:var(--c,var(--accent))}
 #spec{height:220px}
 #circ{height:230px}
@@ -246,8 +248,8 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
             <div class="row spread"><span class="dottl" id="dotTitle"></span>
               <div class="row"><button type="button" id="dotPrev" aria-label="Previous dot">‹</button><button type="button" id="dotNext" aria-label="Next dot">›</button><button type="button" id="dotReset">Reset dot</button><button type="button" id="dotClose">Done</button></div></div>
             <div class="dotctls">
-              <div class="ctl"><div class="top"><label for="dP">Pitch</label><output id="dPv"></output></div><input type="range" id="dP" min="-24" max="24" step="1"></div>
-              <div class="ctl"><div class="top"><label for="dL">Length</label><output id="dLv"></output></div><input type="range" id="dL" min="-200" max="200" step="1"></div>
+              <div class="ctl"><div class="top"><label for="dP">Pitch</label><output id="dPv"></output><button type="button" class="lfob" id="dlb-p" aria-expanded="false" aria-label="LFO for this dot's pitch">LFO</button></div><input type="range" id="dP" min="-24" max="24" step="1"></div>
+              <div class="ctl"><div class="top"><label for="dL">Length</label><output id="dLv"></output><button type="button" class="lfob" id="dlb-l" aria-expanded="false" aria-label="LFO for this dot's length">LFO</button></div><input type="range" id="dL" min="-200" max="200" step="1"></div>
               <div class="ctl"><div class="top"><label for="dA">Level</label><output id="dAv"></output></div><input type="range" id="dA" min="0" max="100" step="1"></div>
             </div>
           </div>
@@ -386,14 +388,14 @@ function lockVal(key,u){
 }
 function newEff(){
   const rings=[];
-  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,dp:null,dl:null,da:null,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level']});
+  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,dp:null,dl:null,da:null,pld:null,plr:null,pls:null,lld:null,llr:null,lls:null,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level']});
   return{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6,gate:true,glide:false,rings};
 }
 /* base values -> sequencer locks -> LFOs. Fills E in place (no allocation, safe for the audio thread) */
 function effParams(S,t,step,E){
   const B=S.base,L=S.lfo||{},q=S.seq;
   let sp=B.speed,F=B.F,sg=B.sigma,det=B.det,vib=B.vib,vol=B.vol;
-  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;o.dp=r.dp||null;o.dl=r.dl||null;o.da=r.da||null;}
+  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;o.dp=r.dp||null;o.dl=r.dl||null;o.da=r.da||null;o.pld=r.pld||null;o.plr=r.plr||null;o.pls=r.pls||null;o.lld=r.lld||null;o.llr=r.llr||null;o.lls=r.lls||null;}
   E.gate=true;E.glide=false;
   if(step>=0&&q){
     E.gate=q.gate[step]!==false;E.glide=!!q.glide[step];
@@ -434,6 +436,13 @@ function ringDots(r){if(!r.on||r.hits<=0)return[];const n=r.steps,p=euclidPatter
   for(let s=0;s<n;s++){const u=(((s-r.rot)%n)+n)%n;if(idx[u]>=0)out.push(idx[u]);}return out;}
 function dotF(F,st){return st?clamp(F*Math.pow(2,st/12),30,12000):F;}
 function dotS(sg,o){return o?clamp(sg*Math.pow(2,o),0.05,40):sg;}
+/* A dot's pitch (semitones) and length (octaves) at time t: its own offset plus its own LFO (pld/plr/pls for pitch, lld/llr/lls for length).
+   Each dot's LFO starts at its own phase. L is a scratch object, so nothing is allocated. Engine and page both use these. */
+function dotSeed(ri,d){return frac((ri*32+d+1)*0.6180339887);}
+function dotPitch(er,ri,d,t,L){let v=er.dp?er.dp[d]||0:0;const dep=er.pld?er.pld[d]||0:0;
+  if(dep>0){L.shape=er.pls?er.pls[d]:'sine';L.rate=er.plr?er.plr[d]||0.5:0.5;L.seed=dotSeed(ri,d);v+=dep*lfoVal(L,t);}return v;}
+function dotLen(er,ri,d,t,L){let v=er.dl?er.dl[d]||0:0;const dep=er.lld?er.lld[d]||0:0;
+  if(dep>0){L.shape=er.lls?er.lls[d]:'sine';L.rate=er.llr?er.llr[d]||0.5:0.5;L.seed=dotSeed(ri,d+16);v+=dep*lfoVal(L,t);}return v;}
 /* which sequencer step is playing: by tempo (with swing) or by counting loops */
 function seqStep(q,el,loops){
   const n=clamp(q.steps|0,1,16);
@@ -449,7 +458,7 @@ class Engine{
   constructor(sr){
     this.sr=sr;this.S=null;this.E=newEff();this.ready=false;
     this.lf=Math.log(0.5);this.lt=this.lf;this.kFast=1-Math.exp(-1/(0.03*sr));this.kS=this.kFast;
-    this.vibPh=0;this.spread=[0,1,-1,0.5];
+    this.vibPh=0;this.spread=[0,1,-1,0.5];this.L={shape:'sine',rate:1,seed:0};
     this.rings=[];for(let i=0;i<4;i++)this.rings.push({key:-1,pos:[],dot:[],ph:0,base:0,next:0,off:0,amp:0});
     const M=this.MAX=768;this.gN=0;
     this.gG=new Float64Array(M);this.gQ=new Float64Array(M);this.gQQ=new Float64Array(M);
@@ -486,13 +495,13 @@ class Engine{
       }
     }
   }
-  spawn(age,amp,er,d){
+  spawn(age,amp,er,d,ri){
     let sg=this.E.sigma,F=this.E.F;
     if(er){   /* this dot's own level, pitch and length */
       if(er.da){const x=er.da[d];if(x!==undefined)amp*=x;}
       if(!(amp>0))return;
-      if(er.dp)F=dotF(F,er.dp[d]||0);
-      if(er.dl)sg=dotS(sg,er.dl[d]||0);
+      F=dotF(F,dotPitch(er,ri,d,this.t,this.L));
+      sg=dotS(sg,dotLen(er,ri,d,this.t,this.L));
     }
     if(this.gN>=this.MAX){this.dropped++;return;}
     const s=sg/1000,sr=this.sr,D=1/sr,a=1/(s*s);
@@ -521,7 +530,7 @@ class Engine{
         if(!P.length){if(r.ph>=1)r.ph-=1;continue;}
         let tg=r.base+P[r.next];
         while(tg<=r.ph){
-          if(E.gate&&r.amp>0)this.spawn((r.ph-tg)/inc,r.amp,E.rings[ri],r.dot[r.next]);
+          if(E.gate&&r.amp>0)this.spawn((r.ph-tg)/inc,r.amp,E.rings[ri],r.dot[r.next],ri);
           r.next++;if(r.next>=P.length){r.next=0;r.base+=1;}
           tg=r.base+P[r.next];
         }
@@ -546,7 +555,7 @@ class Engine{
 }
 function applyMsg(e,d){if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();}
 
-const WORKLET_SRC=[frac,clamp,rnd,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,seqStep,applyMsg].map(f=>f.toString()).join('\n')
+const WORKLET_SRC=[frac,clamp,rnd,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotSeed,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
  +'\n'+Engine.toString()+`
 class RTProcessor extends AudioWorkletProcessor{
   constructor(){super();this.e=new Engine(sampleRate);this.c=0;this.port.onmessage=m=>applyMsg(this.e,m.data);}
@@ -586,7 +595,8 @@ function noteName(f,short){const m=69+12*Math.log2(f/440),r=Math.round(m),c=Math
 const fmtHz=f=>f>=1000?(f/1000).toFixed(2)+' kHz':f>=100?f.toFixed(0)+' Hz':f.toFixed(1)+' Hz';
 const snapSemi=f=>440*Math.pow(2,Math.round(12*Math.log2(f/440))/12);
 
-function defaultRings(){return[1,2,3,4].map(n=>({on:true,steps:n,hits:n,rot:0,level:1,dp:Array(16).fill(0),dl:Array(16).fill(0),da:Array(16).fill(1)}));}
+function defaultRings(){return[1,2,3,4].map(n=>({on:true,steps:n,hits:n,rot:0,level:1,dp:Array(16).fill(0),dl:Array(16).fill(0),da:Array(16).fill(1),
+  pld:Array(16).fill(0),plr:Array(16).fill(0.5),pls:Array(16).fill('sine'),lld:Array(16).fill(0),llr:Array(16).fill(0.5),lls:Array(16).fill('sine')}));}
 const blank=()=>Array(16).fill(null);
 function defaultSeq(){return{playing:false,steps:8,bpm:96,div:2,swing:0,clock:'tempo',loopsPerStep:1,glideTime:0.12,
   gate:Array(16).fill(true),glide:Array(16).fill(false),
@@ -609,8 +619,10 @@ function sanitizeState(o){
   d.base={speed:num(B.speed,SMIN,SMAX,0.5),F:num(B.F,60,4000,700),sigma:num(B.sigma,0.2,8,1.2),det:num(B.det,0,30,0),vib:num(B.vib,0,60,0),vol:num(B.vol,0,1,0.6)};
   if(Array.isArray(o.rings))d.rings=d.rings.map((r,i)=>{const x=o.rings[i]||{};const steps=Math.round(num(x.steps,1,16,r.steps));
     const arr=(a,lo,hi,d)=>Array.from({length:16},(_,k)=>num(Array.isArray(a)?a[k]:undefined,lo,hi,d));
+    const shp=a=>Array.from({length:16},(_,k)=>Array.isArray(a)&&SHAPE_IDS.includes(a[k])?a[k]:'sine');
     return{on:typeof x.on==='boolean'?x.on:r.on,steps,hits:Math.round(num(x.hits,0,steps,Math.min(r.hits,steps))),rot:Math.round(num(x.rot,0,steps-1,0)),level:num(x.level,0,1,1),
-      dp:arr(x.dp,-24,24,0),dl:arr(x.dl,-2,2,0),da:arr(x.da,0,1,1)};});
+      dp:arr(x.dp,-24,24,0),dl:arr(x.dl,-2,2,0),da:arr(x.da,0,1,1),
+      pld:arr(x.pld,0,24,0),plr:arr(x.plr,0.02,20,0.5),pls:shp(x.pls),lld:arr(x.lld,0,2,0),llr:arr(x.llr,0.02,20,0.5),lls:shp(x.lls)};});
   if(o.lfo&&typeof o.lfo==='object')for(const k in o.lfo){if(!LFOSPEC[k])continue;const l=o.lfo[k]||{};
     d.lfo[k]={shape:SHAPE_IDS.includes(l.shape)?l.shape:'sine',rate:num(l.rate,0.02,20,0.2),depth:num(l.depth,0,LFOSPEC[k].max,0),seed:hashKey(k)};}
   d.seq=sanitizeSeq(o.seq);d.seq.playing=false;
@@ -623,10 +635,11 @@ let saveT=0;function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,400
 
 /* The loop as a list of dots, and its spectrum. Each click is exp(-t²/2σ²)·sin(2πFt), centred 3σ after its hit, so its spectrum is
    σ·[exp(-2π²σ²(ν-F)²) − exp(-2π²σ²(ν+F)²)] with a delay phase. Summing that over the dots gives exactly what the engine plays. */
-function dotList(E){const out=[];
+function dotList(E,t){const out=[],L={shape:'sine',rate:1,seed:0};t=t||0;out.mod=false;
   for(let i=0;i<4;i++){const r=E.rings[i];if(!r.on||r.hits<=0||!(r.level>0))continue;const pos=ringPos(r),ids=ringDots(r);
     for(let j=0;j<pos.length;j++){const d=ids[j],a=r.level*(r.da&&r.da[d]!==undefined?r.da[d]:1);if(!(a>0))continue;
-      out.push({ri:i,d,p:pos[j]+r.off,a,F:dotF(E.F,r.dp?r.dp[d]||0:0),s:dotS(E.sigma,r.dl?r.dl[d]||0:0)/1000});}}
+      if((r.pld&&r.pld[d]>0)||(r.lld&&r.lld[d]>0))out.mod=true;
+      out.push({ri:i,d,p:pos[j]+r.off,a,F:dotF(E.F,dotPitch(r,i,d,t,L)),s:dotS(E.sigma,dotLen(r,i,d,t,L))/1000});}}
   return out;}
 function heardMag(D,n,nu){let re=0,im=0;
   for(const o of D){const k=2*Math.PI*Math.PI*o.s*o.s,d1=k*(nu-o.F)*(nu-o.F);if(d1>16)continue;
@@ -915,7 +928,8 @@ function initInstrument(){
     p.querySelector('[data-x]').onclick=()=>{ensureLfo(key).depth=0;p.hidden=true;syncLfoUI(key);changed();};
   }
   function ensureLfo(key){if(!state.lfo[key])state.lfo[key]={shape:'sine',rate:0.2,depth:0,seed:hashKey(key)};return state.lfo[key];}
-  function syncLfoCount(){const n=activeLfos().length;setText('#lfoCount',n?`${n} active`:'none active');}
+  function dotLfoCount(){let n=0;for(const r of state.rings)for(let d=0;d<16;d++){if(r.pld[d]>0)n++;if(r.lld[d]>0)n++;}return n;}
+  function syncLfoCount(){const n=activeLfos().length+dotLfoCount();setText('#lfoCount',n?`${n} active`:'none active');}
   function syncLfoUI(key){const L=state.lfo[key],p=$('#lfo-'+key);
     $$(`.lfob[data-key="${key}"]`).forEach(b=>{b.dataset.active=!!(L&&L.depth>0);b.setAttribute('aria-expanded',p&&!p.hidden?'true':'false');});
     syncLfoCount();
@@ -946,10 +960,34 @@ function initInstrument(){
 
   /* --- one dot: pitch, length and level, chosen by clicking it on the wheel --- */
   const wheelHits=[];let sel=null;
-  function syncDotUI(){$('#dotNone').hidden=!!sel;$('#dotEd').hidden=!sel;const box=$('#dotBox');
-    if(!sel){box.style.removeProperty('--c');return;}
+  const DL={p:{dep:'pld',rate:'plr',shape:'pls',max:24,step:0.5,def:2,name:'Dot pitch',fmt:v=>'±'+v.toFixed(1)+' st'},
+    l:{dep:'lld',rate:'llr',shape:'lls',max:2,step:0.05,def:0.5,name:'Dot length',fmt:v=>'±'+v.toFixed(2)+' oct'}},dotL={shape:'sine',rate:1,seed:0};
+  function syncDotUI(keep){$('#dotNone').hidden=!!sel;$('#dotEd').hidden=!sel;const box=$('#dotBox');
+    if(!sel){box.style.removeProperty('--c');syncLfoCount();return;}
     const r=state.rings[sel.ri];box.style.setProperty('--c',`var(${RC[sel.ri]})`);
-    $('#dP').value=r.dp[sel.d];$('#dL').value=Math.round(r.dl[sel.d]*100);$('#dA').value=Math.round(r.da[sel.d]*100);}
+    $('#dP').value=r.dp[sel.d];$('#dL').value=Math.round(r.dl[sel.d]*100);$('#dA').value=Math.round(r.da[sel.d]*100);
+    for(const w in DL){const c=DL[w],p=$('#dlfo-'+w),b=$('#dlb-'+w),dep=r[c.dep][sel.d],on=dep>0;
+      if(!keep)p.hidden=!on;
+      b.dataset.active=on;b.setAttribute('aria-expanded',p.hidden?'false':'true');
+      p.querySelectorAll('[data-shape]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.shape===r[c.shape][sel.d]?'true':'false'));
+      $('#dr-'+w).value=rateInv(r[c.rate][sel.d]);setText('#dr-'+w+'v',fmtRate(r[c.rate][sel.d]));
+      $('#dd-'+w).value=dep;setText('#dd-'+w+'v',c.fmt(dep));}
+    syncLfoCount();}
+  function makeDotLfo(w){const c=DL[w],p=document.createElement('div');p.className='lfo';p.id='dlfo-'+w;p.hidden=true;
+    p.innerHTML=`<div class="ttl"><span>LFO · ${c.name}</span><button type="button" data-x>Remove LFO</button></div>
+      <div class="shapes" role="group" aria-label="LFO shape">${SHAPES.map(([sh,n])=>`<button type="button" data-shape="${sh}" aria-pressed="false">${n}</button>`).join('')}</div>
+      <div class="ctl"><div class="top"><label for="dr-${w}">Rate</label><output id="dr-${w}v"></output></div><input type="range" id="dr-${w}" min="0" max="1000"></div>
+      <div class="ctl"><div class="top"><label for="dd-${w}">Depth</label><output id="dd-${w}v"></output></div><input type="range" id="dd-${w}" min="0" max="${c.max}" step="${c.step}"></div>`;
+    $('.dotctls').appendChild(p);
+    const R=()=>state.rings[sel.ri];
+    p.querySelectorAll('[data-shape]').forEach(b=>b.onclick=()=>{if(!sel)return;R()[c.shape][sel.d]=b.dataset.shape;syncDotUI(true);changed();});
+    $('#dr-'+w).oninput=e=>{if(!sel)return;R()[c.rate][sel.d]=rateMap(+e.target.value);syncDotUI(true);changed();};
+    $('#dd-'+w).oninput=e=>{if(!sel)return;R()[c.dep][sel.d]=+e.target.value;syncDotUI(true);changed();};
+    p.querySelector('[data-x]').onclick=()=>{if(!sel)return;R()[c.dep][sel.d]=0;p.hidden=true;syncDotUI(true);changed();};
+    $('#dlb-'+w).onclick=()=>{if(!sel)return;
+      if(p.hidden){if(!(R()[c.dep][sel.d]>0)){R()[c.dep][sel.d]=c.def;changed();}p.hidden=false;}else p.hidden=true;
+      syncDotUI(true);};}
+  makeDotLfo('p');makeDotLfo('l');
   function selectDot(x){sel=x;syncDotUI();}
   $('#wheel').addEventListener('pointerdown',e=>{const b=$('#wheel').getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top;
     let best=null,bd=24*24;for(const h of wheelHits){const q=(h.x-x)*(h.x-x)+(h.y-y)*(h.y-y);if(q<bd){bd=q;best=h;}}
@@ -957,7 +995,7 @@ function initInstrument(){
   $('#dP').oninput=e=>{if(sel){state.rings[sel.ri].dp[sel.d]=+e.target.value;changed();}};
   $('#dL').oninput=e=>{if(sel){state.rings[sel.ri].dl[sel.d]=+e.target.value/100;changed();}};
   $('#dA').oninput=e=>{if(sel){state.rings[sel.ri].da[sel.d]=+e.target.value/100;changed();}};
-  $('#dotReset').onclick=()=>{if(!sel)return;const r=state.rings[sel.ri];r.dp[sel.d]=0;r.dl[sel.d]=0;r.da[sel.d]=1;syncDotUI();changed();};
+  $('#dotReset').onclick=()=>{if(!sel)return;const r=state.rings[sel.ri];r.dp[sel.d]=0;r.dl[sel.d]=0;r.da[sel.d]=1;r.pld[sel.d]=0;r.lld[sel.d]=0;syncDotUI();changed();};
   $('#dotClose').onclick=()=>selectDot(null);
   const stepDot=s=>{if(!sel)return;const n=Math.max(1,state.rings[sel.ri].hits);selectDot({ri:sel.ri,d:((sel.d+s)%n+n)%n});};
   $('#dotPrev').onclick=()=>stepDot(-1);$('#dotNext').onclick=()=>stepDot(1);
@@ -992,7 +1030,7 @@ function initInstrument(){
   $('#notes').onchange=e=>{uiPrefs.notes=e.target.checked;savePrefs();};
   $('#theme').onclick=()=>{uiPrefs.theme={auto:'light',light:'dark',dark:'auto'}[uiPrefs.theme];savePrefs();syncPrefsUI();};
   syncPrefsUI();
-  $('#clearLfo').onclick=()=>{Object.values(state.lfo).forEach(l=>l.depth=0);Object.keys(LFOSPEC).forEach(syncLfoUI);changed();};
+  $('#clearLfo').onclick=()=>{Object.values(state.lfo).forEach(l=>l.depth=0);state.rings.forEach(r=>{r.pld.fill(0);r.lld.fill(0);});syncDotUI();Object.keys(LFOSPEC).forEach(syncLfoUI);changed();};
   $('#scatter').onclick=()=>{const keys=Object.keys(LFOSPEC).filter(k=>k!=='vol'&&!(k[0]==='r'&&!state.rings[+k[1]].on));
     for(let n=0;n<4&&keys.length;n++){const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0],L=ensureLfo(k),sp=LFOSPEC[k];
       L.shape=SHAPES[Math.floor(Math.random()*SHAPES.length)][0];L.rate=rateMap(150+Math.random()*600);
@@ -1105,7 +1143,7 @@ function initInstrument(){
   }
 
   /* --- Fourier coefficients of the current loop --- */
-  function coefs(E){const D=dotList(E);let c0=0;for(const o of D)c0+=o.a;
+  function coefs(E){const D=dotList(E,vis.t);let c0=0;for(const o of D)c0+=o.a;
     return{D,c0,at(n){let re=0,im=0;for(const o of D){const a=2*Math.PI*n*o.p;re+=o.a*Math.cos(a);im-=o.a*Math.sin(a);}return[re,im];}};}
   function hitsPerLoop(E){const act=E.rings.filter(r=>r.on&&r.hits>0);
     if(Math.abs(E.det)>0.05||act.some(r=>r.off))return act.reduce((a,r)=>a+r.hits,0);
@@ -1136,7 +1174,7 @@ function initInstrument(){
         g.beginPath();g.arc(x,y,rr,0,Math.PI*2);
         if(hit){wheelHits.push({x,y,ri:o.i,d});
           if(dlv>0){g.fillStyle=col;g.fill();}else{g.fillStyle=T['--bg'];g.fill();g.strokeStyle=col;g.lineWidth=1.3;g.stroke();}
-          if((o.r.dp&&o.r.dp[d])||(o.r.dl&&o.r.dl[d])){g.strokeStyle=T['--ink'];g.globalAlpha=0.55;g.lineWidth=1;g.beginPath();g.arc(x,y,rr+2.5,0,Math.PI*2);g.stroke();g.globalAlpha=1;}   /* dot has its own pitch or length */
+          if((o.r.dp&&o.r.dp[d])||(o.r.dl&&o.r.dl[d])||(o.r.pld&&o.r.pld[d]>0)||(o.r.lld&&o.r.lld[d]>0)){g.strokeStyle=T['--ink'];g.globalAlpha=0.55;g.lineWidth=1;g.beginPath();g.arc(x,y,rr+2.5,0,Math.PI*2);g.stroke();g.globalAlpha=1;}   /* dot has its own pitch or length */
           if(sel&&sel.ri===o.i&&sel.d===d){g.strokeStyle=T['--accent'];g.lineWidth=1.6;g.beginPath();g.arc(x,y,rr+6,0,Math.PI*2);g.stroke();}
           if(blur<0.5&&!ui.calm&&frac(ph-pos)<0.04){g.strokeStyle=col;g.lineWidth=2;g.beginPath();g.arc(x,y,dot*1.9,0,Math.PI*2);g.stroke();}}
         else{g.fillStyle=T['--bg'];g.fill();g.strokeStyle=T['--muted'];g.lineWidth=1;g.stroke();}});
@@ -1187,7 +1225,7 @@ function initInstrument(){
       if(E.vib>0)hint+=' Vibrato smears each harmonic slightly.';
     }
     g.globalAlpha=1;
-    if(activeLfos().length||curStep()>=0)hint+=' The LFOs or sequencer are moving the loop, so this is a snapshot of it at this instant.';
+    if(activeLfos().length||curStep()>=0||C.D.mod)hint+=' The LFOs or sequencer are moving the loop, so this is a snapshot of it at this instant.';
     setText('#specHint',hint);
     if(detuned){g.fillStyle=T['--warn'];g.font=font(12,500);g.textAlign='center';
       g.fillText('Rings are detuned: the loop never repeats exactly,',pl+W/2,pt+H/2-8);g.fillText('so it has no exact harmonic spectrum.',pl+W/2,pt+H/2+8);}
@@ -1233,10 +1271,10 @@ function initInstrument(){
       setText(`#r${i}pat`,euclidPattern(r.steps,r.hits,r.rot).map(x=>x?'x':'·').join(''));});
     if(sel){const sr=state.rings[sel.ri];
       if(!sr.on||sel.d>=sr.hits)selectDot(null);
-      else{const st=sr.dp[sel.d],ol=sr.dl[sel.d];
+      else{const er=E.rings[sel.ri],pm=sr.pld[sel.d]>0,lm=sr.lld[sel.d]>0,st=dotPitch(er,sel.ri,sel.d,vis.t,dotL),ol=dotLen(er,sel.ri,sel.d,vis.t,dotL);
         setText('#dotTitle',`Ring ${sel.ri+1} · dot ${sel.d+1} of ${sr.hits}`);
-        setText('#dPv',(st>0?'+':st<0?'−':'')+Math.abs(st)+' st · '+fmtHz(dotF(E.F,st)));
-        setText('#dLv','×'+Math.pow(2,ol).toFixed(2)+' · '+dotS(E.sigma,ol).toFixed(2)+' ms');
+        setText('#dPv',(st>0?'+':st<0?'−':'')+Math.abs(st).toFixed(pm?1:0)+' st · '+fmtHz(dotF(E.F,st)));$('#dPv').classList.toggle('mod',pm);
+        setText('#dLv','×'+Math.pow(2,ol).toFixed(2)+' · '+dotS(E.sigma,ol).toFixed(2)+' ms');$('#dLv').classList.toggle('mod',lm);
         setText('#dAv',Math.round(sr.da[sel.d]*100)+'%');}}
     const z=zoneOf(E),hpl=hitsPerLoop(E),f=E.speed;
     for(const id of ['#zone','#tbZone']){setText(id,z);$(id).dataset.z=z;}

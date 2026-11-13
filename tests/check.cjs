@@ -51,18 +51,20 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     /* per-dot pitch, length and level (with a rotated ring): the engine against the page's own spectrum formula */
     const z16=a=>Array.from({length:16},(_,i)=>a[i]===undefined?0:a[i]),o16=a=>Array.from({length:16},(_,i)=>a[i]===undefined?1:a[i]);
     const e5=new Engine(sr),S5=JSON.parse(JSON.stringify(S));
-    S5.rings=[{on:true,steps:4,hits:4,rot:1,level:1,dp:z16([0,7,12,-5]),dl:z16([0,0.5,-0.5,0.25]),da:o16([1,0.5,0.8,0.3])},
+    S5.rings=[{on:true,steps:4,hits:4,rot:1,level:1,dp:z16([0,7,12,-5]),dl:z16([0,0.5,-0.5,0.25]),da:o16([1,0.5,0.8,0.3]),
+        pld:z16([0,5]),plr:Array(16).fill(0.02),pls:Array(16).fill('square'),lld:z16([0,0,0.5]),llr:Array(16).fill(0.02),lls:Array(16).fill('square')},   /* square LFOs slow enough to hold one value for the whole test */
       {on:true,steps:5,hits:3,rot:2,level:0.7,dp:z16([3,-2,9]),dl:z16([-0.3,0,0.4]),da:o16([0.9,0,1])},
       {on:false,steps:1,hits:0,rot:0,level:1},{on:false,steps:1,hits:0,rot:0,level:1}];
     applyMsg(e5,{S:S5,jump:true});const out5=new Float32Array(N);for(let i=0;i<N;i+=128)e5.render(out5.subarray(i,i+128),128,i/sr);
-    const D5=dotList(effParams(S5,0,-1,newEff())),H5=[],P5=[];
+    const D5=dotList(effParams(S5,0,-1,newEff()),0.5),H5=[],P5=[];
     for(let n=1;n<=24;n++){let re=0,im=0;for(let i=sr/2;i<N;i++){const a=2*Math.PI*n*100*i/sr;re+=out5[i]*Math.cos(a);im+=out5[i]*Math.sin(a);}H5.push(Math.hypot(re,im));P5.push(heardMag(D5,n,n*100));}
+    const lfoMoved=dotList(effParams(S5,0,-1,newEff()),0.5).some(o=>o.ri===0&&o.d===1&&Math.abs(o.F/700-Math.pow(2,12/12))<1e-6)&&D5.mod;
     const mh5=Math.max(...H5),mp5=Math.max(...P5);let dotErr=0;H5.forEach((h,i)=>dotErr=Math.max(dotErr,Math.abs(h/mh5-P5[i]/mp5)));
-    return{err,leak,stepOk,pitchErr,rest,stress,dotErr,dots:D5.length,worklet:WORKLET_SRC.length};
+    return{err,leak,stepOk,pitchErr,rest,stress,dotErr,lfoMoved,dots:D5.length,worklet:WORKLET_SRC.length};
   });
   check('engine harmonics match divisor sums x click spectrum',m.err<0.01,'max error '+m.err.toFixed(4));
   check('no energy between harmonics',m.leak<1e-6,m.leak.toExponential(1));
-  check('per-dot pitch, length and level match the spectrum formula',m.dotErr<0.01&&m.dots===6,'max error '+m.dotErr.toFixed(4)+', '+m.dots+' sounding dots');
+  check('per-dot pitch, length, level and dot LFOs match the spectrum formula',m.dotErr<0.01&&m.dots===6&&m.lfoMoved,'max error '+m.dotErr.toFixed(4)+', '+m.dots+' sounding dots, LFO applied: '+m.lfoMoved);
   check('sequencer steps in order inside the engine',m.stepOk);
   check('sequencer pitches land on the notes',m.pitchErr<0.01,(m.pitchErr*100).toFixed(2)+'%');
   check('rest steps are silent',m.rest===0,m.rest);
@@ -114,9 +116,11 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     await inst.$eval('#dP',el=>{el.value=7;el.dispatchEvent(new Event('input'));});
     await inst.$eval('#dA',el=>{el.value=40;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(200);
     check('dot pitch and level are stored',await inst.evaluate(()=>state.rings[0].dp[0]===7&&state.rings[0].da[0]===0.4));
+    await inst.click('#dlb-p');await inst.waitForTimeout(200);
+    check('a dot LFO can be added',await inst.evaluate(()=>state.rings[0].pld[0]===2&&!document.querySelector('#dlfo-p').hidden)&&/1 active/.test(await inst.textContent('#lfoCount')));
     await inst.screenshot({path:path.join(OUT,'instrument-dot.png')});
     await inst.click('#dotReset');await inst.keyboard.press('Escape');await inst.waitForTimeout(150);
-    check('Reset dot and Esc clear the editor',await inst.evaluate(()=>state.rings[0].dp[0]===0&&state.rings[0].da[0]===1&&document.querySelector('#dotEd').hidden));}
+    check('Reset dot and Esc clear the editor',await inst.evaluate(()=>state.rings[0].dp[0]===0&&state.rings[0].da[0]===1&&state.rings[0].pld[0]===0&&document.querySelector('#dotEd').hidden));}
 
   /* 5. fallback engine when AudioWorklet is missing */
   const fb=await ctx.newPage();watch(fb,'fallback');
