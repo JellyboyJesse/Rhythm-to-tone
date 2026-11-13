@@ -60,18 +60,21 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     for(let n=1;n<=24;n++){let re=0,im=0;for(let i=sr/2;i<N;i++){const a=2*Math.PI*n*100*i/sr;re+=out5[i]*Math.cos(a);im+=out5[i]*Math.sin(a);}H5.push(Math.hypot(re,im));P5.push(heardMag(D5,n,n*100));}
     const lfoMoved=dotList(effParams(S5,0,-1,newEff()),0.5).some(o=>o.ri===0&&o.d===1&&Math.abs(o.F/700-Math.pow(2,12/12))<1e-6)&&D5.mod;
     const mh5=Math.max(...H5),mp5=Math.max(...P5);let dotErr=0;H5.forEach((h,i)=>dotErr=Math.max(dotErr,Math.abs(h/mh5-P5[i]/mp5)));
-    /* wheels inside dots: ring 1's dots hold ring 2's and ring 3's patterns (ring 3 is switched off and only used as an inner wheel); inner turns overlap the next dot */
+    /* wheels inside dots, three levels deep, with inner turns that overlap the next dot: the engine against the page's spectrum formula */
+    const R=o=>Object.assign({on:true,steps:1,hits:1,rot:0,level:1},o),OFF={on:false,steps:1,hits:0,rot:0,level:1};
     const e6=new Engine(sr),S6=JSON.parse(JSON.stringify(S));
-    S6.rings=[{on:true,steps:4,hits:3,rot:1,level:1,dp:z16([0,5,-7]),dl:z16([0,0.3]),da:o16([1,0.7,0.9]),dw:z16([2,3,0]),dt:Array(16).fill(0.25).map((v,i)=>[0.4,0.07,0.25][i]||v)},
-      {on:true,steps:5,hits:3,rot:1,level:0.6,dp:z16([0,4,7]),dl:z16([0,-0.4]),da:o16([1,0.6,0.8])},
-      {on:false,steps:7,hits:4,rot:2,level:1,dp:z16([12,0,-3,2]),da:o16([1,0,0.5,0.9])},{on:false,steps:1,hits:0,rot:0,level:1}];
+    const deep={rings:[R({steps:3,hits:2,dp:z16([0,-5]),da:o16([1,0.6])}),OFF,OFF,OFF]};
+    const wA={rings:[R({steps:5,hits:3,rot:1,level:0.8,dp:z16([0,4,7]),dl:z16([0,-0.4]),da:o16([1,0.6,0.8]),dk:['click','wheel'],dt:[0.25,0.5],kids:[null,deep]}),R({steps:2,hits:1,level:0.5,dp:z16([12])}),OFF,OFF]};
+    const wB={rings:[R({steps:7,hits:4,rot:2,dp:z16([12,0,-3,2]),da:o16([1,0,0.5,0.9])}),OFF,OFF,OFF]};
+    S6.rings=[R({steps:4,hits:3,rot:1,dp:z16([0,5,-7]),dl:z16([0,0.3]),da:o16([1,0.7,0.9]),dk:['wheel','wheel','click'],dt:[0.4,0.07,0.25],kids:[wA,wB,null]}),
+      R({steps:5,hits:3,rot:1,level:0.6,dp:z16([0,4,7]),dl:z16([0,-0.4]),da:o16([1,0.6,0.8])}),OFF,OFF];
     applyMsg(e6,{S:S6,jump:true});const out6=new Float32Array(N);for(let i=0;i<N;i+=128)e6.render(out6.subarray(i,i+128),128,i/sr);
     const D6=dotList(effParams(S6,0,-1,newEff()),0.5),H6=[],P6=[];
     for(let n=1;n<=24;n++){let re=0,im=0;for(let i=sr/2;i<N;i++){const a=2*Math.PI*n*100*i/sr;re+=out6[i]*Math.cos(a);im+=out6[i]*Math.sin(a);}H6.push(Math.hypot(re,im));P6.push(heardMag(D6,n,n*100));}
     const mh6=Math.max(...H6),mp6=Math.max(...P6);let nestErr=0;H6.forEach((h,i)=>nestErr=Math.max(nestErr,Math.abs(h/mh6-P6[i]/mp6)));
     /* a slow outer wheel: each inner click lands at its exact time (one dot at 2 loops/s holding a 4-hit wheel over half a loop -> clicks every 62.5 ms, from the first crossing at 0.5 s) */
     const e7=new Engine(sr),S7=JSON.parse(JSON.stringify(S));S7.base.speed=2;S7.base.sigma=0.5;
-    S7.rings=[{on:true,steps:1,hits:1,rot:0,level:1,dw:z16([2]),dt:Array(16).fill(0.5)},{on:false,steps:4,hits:4,rot:0,level:1},{on:false,steps:1,hits:0,rot:0,level:1},{on:false,steps:1,hits:0,rot:0,level:1}];
+    S7.rings=[R({dk:['wheel'],dt:[0.5],kids:[{rings:[R({steps:4,hits:4}),OFF,OFF,OFF]}]}),OFF,OFF,OFF];
     applyMsg(e7,{S:S7,jump:true});const out7=new Float32Array(N);for(let i=0;i<N;i+=128)e7.render(out7.subarray(i,i+128),128,i/sr);
     const peaks=[];for(let k=0;k<4;k++){const c=Math.round((0.5+0.0625*k+0.0015)*sr);let en=0,far=0;for(let i=c-60;i<=c+60;i++)en+=out7[i]*out7[i];for(let i=c+400;i<=c+520;i++)far+=out7[i]*out7[i];peaks.push(en>1e-3&&far<en*1e-6);}
     return{err,leak,stepOk,pitchErr,rest,stress,dotErr,lfoMoved,dots:D5.length,nestErr,nestDots:D6.length,nestTimes:peaks.every(Boolean),e6drop:e6.dropped,worklet:WORKLET_SRC.length};
@@ -79,7 +82,7 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   check('engine harmonics match divisor sums x click spectrum',m.err<0.01,'max error '+m.err.toFixed(4));
   check('no energy between harmonics',m.leak<1e-6,m.leak.toExponential(1));
   check('per-dot pitch, length, level and dot LFOs match the spectrum formula',m.dotErr<0.01&&m.dots===6&&m.lfoMoved,'max error '+m.dotErr.toFixed(4)+', '+m.dots+' sounding dots, LFO applied: '+m.lfoMoved);
-  check('wheels inside dots match the spectrum formula',m.nestErr<0.01&&m.nestDots===10&&m.e6drop===0,'max error '+m.nestErr.toFixed(4)+', '+m.nestDots+' sounding clicks');
+  check('wheels inside dots match the spectrum formula',m.nestErr<0.01&&m.nestDots===12&&m.e6drop===0,'max error '+m.nestErr.toFixed(4)+', '+m.nestDots+' sounding clicks');
   check('inner-wheel clicks land at their exact times',m.nestTimes);
   check('sequencer steps in order inside the engine',m.stepOk);
   check('sequencer pitches land on the notes',m.pitchErr<0.01,(m.pitchErr*100).toFixed(2)+'%');
@@ -135,11 +138,24 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     await inst.click('#dlb-p');await inst.waitForTimeout(200);
     check('a dot LFO can be added',await inst.evaluate(()=>state.rings[0].pld[0]===2&&!document.querySelector('#dlfo-p').hidden)&&/1 active/.test(await inst.textContent('#lfoCount')));
     await inst.screenshot({path:path.join(OUT,'instrument-dot.png')});
-    await inst.click('#dW [data-w="3"]');await inst.$eval('#dT',el=>{el.value=500;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(250);
-    check('a wheel can be put inside a dot',await inst.evaluate(()=>state.rings[0].dw[0]===3&&Math.abs(state.rings[0].dt[0]-0.5)<1e-9&&!document.querySelector('#dTc').hidden)&&/x/.test(await inst.textContent('#dWv'))&&/0\.50 loop/.test(await inst.textContent('#dTv')),await inst.textContent('#dWv')+' | '+await inst.textContent('#dTv'));
+    await inst.click('#dK [data-k="wheel"]');await inst.$eval('#dT',el=>{el.value=500;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(250);
+    check('a wheel can be put inside a dot',await inst.evaluate(()=>state.rings[0].dk[0]==='wheel'&&!!state.rings[0].kids[0]&&Math.abs(state.rings[0].dt[0]-0.5)<1e-9&&!document.querySelector('#dTc').hidden)&&/wheel/.test(await inst.textContent('#dWv'))&&/0\.50 loop/.test(await inst.textContent('#dTv')),await inst.textContent('#dWv')+' | '+await inst.textContent('#dTv'));
     await inst.screenshot({path:path.join(OUT,'instrument-wheel-in-dot.png')});
+    await inst.click('#dOpen');await inst.waitForTimeout(250);
+    check('the wheel inside a dot opens',/Top.*Ring 1 · dot 1/.test(await inst.textContent('#path'))&&(await inst.textContent('#r0stepsv'))==='4'&&await inst.evaluate(()=>document.querySelector('#pRings').dataset.inner==='true'),await inst.textContent('#path'));
+    await inst.click('#ring0 .stepper button:last-child');await inst.waitForTimeout(200);
+    check('ring controls edit the open wheel, not the top one',await inst.evaluate(()=>state.rings[0].kids[0].rings[0].steps===5&&state.rings[0].steps===1));
+    {const wb2=await (await inst.$('#wheel')).boundingBox(),R2=Math.min(wb2.width,wb2.height)/2-34,gap2=(R2-R2*0.3)/1;
+      await inst.mouse.click(wb2.x+wb2.width/2,wb2.y+wb2.height/2-(R2-gap2*0.15));await inst.waitForTimeout(200);
+      await inst.click('#dK [data-k="wheel"]');await inst.click('#dOpen');await inst.waitForTimeout(250);
+      check('wheels keep opening further down',/Ring 1 · dot 1.*Ring 1 · dot 1/.test(await inst.textContent('#path'))&&await inst.evaluate(()=>!!state.rings[0].kids[0].rings[0].kids[0]),await inst.textContent('#path'));
+      await inst.screenshot({path:path.join(OUT,'instrument-inner-wheel.png')});}
+    await inst.click('#path button');await inst.waitForTimeout(250);
+    check('the path leads back to the top wheel',await inst.evaluate(()=>document.querySelector('#path').hidden&&document.querySelector('#pRings').dataset.inner==='false')&&(await inst.textContent('#r0stepsv'))==='1');
+    {const wb3=await (await inst.$('#wheel')).boundingBox(),R3=Math.min(wb3.width,wb3.height)/2-34,gap3=(R3-R3*0.3)/4;
+      await inst.mouse.click(wb3.x+wb3.width/2,wb3.y+wb3.height/2-(R3-gap3*0.15));await inst.waitForTimeout(200);}
     await inst.click('#dotReset');await inst.keyboard.press('Escape');await inst.waitForTimeout(150);
-    check('Reset dot and Esc clear the editor',await inst.evaluate(()=>state.rings[0].dp[0]===0&&state.rings[0].da[0]===1&&state.rings[0].pld[0]===0&&state.rings[0].dw[0]===0&&document.querySelector('#dotEd').hidden));}
+    check('Reset dot and Esc clear the editor',await inst.evaluate(()=>state.rings[0].dp[0]===0&&state.rings[0].da[0]===1&&state.rings[0].pld[0]===0&&state.rings[0].dk[0]==='click'&&state.rings[0].kids[0]===null&&document.querySelector('#dotEd').hidden));}
 
   /* 5. fallback engine when AudioWorklet is missing */
   const fb=await ctx.newPage();watch(fb,'fallback');

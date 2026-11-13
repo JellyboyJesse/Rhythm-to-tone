@@ -113,7 +113,9 @@ The LFO buttons beside a dot's Pitch and Length give that dot its own LFO, with 
 
 ## Wheels inside dots
 
-In the dot editor, **Inside** chooses what the dot plays: one click, or one of the four rings' patterns as a wheel of its own. When the playhead crosses the dot, the inner wheel makes one turn and stops. **Turn** sets how long that turn lasts, as a fraction of the main loop. If the turn is longer than the gap to the next dot, the two overlap. The inner clicks use the outer dot's pitch, length and level, combined with the inner ring's own per-dot settings. A ring can be switched off and still be used as an inner wheel. On the wheel, the dot is drawn hollow, with an arc for its turn and small dots for its clicks. The Heard spectrum and the circles include every inner click.
+In the dot editor, **Inside** chooses what the dot plays: one click, or a wheel of its own. **Open wheel** (or a double-click on the dot) shows that wheel in place of the main one, with the same four rings, presets and per-dot settings. Its dots can hold wheels too, down to three levels below the top. The path above the wheel shows where you are and leads back up.
+
+When a playhead crosses a dot, the wheel inside makes one turn and stops. **Turn** sets how long that turn lasts, as a fraction of the turn of the wheel the dot sits in. If it is longer than the gap to the next dot, the two overlap. Level multiplies and pitch and length add up on the way down. On the wheel, a dot holding a wheel is drawn hollow, with an arc for its turn and small dots for the hits inside. The Heard spectrum and the circles include every click at every level.
 
 ## Using it as a Mac app
 

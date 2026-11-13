@@ -107,6 +107,11 @@ canvas{display:block;width:100%}
 .dotbox .lfo .shapes{grid-column:1/-1;width:max-content;max-width:100%}
 .dotbox input[type=range]{--sl:var(--c,var(--accent))}
 .dotin{grid-column:1/-1}
+.path{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font:500 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.path button{padding:3px 7px;font-size:10px}
+.path b{color:var(--ink);font-weight:600}
+#pRings[data-inner="true"] .lfob,#pRings[data-inner="true"] .lfo{display:none!important}
+.where{font:500 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0}
 .dotin .seg{width:max-content;max-width:100%;flex-wrap:wrap}
 .dotin .seg button{padding:4px 8px;font-size:10px}
 .dotin .seg button[aria-pressed="true"]{background:var(--c,var(--accent));color:var(--bg)}
@@ -245,6 +250,7 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
         <div class="row spread"><h2><b>01</b>Loop</h2>
           <div class="row" id="presets"></div>
         </div>
+        <nav class="path" id="path" aria-label="Which wheel is shown" hidden></nav>
         <canvas id="wheel" aria-label="Rhythm wheel showing each ring's hits and playhead. Click a dot to edit it."></canvas>
         <div class="dotbox" id="dotBox">
           <p class="sub mono" id="dotNone">Click a dot to set its pitch, length and level, or to put a wheel inside it.</p>
@@ -256,7 +262,7 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
               <div class="ctl"><div class="top"><label for="dL">Length</label><output id="dLv"></output><button type="button" class="lfob" id="dlb-l" aria-expanded="false" aria-label="LFO for this dot's length">LFO</button></div><input type="range" id="dL" min="-200" max="200" step="1"></div>
               <div class="ctl"><div class="top"><label for="dA">Level</label><output id="dAv"></output></div><input type="range" id="dA" min="0" max="100" step="1"></div>
               <div class="ctl dotin"><div class="top"><span class="lab">Inside</span><output id="dWv"></output></div>
-                <div class="seg" id="dW" role="group" aria-label="What this dot plays"><button type="button" data-w="0" aria-pressed="true">Click</button><button type="button" data-w="1" aria-pressed="false">Ring 1</button><button type="button" data-w="2" aria-pressed="false">Ring 2</button><button type="button" data-w="3" aria-pressed="false">Ring 3</button><button type="button" data-w="4" aria-pressed="false">Ring 4</button></div></div>
+                <div class="row"><div class="seg" id="dK" role="group" aria-label="What this dot plays"><button type="button" data-k="click" aria-pressed="true">Click</button><button type="button" data-k="wheel" aria-pressed="false">Wheel</button></div><button type="button" id="dOpen" hidden>Open wheel ›</button></div></div>
               <div class="ctl" id="dTc" hidden><div class="top"><label for="dT">Turn</label><output id="dTv"></output></div><input type="range" id="dT" min="0" max="600" step="1"></div>
             </div>
           </div>
@@ -322,6 +328,7 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
     <div class="col colC">
       <section class="panel" id="pRings" aria-label="Rings">
         <h2><b>05</b>Rings</h2>
+        <p class="where" id="ringsWhere" hidden></p>
         <p class="hint">Each ring spreads its hits as evenly as possible over its steps (a Euclidean rhythm). A ring with equal steps and hits is a plain pulse. An LFO on Rotate turns the ring smoothly, between steps.</p>
         <div class="rings" id="rings"></div>
       </section>
@@ -395,14 +402,14 @@ function lockVal(key,u){
 }
 function newEff(){
   const rings=[];
-  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,dp:null,dl:null,da:null,dw:null,dt:null,pld:null,plr:null,pls:null,lld:null,llr:null,lls:null,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level']});
+  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,dp:null,dl:null,da:null,dk:null,dt:null,kids:null,pld:null,plr:null,pls:null,lld:null,llr:null,lls:null,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level']});
   return{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6,gate:true,glide:false,rings};
 }
 /* base values -> sequencer locks -> LFOs. Fills E in place (no allocation, safe for the audio thread) */
 function effParams(S,t,step,E){
   const B=S.base,L=S.lfo||{},q=S.seq;
   let sp=B.speed,F=B.F,sg=B.sigma,det=B.det,vib=B.vib,vol=B.vol;
-  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;o.dp=r.dp||null;o.dl=r.dl||null;o.da=r.da||null;o.dw=r.dw||null;o.dt=r.dt||null;o.pld=r.pld||null;o.plr=r.plr||null;o.pls=r.pls||null;o.lld=r.lld||null;o.llr=r.llr||null;o.lls=r.lls||null;}
+  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;o.dp=r.dp||null;o.dl=r.dl||null;o.da=r.da||null;o.dk=r.dk||null;o.dt=r.dt||null;o.kids=r.kids||null;o.pld=r.pld||null;o.plr=r.plr||null;o.pls=r.pls||null;o.lld=r.lld||null;o.llr=r.llr||null;o.lls=r.lls||null;}
   E.gate=true;E.glide=false;
   if(step>=0&&q){
     E.gate=q.gate[step]!==false;E.glide=!!q.glide[step];
@@ -435,22 +442,21 @@ function effParams(S,t,step,E){
   return E;
 }
 function euclidPattern(n,k,rot){const p=new Array(n).fill(false);if(k<=0)return p;for(let s=0;s<n;s++)if(((s*k)%n)<k)p[(s+rot)%n]=true;return p;}
-function ringPos(r){return r.on?innerPos(r):[];}
-/* A ring's pattern whether or not the ring is switched on: this is what a dot plays when it holds that ring as its inner wheel. */
-function innerPos(r){const out=[];if(r.hits<=0)return out;const p=euclidPattern(r.steps,r.hits,r.rot);for(let s=0;s<p.length;s++)if(p[s])out.push(s/r.steps);return out;}
+function ringPos(r){if(!r.on||r.hits<=0)return[];const out=[];const p=euclidPattern(r.steps,r.hits,r.rot);for(let s=0;s<p.length;s++)if(p[s])out.push(s/r.steps);return out;}
 /* Per-dot settings. A dot is numbered by its order in the unrotated pattern, so its settings travel with it when the ring rotates.
    ringDots gives the dot number of each entry of ringPos. dp = pitch offset in semitones, dl = length offset in octaves, da = level. */
-function ringDots(r){return r.on?innerDots(r):[];}
-function innerDots(r){if(r.hits<=0)return[];const n=r.steps,p=euclidPattern(n,r.hits,0),idx=new Array(n),out=[];let c=0;
+function ringDots(r){if(!r.on||r.hits<=0)return[];const n=r.steps,p=euclidPattern(n,r.hits,0),idx=new Array(n),out=[];let c=0;
   for(let u=0;u<n;u++)idx[u]=p[u]?c++:-1;
   for(let s=0;s<n;s++){const u=(((s-r.rot)%n)+n)%n;if(idx[u]>=0)out.push(idx[u]);}return out;}
 function dotF(F,st){return st?clamp(F*Math.pow(2,st/12),30,12000):F;}
 function dotS(sg,o){return o?clamp(sg*Math.pow(2,o),0.05,40):sg;}
 /* A dot's pitch (semitones) and length (octaves) at time t: its own offset plus its own LFO (pld/plr/pls for pitch, lld/llr/lls for length).
    Each dot's LFO starts at its own phase. L is a scratch object, so nothing is allocated. Engine and page both use these. */
-/* Wheels inside dots. dw = what the dot plays (0 a click, 1-4 that ring's pattern as an inner wheel), dt = how long the inner wheel's one turn
-   lasts, as a fraction of the outer loop. dotWheel gives the inner ring's index or -1; dotTurn gives the turn. */
-function dotWheel(er,d){const w=er.dw?er.dw[d]|0:0;return w>0&&w<=4?w-1:-1;}
+/* Wheels inside dots. Every dot has a kind, dk: 'click' plays one click, 'wheel' plays the wheel kept in kids[d] ({rings:[4 rings]}, each ring
+   shaped like a top ring, with dots that can hold wheels again). Other kinds (a sample, a bare impulse) can be added to dk later.
+   dt = how long the inner wheel's one turn lasts, as a fraction of the turn of the wheel it sits in. depth 0 is the top wheel; wheels nest
+   three levels below it. dotWheel gives the wheel a dot plays, or null for a click. */
+function dotWheel(r,d,depth){if(depth>=3||!r.dk||r.dk[d]!=='wheel'||!r.kids)return null;const w=r.kids[d];return w&&w.rings?w:null;}
 function dotTurn(er,d){return clamp(er.dt?er.dt[d]||0.25:0.25,1/64,1);}
 function dotSeed(ri,d){return frac((ri*32+d+1)*0.6180339887);}
 function dotPitch(er,ri,d,t,L){let v=er.dp?er.dp[d]||0:0;const dep=er.pld?er.pld[d]||0:0;
@@ -473,18 +479,28 @@ class Engine{
     this.sr=sr;this.S=null;this.E=newEff();this.ready=false;
     this.lf=Math.log(0.5);this.lt=this.lf;this.kFast=1-Math.exp(-1/(0.03*sr));this.kS=this.kFast;
     this.vibPh=0;this.spread=[0,1,-1,0.5];this.L={shape:'sine',rate:1,seed:0};
-    this.rings=[];for(let i=0;i<4;i++)this.rings.push({key:-1,pos:[],dot:[],ikey:-1,ip:[],id:[],ph:0,base:0,next:0,off:0,amp:0});
+    this.rings=[];for(let i=0;i<4;i++)this.rings.push({key:-1,pos:[],dot:[],ph:0,base:0,next:0,off:0,amp:0});
     const M=this.MAX=768;this.gN=0;
     this.gG=new Float64Array(M);this.gQ=new Float64Array(M);this.gQQ=new Float64Array(M);
     this.gC=new Float64Array(M);this.gS=new Float64Array(M);this.gCr=new Float64Array(M);this.gSr=new Float64Array(M);
     this.gA=new Float32Array(M);this.gR=new Int32Array(M);
     this.master=0;this.loops=0;this.dropped=0;this.comp=1;this.t=0;
-    /* clicks of inner wheels that are still to come: sample time, level, pitch, length */
-    const PM=this.PM=1024;this.pN=0;this.pMin=Infinity;this.n=0;
-    this.pT=new Float64Array(PM);this.pA=new Float32Array(PM);this.pF=new Float64Array(PM);this.pS=new Float64Array(PM);
+    /* dots of inner wheels that are still to fire: sample time, ring, ring number, dot, level, pitch and length so far, turn length, depth */
+    const PM=this.PM=2048;this.pN=0;this.pMin=Infinity;this.n=0;
+    this.pT=new Float64Array(PM);this.pA=new Float64Array(PM);this.pP=new Float64Array(PM);this.pL=new Float64Array(PM);this.pW=new Float64Array(PM);
+    this.pI=new Int8Array(PM);this.pD=new Int8Array(PM);this.pZ=new Int8Array(PM);this.pR=new Array(PM).fill(null);
+    this.pc=new WeakMap();this.dirty=true;this.nl=0;
     this.seqOn=false;this.seqT0=0;this.seqL0=0;this.step=-1;
   }
-  setState(S,jump){this.S=S;this.update(this.t);if(jump)this.lf=this.lt;}
+  setState(S,jump){this.S=S;this.dirty=true;this.update(this.t);if(jump)this.lf=this.lt;}
+  /* an inner ring's hit positions and dot numbers, worked out once and kept until its pattern changes */
+  pat(r){let c=this.pc.get(r);if(!c){c={k:-1,p:[],d:[]};this.pc.set(r,c);}
+    const k=r.on?((r.steps*17+r.hits)*17+r.rot):-2;if(c.k!==k){c.k=k;c.p=ringPos(r);c.d=ringDots(r);}return c;}
+  /* how many clicks one top loop makes, counting every level (stops counting past 4096) */
+  leaves(rings,depth){let n=0;
+    for(let i=0;i<4;i++){const r=rings[i];if(!r||!r.on)continue;const ds=depth?this.pat(r).d:this.rings[i].dot;
+      for(let j=0;j<ds.length;j++){const W=dotWheel(r,ds[j],depth);n+=W?this.leaves(W.rings,depth+1):1;if(n>4096)return n;}}
+    return n;}
   seek(r){r.ph-=Math.floor(r.ph);r.base=0;let k=0;while(k<r.pos.length&&r.pos[k]<=r.ph)k++;if(k===r.pos.length){k=0;r.base=1;}r.next=k;}
   resync(){for(const r of this.rings){r.ph=this.master-r.off;this.seek(r);}}
   update(t){
@@ -501,8 +517,7 @@ class Engine{
     for(let i=0;i<4;i++){
       const er=E.rings[i],r=this.rings[i];r.amp=er.level;
       const key=er.on?((er.steps*17+er.hits)*17+er.rot):-2;
-      if(key!==r.key){r.key=key;r.pos=ringPos(er);r.dot=ringDots(er);this.seek(r);}
-      const ik=(er.steps*17+er.hits)*17+er.rot;if(ik!==r.ikey){r.ikey=ik;r.ip=innerPos(er);r.id=innerDots(er);}
+      if(key!==r.key){r.key=key;r.pos=ringPos(er);r.dot=ringDots(er);this.seek(r);this.dirty=true;}
       const d=er.off-r.off;
       if(d!==0){
         r.off=er.off;r.ph-=d;
@@ -513,28 +528,24 @@ class Engine{
       }
     }
   }
-  /* A dot fires. A plain dot starts one click. A dot holding a wheel starts that wheel's one turn: its clicks are set down now, at their exact
-     times, with the pitch, length and level in force at this moment, and they play out even if the next dot fires first. */
-  spawn(age,amp,er,d,ri,inc){
-    let sg=this.E.sigma,F=this.E.F;
-    if(er){   /* this dot's own level, pitch and length */
-      if(er.da){const x=er.da[d];if(x!==undefined)amp*=x;}
-      if(!(amp>0))return;
-      const st=dotPitch(er,ri,d,this.t,this.L),ol=dotLen(er,ri,d,this.t,this.L),wi=dotWheel(er,d);
-      if(wi>=0){
-        const ir=this.E.rings[wi],c=this.rings[wi],P=c.ip,turn=dotTurn(er,d)/inc;
-        for(let j=0;j<P.length;j++){const k=c.id[j];let a=amp;
-          if(ir.da){const x=ir.da[k];if(x!==undefined)a*=x;}
-          if(!(a>0))continue;
-          const f2=dotF(F,st+dotPitch(ir,wi,k,this.t,this.L)),s2=dotS(sg,ol+dotLen(ir,wi,k,this.t,this.L)),dly=P[j]*turn-age;
-          if(dly<=0)this.click(-dly,a,f2,s2);
-          else if(this.pN<this.PM){const q=this.pN++,T=this.n+dly;this.pT[q]=T;this.pA[q]=a;this.pF[q]=f2;this.pS[q]=s2;if(T<this.pMin)this.pMin=T;}
-          else this.dropped++;}
-        return;
-      }
-      F=dotF(F,st);sg=dotS(sg,ol);
-    }
-    this.click(age,amp,F,sg);
+  /* A dot fires. A plain dot starts one click. A dot holding a wheel starts that wheel's one turn: each of its dots is set down at its exact
+     time and fires in the same way when it comes due, so wheels can sit inside wheels. A turn keeps the length it started with and plays
+     out even if the next dot fires first. Level multiplies and pitch and length add up on the way down.
+     r = the ring the dot is on, age = samples since it fired, st/ol = pitch and length so far, Lp = this wheel's turn in samples. */
+  fire(r,ri,d,age,amp,st,ol,Lp,depth){
+    if(r.da){const x=r.da[d];if(x!==undefined)amp*=x;}
+    if(!(amp>0))return;
+    st+=dotPitch(r,ri,d,this.t,this.L);ol+=dotLen(r,ri,d,this.t,this.L);
+    const W=dotWheel(r,d,depth);
+    if(W){const T=dotTurn(r,d)*Lp;
+      for(let ci=0;ci<4;ci++){const c=W.rings[ci];if(!c||!c.on||!(c.level>0))continue;
+        const pc=this.pat(c),P=pc.p,a=amp*c.level;
+        for(let j=0;j<P.length;j++){const dly=P[j]*T-age;
+          if(dly<=0)this.fire(c,ci,pc.d[j],-dly,a,st,ol,T,depth+1);
+          else if(this.pN<this.PM){const q=this.pN++,tm=this.n+dly;this.pT[q]=tm;this.pR[q]=c;this.pI[q]=ci;this.pD[q]=pc.d[j];this.pA[q]=a;this.pP[q]=st;this.pL[q]=ol;this.pW[q]=T;this.pZ[q]=depth+1;if(tm<this.pMin)this.pMin=tm;}
+          else this.dropped++;}}
+      return;}
+    this.click(age,amp,dotF(this.E.F,st),dotS(this.E.sigma,ol));
   }
   click(age,amp,F,sg){
     if(this.gN>=this.MAX){this.dropped++;return;}
@@ -554,10 +565,12 @@ class Engine{
       if((i&15)===0){this.t=t0+i/sr;this.update(this.t);}
       this.n++;
       if(!this.ready){out[i]=0;continue;}
-      if(this.n>=this.pMin){let mn=Infinity;   /* inner-wheel clicks that are due */
-        for(let q=0;q<this.pN;){const T=this.pT[q];
-          if(T<=this.n){this.click(this.n-T,this.pA[q],this.pF[q],this.pS[q]);const l=--this.pN;this.pT[q]=this.pT[l];this.pA[q]=this.pA[l];this.pF[q]=this.pF[l];this.pS[q]=this.pS[l];}
-          else{if(T<mn)mn=T;q++;}}
+      if(this.n>=this.pMin){let mn=Infinity;   /* inner dots that are due */
+        for(let q=0;q<this.pN;){const tm=this.pT[q];
+          if(tm<=this.n){const c=this.pR[q],ci=this.pI[q],dd=this.pD[q],a=this.pA[q],st=this.pP[q],ol=this.pL[q],T=this.pW[q],z=this.pZ[q],l=--this.pN;
+            this.pT[q]=this.pT[l];this.pR[q]=this.pR[l];this.pR[l]=null;this.pI[q]=this.pI[l];this.pD[q]=this.pD[l];this.pA[q]=this.pA[l];this.pP[q]=this.pP[l];this.pL[q]=this.pL[l];this.pW[q]=this.pW[l];this.pZ[q]=this.pZ[l];
+            this.fire(c,ci,dd,this.n-tm,a,st,ol,T,z);}
+          else{if(tm<mn)mn=tm;q++;}}
         this.pMin=mn;}
       const E=this.E;
       this.lf+=(this.lt-this.lf)*this.kS;let f=Math.exp(this.lf);
@@ -570,7 +583,7 @@ class Engine{
         if(!P.length){if(r.ph>=1)r.ph-=1;continue;}
         let tg=r.base+P[r.next];
         while(tg<=r.ph){
-          if(E.gate&&r.amp>0)this.spawn((r.ph-tg)/inc,r.amp,E.rings[ri],r.dot[r.next],ri,inc);
+          if(E.gate&&r.amp>0)this.fire(E.rings[ri],ri,r.dot[r.next],(r.ph-tg)/inc,r.amp,0,0,1/inc,0);
           r.next++;if(r.next>=P.length){r.next=0;r.base+=1;}
           tg=r.base+P[r.next];
         }
@@ -588,14 +601,14 @@ class Engine{
       if(av>0.8)v=(v<0?-1:1)*(0.8+0.2*Math.tanh((av-0.8)/0.2));   /* safety limiter: untouched below 0.8 */
       out[i]=v;
     }
-    if(this.ready){let hits=0;for(let i=0;i<4;i++){const r=this.rings[i],er=this.E.rings[i];for(let j=0;j<r.dot.length;j++){const wi=dotWheel(er,r.dot[j]);hits+=wi>=0?this.rings[wi].ip.length:1;}}
+    if(this.ready){if(this.dirty){this.dirty=false;this.nl=this.leaves(this.E.rings,0);}const hits=this.nl;
       const overlap=Math.exp(this.lf)*hits*6*this.E.sigma/1000;this.comp+=(1/Math.sqrt(1+overlap)-this.comp)*0.3;}
   }
   report(){const r=[];for(const x of this.rings)r.push(frac(x.ph+x.off));return{m:this.master,r,f:Math.exp(this.lf),d:this.dropped,t:this.t,step:this.step};}
 }
 function applyMsg(e,d){if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();}
 
-const WORKLET_SRC=[frac,clamp,rnd,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,innerPos,ringDots,innerDots,dotF,dotS,dotWheel,dotTurn,dotSeed,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
+const WORKLET_SRC=[frac,clamp,rnd,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotWheel,dotTurn,dotSeed,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
  +'\n'+Engine.toString()+`
 class RTProcessor extends AudioWorkletProcessor{
   constructor(){super();this.e=new Engine(sampleRate);this.c=0;this.port.onmessage=m=>applyMsg(this.e,m.data);}
@@ -635,8 +648,11 @@ function noteName(f,short){const m=69+12*Math.log2(f/440),r=Math.round(m),c=Math
 const fmtHz=f=>f>=1000?(f/1000).toFixed(2)+' kHz':f>=100?f.toFixed(0)+' Hz':f.toFixed(1)+' Hz';
 const snapSemi=f=>440*Math.pow(2,Math.round(12*Math.log2(f/440))/12);
 
-function defaultRings(){return[1,2,3,4].map(n=>({on:true,steps:n,hits:n,rot:0,level:1,dp:Array(16).fill(0),dl:Array(16).fill(0),da:Array(16).fill(1),dw:Array(16).fill(0),dt:Array(16).fill(0.25),
-  pld:Array(16).fill(0),plr:Array(16).fill(0.5),pls:Array(16).fill('sine'),lld:Array(16).fill(0),llr:Array(16).fill(0.5),lls:Array(16).fill('sine')}));}
+function mkRing(steps,hits,on){return{on:!!on,steps,hits,rot:0,level:1,dp:Array(16).fill(0),dl:Array(16).fill(0),da:Array(16).fill(1),
+  dk:Array(16).fill('click'),dt:Array(16).fill(0.25),kids:Array(16).fill(null),
+  pld:Array(16).fill(0),plr:Array(16).fill(0.5),pls:Array(16).fill('sine'),lld:Array(16).fill(0),llr:Array(16).fill(0.5),lls:Array(16).fill('sine')};}
+function defaultRings(){return[1,2,3,4].map(n=>mkRing(n,n,true));}
+function newWheel(){return{rings:[mkRing(4,4,true),mkRing(3,3,false),mkRing(2,2,false),mkRing(1,1,false)]};}
 const blank=()=>Array(16).fill(null);
 function defaultSeq(){return{playing:false,steps:8,bpm:96,div:2,swing:0,clock:'tempo',loopsPerStep:1,glideTime:0.12,
   gate:Array(16).fill(true),glide:Array(16).fill(false),
@@ -653,16 +669,21 @@ function sanitizeSeq(q){
       vals:Array.from({length:16},(_,i)=>{const v=Array.isArray(x.vals)?x.vals[i]:null;return typeof v==='number'&&isFinite(v)?clamp(v,0,1):null;})};});
   return d;
 }
+/* one ring, and the wheels inside its dots (depth 0 = a top ring; wheels below the third level are dropped) */
+function sanRing(x,r,depth){x=x&&typeof x==='object'?x:{};const steps=Math.round(num(x.steps,1,16,r.steps));
+  const arr=(a,lo,hi,d)=>Array.from({length:16},(_,k)=>num(Array.isArray(a)?a[k]:undefined,lo,hi,d));
+  const shp=a=>Array.from({length:16},(_,k)=>Array.isArray(a)&&SHAPE_IDS.includes(a[k])?a[k]:'sine');
+  return{on:typeof x.on==='boolean'?x.on:r.on,steps,hits:Math.round(num(x.hits,0,steps,Math.min(r.hits,steps))),rot:Math.round(num(x.rot,0,steps-1,0)),level:num(x.level,0,1,1),
+    dp:arr(x.dp,-24,24,0),dl:arr(x.dl,-2,2,0),da:arr(x.da,0,1,1),
+    dk:Array.from({length:16},(_,k)=>Array.isArray(x.dk)&&x.dk[k]==='wheel'?'wheel':'click'),dt:arr(x.dt,1/64,1,0.25),
+    kids:Array.from({length:16},(_,k)=>{const w=Array.isArray(x.kids)?x.kids[k]:null;if(depth>=3||!w||!Array.isArray(w.rings))return null;
+      return{rings:newWheel().rings.map((nr,i)=>sanRing(w.rings[i],nr,depth+1))};}),
+    pld:arr(x.pld,0,24,0),plr:arr(x.plr,0.02,20,0.5),pls:shp(x.pls),lld:arr(x.lld,0,2,0),llr:arr(x.llr,0.02,20,0.5),lls:shp(x.lls)};}
 function sanitizeState(o){
   const d=defaults();if(!o||typeof o!=='object')return d;
   const B=o.base||{};
   d.base={speed:num(B.speed,SMIN,SMAX,0.5),F:num(B.F,60,4000,700),sigma:num(B.sigma,0.2,8,1.2),det:num(B.det,0,30,0),vib:num(B.vib,0,60,0),vol:num(B.vol,0,1,0.6)};
-  if(Array.isArray(o.rings))d.rings=d.rings.map((r,i)=>{const x=o.rings[i]||{};const steps=Math.round(num(x.steps,1,16,r.steps));
-    const arr=(a,lo,hi,d)=>Array.from({length:16},(_,k)=>num(Array.isArray(a)?a[k]:undefined,lo,hi,d));
-    const shp=a=>Array.from({length:16},(_,k)=>Array.isArray(a)&&SHAPE_IDS.includes(a[k])?a[k]:'sine');
-    return{on:typeof x.on==='boolean'?x.on:r.on,steps,hits:Math.round(num(x.hits,0,steps,Math.min(r.hits,steps))),rot:Math.round(num(x.rot,0,steps-1,0)),level:num(x.level,0,1,1),
-      dp:arr(x.dp,-24,24,0),dl:arr(x.dl,-2,2,0),da:arr(x.da,0,1,1),dw:arr(x.dw,0,4,0).map(Math.round),dt:arr(x.dt,1/64,1,0.25),
-      pld:arr(x.pld,0,24,0),plr:arr(x.plr,0.02,20,0.5),pls:shp(x.pls),lld:arr(x.lld,0,2,0),llr:arr(x.llr,0.02,20,0.5),lls:shp(x.lls)};});
+  if(Array.isArray(o.rings))d.rings=d.rings.map((r,i)=>sanRing(o.rings[i],r,0));
   if(o.lfo&&typeof o.lfo==='object')for(const k in o.lfo){if(!LFOSPEC[k])continue;const l=o.lfo[k]||{};
     d.lfo[k]={shape:SHAPE_IDS.includes(l.shape)?l.shape:'sine',rate:num(l.rate,0.02,20,0.2),depth:num(l.depth,0,LFOSPEC[k].max,0),seed:hashKey(k)};}
   d.seq=sanitizeSeq(o.seq);d.seq.playing=false;
@@ -675,19 +696,18 @@ let saveT=0;function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,400
 
 /* The loop as a list of dots, and its spectrum. Each click is exp(-t²/2σ²)·sin(2πFt), centred 3σ after its hit, so its spectrum is
    σ·[exp(-2π²σ²(ν-F)²) − exp(-2π²σ²(ν+F)²)] with a delay phase. Summing that over the dots gives exactly what the engine plays. */
-function dotList(E,t){const out=[],L={shape:'sine',rate:1,seed:0};t=t||0;out.mod=false;
+function dotList(E,t){const out=[],L={shape:'sine',rate:1,seed:0};t=t||0;out.mod=false;out.cut=false;
   const lfo=(r,d)=>(r.pld&&r.pld[d]>0)||(r.lld&&r.lld[d]>0);
-  for(let i=0;i<4;i++){const r=E.rings[i];if(!r.on||r.hits<=0||!(r.level>0))continue;const pos=ringPos(r),ids=ringDots(r);
-    for(let j=0;j<pos.length;j++){const d=ids[j],a=r.level*(r.da&&r.da[d]!==undefined?r.da[d]:1);if(!(a>0))continue;
-      if(lfo(r,d))out.mod=true;
-      const st=dotPitch(r,i,d,t,L),ol=dotLen(r,i,d,t,L),wi=dotWheel(r,d);
-      if(wi>=0){   /* a wheel inside the dot: its clicks are spread over one turn that starts at the dot */
-        const ir=E.rings[wi],ip=innerPos(ir),id=innerDots(ir),turn=dotTurn(r,d);
-        for(let k=0;k<ip.length;k++){const c=id[k],a2=a*(ir.da&&ir.da[c]!==undefined?ir.da[c]:1);if(!(a2>0))continue;
-          if(lfo(ir,c))out.mod=true;
-          out.push({ri:i,d,sub:k,p:pos[j]+r.off+ip[k]*turn,a:a2,F:dotF(E.F,st+dotPitch(ir,wi,c,t,L)),s:dotS(E.sigma,ol+dotLen(ir,wi,c,t,L))/1000});}
-        continue;}
-      out.push({ri:i,d,p:pos[j]+r.off,a,F:dotF(E.F,st),s:dotS(E.sigma,ol)/1000});}}
+  /* p0, span = where this wheel's turn starts and how long it lasts, in top loops. A wheel inside a dot is walked the same way. */
+  const walk=(rings,depth,p0,span,amp,st0,ol0,ri0,d0)=>{
+    for(let i=0;i<4;i++){const r=rings[i];if(!r||!r.on||r.hits<=0||!(r.level>0))continue;const pos=ringPos(r),ids=ringDots(r),off=r.off||0;
+      for(let j=0;j<pos.length;j++){const d=ids[j],a=amp*r.level*(r.da&&r.da[d]!==undefined?r.da[d]:1);if(!(a>0))continue;
+        if(lfo(r,d))out.mod=true;
+        const st=st0+dotPitch(r,i,d,t,L),ol=ol0+dotLen(r,i,d,t,L),p=p0+(pos[j]+off)*span,W=dotWheel(r,d,depth),ri=depth?ri0:i,dd=depth?d0:d;
+        if(W){walk(W.rings,depth+1,p,span*dotTurn(r,d),a,st,ol,ri,dd);continue;}
+        if(out.length>=4096){out.cut=true;return;}
+        out.push({ri,d:dd,p,a,F:dotF(E.F,st),s:dotS(E.sigma,ol)/1000});}}};
+  walk(E.rings,0,0,1,1,0,0,0,0);
   return out;}
 function heardMag(D,n,nu){let re=0,im=0;
   for(const o of D){const k=2*Math.PI*Math.PI*o.s*o.s,d1=k*(nu-o.F)*(nu-o.F);if(d1>16)continue;
@@ -949,6 +969,11 @@ function initInstrument(){
   const Smap=v=>0.2*Math.pow(40,v/1000),SmapInv=s=>Math.round(Math.log(s/0.2)/Math.log(40)*1000);
   const activeLfos=()=>Object.entries(state.lfo).filter(([k,l])=>l.depth>0);
 
+  /* Which wheel is on screen: a path of dots from the top wheel down. VR() is that wheel's four rings. */
+  const view=[];
+  function wheelAt(n){let rs=state.rings;for(let k=0;k<n;k++){const v=view[k],w=rs[v.ri]&&rs[v.ri].kids[v.d];if(!w)return null;rs=w.rings;}return rs;}
+  const VR=()=>wheelAt(view.length)||state.rings;
+  const eachRing=(rs,f)=>rs.forEach(r=>{f(r);r.kids.forEach(w=>{if(w)eachRing(w.rings,f);});});
   function sendState(jump){audio.send({S:JSON.parse(JSON.stringify(state)),jump:!!jump});}
   function changed(){sendState();saveSoon();}
   let toastT=0;function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,6000);}
@@ -976,7 +1001,7 @@ function initInstrument(){
     p.querySelector('[data-x]').onclick=()=>{ensureLfo(key).depth=0;p.hidden=true;syncLfoUI(key);changed();};
   }
   function ensureLfo(key){if(!state.lfo[key])state.lfo[key]={shape:'sine',rate:0.2,depth:0,seed:hashKey(key)};return state.lfo[key];}
-  function dotLfoCount(){let n=0;for(const r of state.rings)for(let d=0;d<16;d++){if(r.pld[d]>0)n++;if(r.lld[d]>0)n++;}return n;}
+  function dotLfoCount(){let n=0;eachRing(state.rings,r=>{for(let d=0;d<16;d++){if(r.pld[d]>0)n++;if(r.lld[d]>0)n++;}});return n;}
   function syncLfoCount(){const n=activeLfos().length+dotLfoCount();setText('#lfoCount',n?`${n} active`:'none active');}
   function syncLfoUI(key){const L=state.lfo[key],p=$('#lfo-'+key);
     $$(`.lfob[data-key="${key}"]`).forEach(b=>{b.dataset.active=!!(L&&L.depth>0);b.setAttribute('aria-expanded',p&&!p.hidden?'true':'false');});
@@ -990,13 +1015,13 @@ function initInstrument(){
 
   /* --- presets & rings --- */
   PRESETS.forEach(([name,rs])=>{const b=document.createElement('button');b.type='button';b.textContent=name;
-    b.onclick=()=>{state.rings.forEach((r,i)=>{if(rs[i]){r.on=true;r.steps=rs[i][0];r.hits=rs[i][1];r.rot=0;r.level=1;}else r.on=false;});syncRingUI();changed();};
+    b.onclick=()=>{VR().forEach((r,i)=>{if(rs[i]){r.on=true;r.steps=rs[i][0];r.hits=rs[i][1];r.rot=0;r.level=1;}else r.on=false;});syncRingUI();changed();};
     $('#presets').appendChild(b);});
   for(let i=0;i<4;i++){
     const d=document.createElement('div');d.className='ring';d.style.setProperty('--c',`var(${RC[i]})`);d.id='ring'+i;
     d.innerHTML=`<div class="head"><label><input type="checkbox" id="r${i}on"> Ring ${i+1}</label><span class="pat" id="r${i}pat" aria-label="Pattern"></span></div>`;
     $('#rings').appendChild(d);
-    const R=()=>state.rings[i];
+    const R=()=>VR()[i];
     d.querySelector(`#r${i}on`).onchange=e=>{R().on=e.target.checked;syncRingUI();changed();};
     makeStepper(d,{id:`r${i}steps`,key:`r${i}steps`,label:'Steps',onStep:s=>{const r=R();r.steps=clamp(r.steps+s,1,16);r.hits=Math.min(r.hits,r.steps);r.rot=Math.min(r.rot,r.steps-1);changed();}});
     makeStepper(d,{id:`r${i}hits`,key:`r${i}hits`,label:'Hits',onStep:s=>{const r=R();r.hits=clamp(r.hits+s,0,r.steps);changed();}});
@@ -1004,7 +1029,7 @@ function initInstrument(){
     makeCtl(d,{id:`r${i}level`,key:`r${i}level`,label:'Level',min:0,max:100,value:100,oninput:v=>{R().level=v/100;changed();}}).classList.add('lvl');
     ['steps','hits','rot','level'].forEach(k=>makeLfoPanel(d,`r${i}${k}`));
   }
-  function syncRingUI(){state.rings.forEach((r,i)=>{$('#ring'+i).dataset.off=!r.on;$(`#r${i}on`).checked=r.on;$(`#r${i}level`).value=Math.round(r.level*100);});}
+  function syncRingUI(){VR().forEach((r,i)=>{$('#ring'+i).dataset.off=!r.on;$(`#r${i}on`).checked=r.on;$(`#r${i}level`).value=Math.round(r.level*100);});}
 
   /* --- one dot: pitch, length and level, chosen by clicking it on the wheel --- */
   const wheelHits=[];let sel=null;
@@ -1012,9 +1037,10 @@ function initInstrument(){
     l:{dep:'lld',rate:'llr',shape:'lls',max:2,step:0.05,def:0.5,name:'Dot length',fmt:v=>'±'+v.toFixed(2)+' oct'}},dotL={shape:'sine',rate:1,seed:0};
   function syncDotUI(keep){$('#dotNone').hidden=!!sel;$('#dotEd').hidden=!sel;const box=$('#dotBox');
     if(!sel){box.style.removeProperty('--c');syncLfoCount();return;}
-    const r=state.rings[sel.ri];box.style.setProperty('--c',`var(${RC[sel.ri]})`);
-    $$('#dW button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.w===r.dw[sel.d]?'true':'false'));
-    $('#dTc').hidden=!(r.dw[sel.d]>0);$('#dT').value=Math.round(600+100*Math.log2(r.dt[sel.d]));
+    const r=VR()[sel.ri];box.style.setProperty('--c',`var(${RC[sel.ri]})`);
+    const isW=r.dk[sel.d]==='wheel';
+    $$('#dK button').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.k===r.dk[sel.d]?'true':'false');if(b.dataset.k==='wheel')b.disabled=view.length>=3&&!isW;});
+    $('#dOpen').hidden=!(isW&&r.kids[sel.d]&&view.length<3);$('#dTc').hidden=!isW;$('#dT').value=Math.round(600+100*Math.log2(r.dt[sel.d]));
     $('#dP').value=r.dp[sel.d];$('#dL').value=Math.round(r.dl[sel.d]*100);$('#dA').value=Math.round(r.da[sel.d]*100);
     for(const w in DL){const c=DL[w],p=$('#dlfo-'+w),b=$('#dlb-'+w),dep=r[c.dep][sel.d],on=dep>0;
       if(!keep)p.hidden=!on;
@@ -1029,7 +1055,7 @@ function initInstrument(){
       <div class="ctl"><div class="top"><label for="dr-${w}">Rate</label><output id="dr-${w}v"></output></div><input type="range" id="dr-${w}" min="0" max="1000"></div>
       <div class="ctl"><div class="top"><label for="dd-${w}">Depth</label><output id="dd-${w}v"></output></div><input type="range" id="dd-${w}" min="0" max="${c.max}" step="${c.step}"></div>`;
     $('.dotctls').appendChild(p);
-    const R=()=>state.rings[sel.ri];
+    const R=()=>VR()[sel.ri];
     p.querySelectorAll('[data-shape]').forEach(b=>b.onclick=()=>{if(!sel)return;R()[c.shape][sel.d]=b.dataset.shape;syncDotUI(true);changed();});
     $('#dr-'+w).oninput=e=>{if(!sel)return;R()[c.rate][sel.d]=rateMap(+e.target.value);syncDotUI(true);changed();};
     $('#dd-'+w).oninput=e=>{if(!sel)return;R()[c.dep][sel.d]=+e.target.value;syncDotUI(true);changed();};
@@ -1042,14 +1068,29 @@ function initInstrument(){
   $('#wheel').addEventListener('pointerdown',e=>{const b=$('#wheel').getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top;
     let best=null,bd=24*24;for(const h of wheelHits){const q=(h.x-x)*(h.x-x)+(h.y-y)*(h.y-y);if(q<bd){bd=q;best=h;}}
     selectDot(best?{ri:best.ri,d:best.d}:null);});
-  $('#dP').oninput=e=>{if(sel){state.rings[sel.ri].dp[sel.d]=+e.target.value;changed();}};
-  $('#dL').oninput=e=>{if(sel){state.rings[sel.ri].dl[sel.d]=+e.target.value/100;changed();}};
-  $('#dA').oninput=e=>{if(sel){state.rings[sel.ri].da[sel.d]=+e.target.value/100;changed();}};
-  $$('#dW button').forEach(b=>b.onclick=()=>{if(sel){state.rings[sel.ri].dw[sel.d]=+b.dataset.w;syncDotUI(true);changed();}});
-  $('#dT').oninput=e=>{if(sel){state.rings[sel.ri].dt[sel.d]=Math.pow(2,(+e.target.value-600)/100);changed();}};
-  $('#dotReset').onclick=()=>{if(!sel)return;const r=state.rings[sel.ri];r.dw[sel.d]=0;r.dt[sel.d]=0.25;r.dp[sel.d]=0;r.dl[sel.d]=0;r.da[sel.d]=1;r.pld[sel.d]=0;r.lld[sel.d]=0;syncDotUI();changed();};
+  $('#dP').oninput=e=>{if(sel){VR()[sel.ri].dp[sel.d]=+e.target.value;changed();}};
+  $('#dL').oninput=e=>{if(sel){VR()[sel.ri].dl[sel.d]=+e.target.value/100;changed();}};
+  $('#dA').oninput=e=>{if(sel){VR()[sel.ri].da[sel.d]=+e.target.value/100;changed();}};
+  $$('#dK button').forEach(b=>b.onclick=()=>{if(!sel)return;const r=VR()[sel.ri];r.dk[sel.d]=b.dataset.k;
+    if(b.dataset.k==='wheel'&&!r.kids[sel.d])r.kids[sel.d]=newWheel();   /* a wheel that was made stays kept if the dot goes back to a click */
+    syncDotUI(true);changed();});
+  function syncView(){const p=$('#path');p.hidden=!view.length;p.textContent='';
+    if(view.length){const add=(t,n)=>{const b=document.createElement(n===view.length?'b':'button');if(n<view.length){b.type='button';b.onclick=()=>goTo(n);}b.textContent=t;p.appendChild(b);
+        if(n<view.length)p.appendChild(document.createTextNode('›'));};
+      add('Top',0);view.forEach((v,k)=>add(`Ring ${v.ri+1} · dot ${v.d+1}`,k+1));}
+    $('#pRings').dataset.inner=view.length>0;const wl=$('#ringsWhere');wl.hidden=!view.length;
+    if(view.length){const v=view[view.length-1];wl.textContent=`The wheel inside Ring ${v.ri+1} · dot ${v.d+1} (level ${view.length+1})`;}
+    syncRingUI();}
+  function goTo(n){view.length=Math.max(0,Math.min(n,view.length));selectDot(null);syncView();}
+  function openDot(ri,d){const r=VR()[ri];if(view.length>=3||r.dk[d]!=='wheel'||!r.kids[d])return;view.push({ri,d});selectDot(null);syncView();}
+  $('#dOpen').onclick=()=>{if(sel)openDot(sel.ri,sel.d);};
+  $('#wheel').addEventListener('dblclick',e=>{const b=$('#wheel').getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top;
+    let best=null,bd=24*24;for(const h of wheelHits){const q=(h.x-x)*(h.x-x)+(h.y-y)*(h.y-y);if(q<bd){bd=q;best=h;}}
+    if(best)openDot(best.ri,best.d);});
+  $('#dT').oninput=e=>{if(sel){VR()[sel.ri].dt[sel.d]=Math.pow(2,(+e.target.value-600)/100);changed();}};
+  $('#dotReset').onclick=()=>{if(!sel)return;const r=VR()[sel.ri];r.dk[sel.d]='click';r.kids[sel.d]=null;r.dt[sel.d]=0.25;r.dp[sel.d]=0;r.dl[sel.d]=0;r.da[sel.d]=1;r.pld[sel.d]=0;r.lld[sel.d]=0;syncDotUI();changed();};
   $('#dotClose').onclick=()=>selectDot(null);
-  const stepDot=s=>{if(!sel)return;const n=Math.max(1,state.rings[sel.ri].hits);selectDot({ri:sel.ri,d:((sel.d+s)%n+n)%n});};
+  const stepDot=s=>{if(!sel)return;const n=Math.max(1,VR()[sel.ri].hits);selectDot({ri:sel.ri,d:((sel.d+s)%n+n)%n});};
   $('#dotPrev').onclick=()=>stepDot(-1);$('#dotNext').onclick=()=>stepDot(1);
 
   /* --- speed --- */
@@ -1082,7 +1123,7 @@ function initInstrument(){
   $('#notes').onchange=e=>{uiPrefs.notes=e.target.checked;savePrefs();};
   $('#theme').onclick=()=>{uiPrefs.theme={auto:'light',light:'dark',dark:'auto'}[uiPrefs.theme];savePrefs();syncPrefsUI();};
   syncPrefsUI();
-  $('#clearLfo').onclick=()=>{Object.values(state.lfo).forEach(l=>l.depth=0);state.rings.forEach(r=>{r.pld.fill(0);r.lld.fill(0);});syncDotUI();Object.keys(LFOSPEC).forEach(syncLfoUI);changed();};
+  $('#clearLfo').onclick=()=>{Object.values(state.lfo).forEach(l=>l.depth=0);eachRing(state.rings,r=>{r.pld.fill(0);r.lld.fill(0);});syncDotUI();Object.keys(LFOSPEC).forEach(syncLfoUI);changed();};
   $('#scatter').onclick=()=>{const keys=Object.keys(LFOSPEC).filter(k=>k!=='vol'&&!(k[0]==='r'&&!state.rings[+k[1]].on));
     for(let n=0;n<4&&keys.length;n++){const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0],L=ensureLfo(k),sp=LFOSPEC[k];
       L.shape=SHAPES[Math.floor(Math.random()*SHAPES.length)][0];L.rate=rateMap(150+Math.random()*600);
@@ -1092,7 +1133,7 @@ function initInstrument(){
   $('#reset').onclick=()=>{const b=$('#reset');
     if(!resetArm){b.textContent='Tap again to reset';resetArm=setTimeout(()=>{resetArm=0;b.textContent='Reset patch';},3000);return;}
     clearTimeout(resetArm);resetArm=0;b.textContent='Reset patch';
-    const d=defaults();state.base=d.base;state.rings=d.rings;state.lfo={};$$('.lfo').forEach(p=>p.hidden=true);selectDot(null);syncAllUI();changed();};
+    const d=defaults();state.base=d.base;state.rings=d.rings;state.lfo={};view.length=0;syncView();$$('.lfo').forEach(p=>p.hidden=true);selectDot(null);syncAllUI();changed();};
   function syncAllUI(){speedEl.value=s2v(state.base.speed);$('#F').value=FmapInv(state.base.F);$('#S').value=SmapInv(state.base.sigma);
     $('#D').value=Math.round(state.base.det*10);$('#V').value=Math.round(state.base.vib*10);$('#O').value=Math.round(state.base.vol*100);
     syncRingUI();Object.keys(LFOSPEC).forEach(syncLfoUI);}
@@ -1141,9 +1182,9 @@ function initInstrument(){
     switch(e.key){
       case ' ':if(tag==='BUTTON'||tag==='INPUT')return;e.preventDefault();toggleAudio();break;
       case 'p':case 'P':setPlay(!state.seq.playing,true);break;
-      case 'Escape':selectDot(null);break;
+      case 'Escape':if(sel)selectDot(null);else if(view.length)goTo(view.length-1);break;
       case 'n':case 'N':uiPrefs.notes=!uiPrefs.notes;savePrefs();syncPrefsUI();break;
-      case '1':case '2':case '3':case '4':{const r=state.rings[+e.key-1];r.on=!r.on;syncRingUI();changed();break;}
+      case '1':case '2':case '3':case '4':{const r=VR()[+e.key-1];r.on=!r.on;syncRingUI();changed();break;}
       case 'ArrowLeft':case 'ArrowRight':{if(range)return;e.preventDefault();stopSweep();
         setSpeed(state.base.speed*Math.pow(2,(e.key==='ArrowRight'?1:-1)*(e.shiftKey?1:1/12)));break;}
     }
@@ -1197,14 +1238,17 @@ function initInstrument(){
   /* --- Fourier coefficients of the current loop --- */
   function coefs(E){const D=dotList(E,vis.t);let c0=0;for(const o of D)c0+=o.a;
     return{D,c0,at(n){let re=0,im=0;for(const o of D){const a=2*Math.PI*n*o.p;re+=o.a*Math.cos(a);im-=o.a*Math.sin(a);}return[re,im];}};}
-  function hitsPerLoop(E){const act=E.rings.filter(r=>r.on&&r.hits>0);
-    if(Math.abs(E.det)>0.05||act.some(r=>r.off))return act.reduce((a,r)=>a+ringDots(r).reduce((n,d)=>{const wi=dotWheel(r,d);return n+(wi<0?1:E.rings[wi].hits);},0),0);
-    const set=new Set();for(const r of act){const pos=ringPos(r),ids=ringDots(r);
-      for(let j=0;j<pos.length;j++){const wi=dotWheel(r,ids[j]);
-        if(wi<0)set.add(Math.round(pos[j]*1e6));else for(const q of innerPos(E.rings[wi]))set.add(Math.round(frac(pos[j]+q*dotTurn(r,ids[j]))*1e6)%1e6);}}
-    return set.size;}
+  function hitsPerLoop(E){const D=dotList(E,0);if(Math.abs(E.det)>0.05)return D.length;
+    const set=new Set();for(const o of D)set.add(Math.round(frac(o.p)*1e6)%1e6);return set.size;}
   function zoneOf(E){if(E.speed>=20)return'Tone';if(E.speed*hitsPerLoop(E)>=15)return'Blur';return'Rhythm';}
 
+  /* Where the wheel on screen sits in the top loop: its start p0 and its length span, both in top loops, and whether it is reached at all.
+     Its playhead is then (top phase − p0) / span while that is under 1; the rest of the time the wheel is waiting to be fired. */
+  function viewClock(E){let rs=E.rings,p0=0,span=1,live=true;
+    for(let k=0;k<view.length;k++){const v=view[k],r=rs[v.ri];if(!r||!r.kids||!r.kids[v.d])return null;
+      const j=ringDots(r).indexOf(v.d);if(j<0||!dotWheel(r,v.d,k)||!(r.level>0)||(r.da&&r.da[v.d]===0))live=false;else p0+=(ringPos(r)[j]+(r.off||0))*span;
+      span*=dotTurn(r,v.d);rs=r.kids[v.d].rings;}
+    return{rs,p0,span,live};}
   /* --- drawing --- */
   function drawWheel(E){
     const {g,w,h}=fit($('#wheel'));g.clearRect(0,0,w,h);wheelHits.length=0;
@@ -1215,36 +1259,42 @@ function initInstrument(){
       g.beginPath();g.moveTo(cx+Math.cos(a)*R0,cy+Math.sin(a)*R0);g.lineTo(cx+Math.cos(a)*(R0+l),cy+Math.sin(a)*(R0+l));g.stroke();}
     g.globalAlpha=1;g.fillStyle=T['--muted'];g.font=font(10);g.textAlign='center';
     g.fillText('0',cx,cy-R0-14);g.fillText('¼',cx+R0+17,cy+3.5);g.fillText('½',cx,cy+R0+21);g.fillText('¾',cx-R0-17,cy+3.5);
-    const act=E.rings.map((r,i)=>({r,i})).filter(o=>o.r.on);
+    const vc=view.length?viewClock(E):null,RS=vc?vc.rs:E.rings,fv=vc?vis.f/vc.span:vis.f;
+    let iph=null;if(vc&&vc.live){const u=frac(vis.rings[view[0].ri]-vc.p0)/vc.span;if(u<1)iph=u;}
+    const act=RS.map((r,i)=>({r,i})).filter(o=>o.r.on);
     const n=Math.max(1,act.length),inner=R*0.3,gap=(R-inner)/n;
-    const blur=ui.calm?clamp((vis.f-0.6)/0.6,0,1):clamp((vis.f-1.5)/6,0,1);
+    const blur=ui.calm?clamp((fv-0.6)/0.6,0,1):clamp((fv-1.5)/6,0,1);
     act.forEach((o,k)=>{const rad=R-k*gap-gap*0.15,col=T[RC[o.i]],pat=euclidPattern(o.r.steps,o.r.hits,o.r.rot);
       g.strokeStyle=T['--line'];g.lineWidth=1;g.beginPath();g.arc(cx,cy,rad,0,Math.PI*2);g.stroke();
-      const ph=vis.rings[o.i],a=ph*2*Math.PI-Math.PI/2;
+      const run=!vc||iph!==null,ph=vc?(iph||0):vis.rings[o.i],a=ph*2*Math.PI-Math.PI/2;
       if(blur>0){g.globalAlpha=(ui.calm?0.12:0.18)*blur;g.strokeStyle=col;g.lineWidth=gap*0.5;g.beginPath();g.arc(cx,cy,rad,0,Math.PI*2);g.stroke();g.globalAlpha=1;}
-      if(blur<1){g.globalAlpha=1-blur;g.strokeStyle=col;g.lineWidth=1.5;g.beginPath();g.moveTo(cx+Math.cos(a)*(rad-gap*0.4),cy+Math.sin(a)*(rad-gap*0.4));g.lineTo(cx+Math.cos(a)*(rad+gap*0.25),cy+Math.sin(a)*(rad+gap*0.25));g.stroke();g.globalAlpha=1;}
+      if(blur<1&&run){g.globalAlpha=1-blur;g.strokeStyle=col;g.lineWidth=1.5;g.beginPath();g.moveTo(cx+Math.cos(a)*(rad-gap*0.4),cy+Math.sin(a)*(rad-gap*0.4));g.lineTo(cx+Math.cos(a)*(rad+gap*0.25),cy+Math.sin(a)*(rad+gap*0.25));g.stroke();g.globalAlpha=1;}
       const dot=Math.max(3,Math.min(9,gap*0.22)),ids=ringDots(o.r);let hc=0;
-      pat.forEach((hit,s)=>{const pos=s/o.r.steps+o.r.off,aa=pos*2*Math.PI-Math.PI/2,x=cx+Math.cos(aa)*rad,y=cy+Math.sin(aa)*rad;
+      pat.forEach((hit,s)=>{const pos=s/o.r.steps+(o.r.off||0),aa=pos*2*Math.PI-Math.PI/2,x=cx+Math.cos(aa)*rad,y=cy+Math.sin(aa)*rad;
         const d=hit?ids[hc++]:-1,dlv=hit&&o.r.da&&o.r.da[d]!==undefined?o.r.da[d]:1,rr=hit?dot*(0.4+0.6*o.r.level*dlv):dot*0.45;
         g.beginPath();g.arc(x,y,rr,0,Math.PI*2);
         if(hit){wheelHits.push({x,y,ri:o.i,d});
-          const wi=dotWheel(o.r,d);
-          if(dlv>0&&wi<0){g.fillStyle=col;g.fill();}else if(dlv>0){g.fillStyle=T['--bg'];g.fill();g.strokeStyle=col;g.lineWidth=1.6;g.stroke();
-            /* a wheel inside this dot: its turn as an arc, its clicks as small dots along it */
-            const ir=E.rings[wi],ip=innerPos(ir),id=innerDots(ir),sw=dotTurn(o.r,d)*2*Math.PI;
-            g.globalAlpha=0.45;g.lineWidth=1.2;g.beginPath();g.arc(cx,cy,rad,aa,aa+sw);g.stroke();g.globalAlpha=1;g.fillStyle=col;
-            for(let q=0;q<ip.length;q++){const lv=ir.da&&ir.da[id[q]]!==undefined?ir.da[id[q]]:1;if(!(lv>0))continue;const ab=aa+ip[q]*sw;
-              g.beginPath();g.arc(cx+Math.cos(ab)*rad,cy+Math.sin(ab)*rad,Math.max(1.6,rr*(0.3+0.25*lv)),0,Math.PI*2);g.fill();}
+          const W=dotWheel(o.r,d,view.length);
+          if(dlv>0&&!W){g.fillStyle=col;g.fill();}else if(dlv>0){g.fillStyle=T['--bg'];g.fill();g.strokeStyle=col;g.lineWidth=1.6;g.stroke();
+            /* a wheel inside this dot: its turn as an arc, its first level of hits as small dots along it */
+            const sw=dotTurn(o.r,d)*2*Math.PI;
+            g.globalAlpha=0.45;g.lineWidth=1.2;g.beginPath();g.arc(cx,cy,rad,aa,aa+sw);g.stroke();g.globalAlpha=1;
+            for(let ci=0;ci<4;ci++){const c=W.rings[ci];if(!c||!c.on||!(c.level>0))continue;g.fillStyle=T[RC[ci]];
+              for(const q of ringPos(c)){const ab=aa+q*sw;g.beginPath();g.arc(cx+Math.cos(ab)*rad,cy+Math.sin(ab)*rad,Math.max(1.6,rr*0.4),0,Math.PI*2);g.fill();}}
+            g.fillStyle=col;g.beginPath();g.arc(x,y,Math.max(1.2,rr*0.3),0,Math.PI*2);g.fill();
           }else{g.fillStyle=T['--bg'];g.fill();g.strokeStyle=col;g.lineWidth=1.3;g.stroke();}
           if((o.r.dp&&o.r.dp[d])||(o.r.dl&&o.r.dl[d])||(o.r.pld&&o.r.pld[d]>0)||(o.r.lld&&o.r.lld[d]>0)){g.strokeStyle=T['--ink'];g.globalAlpha=0.55;g.lineWidth=1;g.beginPath();g.arc(x,y,rr+2.5,0,Math.PI*2);g.stroke();g.globalAlpha=1;}   /* dot has its own pitch or length */
           if(sel&&sel.ri===o.i&&sel.d===d){g.strokeStyle=T['--accent'];g.lineWidth=1.6;g.beginPath();g.arc(x,y,rr+6,0,Math.PI*2);g.stroke();}
-          if(blur<0.5&&!ui.calm&&frac(ph-pos)<0.04){g.strokeStyle=col;g.lineWidth=2;g.beginPath();g.arc(x,y,dot*1.9,0,Math.PI*2);g.stroke();}}
+          if(blur<0.5&&!ui.calm&&run&&frac(ph-pos)<0.04){g.strokeStyle=col;g.lineWidth=2;g.beginPath();g.arc(x,y,dot*1.9,0,Math.PI*2);g.stroke();}}
         else{g.fillStyle=T['--bg'];g.fill();g.strokeStyle=T['--muted'];g.lineWidth=1;g.stroke();}});
-      if(blur<1){const hx=cx+Math.cos(a)*rad,hy=cy+Math.sin(a)*rad;g.globalAlpha=1-blur;   /* playhead target */
+      if(blur<1&&run){const hx=cx+Math.cos(a)*rad,hy=cy+Math.sin(a)*rad;g.globalAlpha=1-blur;   /* playhead target */
         g.fillStyle=T['--bg'];g.beginPath();g.arc(hx,hy,5.5,0,Math.PI*2);g.fill();g.strokeStyle=T['--ink'];g.lineWidth=1.3;g.stroke();
         g.fillStyle=col;g.beginPath();g.arc(hx,hy,2.2,0,Math.PI*2);g.fill();g.globalAlpha=1;}
     });
     if(!act.length){g.fillStyle=T['--muted'];g.font=font(13);g.textAlign='center';g.fillText('Turn on a ring',cx,cy);return;}
+    if(vc){const sec=vc.span/Math.max(1e-6,E.speed);g.textAlign='center';g.fillStyle=T['--ink'];g.font=font(Math.max(13,inner*0.24),500);
+      g.fillText('Level '+(view.length+1),cx,cy+4);g.fillStyle=T['--muted'];g.font=font(11);
+      g.fillText((sec>=1?sec.toFixed(2)+' s':(sec*1000).toFixed(sec<0.01?2:1)+' ms')+' turn'+(vc.live?'':' · not reached'),cx,cy+22);return;}
     const z=zoneOf(E);g.textAlign='center';g.fillStyle=T['--ink'];g.font=font(Math.max(13,inner*0.28),500);
     g.fillText(z==='Tone'?noteName(E.speed,true):z,cx,cy+4);
     g.fillStyle=T['--muted'];g.font=font(11);g.fillText(z==='Tone'?fmtHz(E.speed):(1/E.speed).toFixed(2)+' s',cx,cy+22);
@@ -1310,7 +1360,7 @@ function initInstrument(){
     g.strokeStyle=T['--line'];g.beginPath();g.moveTo(x0,cy);g.lineTo(x1,cy);g.stroke();
     g.strokeStyle=T['--ink'];g.lineWidth=1.3;g.beginPath();
     const S=300;for(let i=0;i<=S;i++){const px=x0+i/S*WW,py=cy-val(i/S)*k;i?g.lineTo(px,py):g.moveTo(px,py);}g.stroke();
-    E.rings.forEach((r,i)=>{if(!r.on)return;g.fillStyle=T[RC[i]];ringPos(r).forEach(p=>{g.fillRect(x0+frac(p+r.off)*WW-1,h-8-i*3,2,3);});});
+    for(const o of C.D){g.fillStyle=T[RC[o.ri]];g.fillRect(x0+frac(o.p)*WW-1,h-8-o.ri*3,2,3);}
     const mx=x0+t*WW,my=cy-val(t)*k;
     g.setLineDash([3,3]);g.strokeStyle=T['--muted'];g.beginPath();g.moveTo(x,y);g.lineTo(mx,my);g.stroke();g.setLineDash([]);
     g.fillStyle=T['--accent'];g.beginPath();g.arc(mx,my,3,0,Math.PI*2);g.fill();
@@ -1326,23 +1376,25 @@ function initInstrument(){
     const M=k=>(state.lfo[k]&&state.lfo[k].depth>0)||locked.has(k);
     setOut('F',fmtHz(E.F),M('F'));setOut('S',E.sigma.toFixed(2)+' ms',M('sigma'));
     setOut('D',E.det.toFixed(1)+'¢',M('det'));setOut('V',E.vib.toFixed(0)+'¢',M('vib'));setOut('O',Math.round(E.vol*100)+'%',M('vol'));
-    E.rings.forEach((r,i)=>{
-      setOut(`r${i}steps`,String(r.steps),M(`r${i}steps`));setOut(`r${i}hits`,String(r.hits),M(`r${i}hits`));
-      setOut(`r${i}rot`,M(`r${i}rot`)?(r.rot+r.off*r.steps).toFixed(1):String(r.rot),M(`r${i}rot`));
-      setOut(`r${i}level`,Math.round(r.level*100)+'%',M(`r${i}level`));
+    if(view.length&&!wheelAt(view.length)){view.length=0;selectDot(null);syncView();}   /* the wheel on screen is gone (reset, or its dot was reset) */
+    const vc=view.length?viewClock(E):null,RS=vc?vc.rs:E.rings,MR=k=>!vc&&M(k);
+    RS.forEach((r,i)=>{
+      setOut(`r${i}steps`,String(r.steps),MR(`r${i}steps`));setOut(`r${i}hits`,String(r.hits),MR(`r${i}hits`));
+      setOut(`r${i}rot`,MR(`r${i}rot`)?(r.rot+r.off*r.steps).toFixed(1):String(r.rot),MR(`r${i}rot`));
+      setOut(`r${i}level`,Math.round(r.level*100)+'%',MR(`r${i}level`));
       setText(`#r${i}pat`,euclidPattern(r.steps,r.hits,r.rot).map(x=>x?'x':'·').join(''));});
-    if(sel){const sr=state.rings[sel.ri];
+    if(sel){const sr=VR()[sel.ri];
       if(!sr.on||sel.d>=sr.hits)selectDot(null);
-      else{const er=E.rings[sel.ri],pm=sr.pld[sel.d]>0,lm=sr.lld[sel.d]>0,st=dotPitch(er,sel.ri,sel.d,vis.t,dotL),ol=dotLen(er,sel.ri,sel.d,vis.t,dotL);
+      else{const er=RS[sel.ri],pm=sr.pld[sel.d]>0,lm=sr.lld[sel.d]>0,st=dotPitch(er,sel.ri,sel.d,vis.t,dotL),ol=dotLen(er,sel.ri,sel.d,vis.t,dotL);
         setText('#dotTitle',`Ring ${sel.ri+1} · dot ${sel.d+1} of ${sr.hits}`);
         setText('#dPv',(st>0?'+':st<0?'−':'')+Math.abs(st).toFixed(pm?1:0)+' st · '+fmtHz(dotF(E.F,st)));$('#dPv').classList.toggle('mod',pm);
         setText('#dLv','×'+Math.pow(2,ol).toFixed(2)+' · '+dotS(E.sigma,ol).toFixed(2)+' ms');$('#dLv').classList.toggle('mod',lm);
         setText('#dAv',Math.round(sr.da[sel.d]*100)+'%');
-        const wi=dotWheel(er,sel.d);
-        if(wi<0)setText('#dWv','one click');
-        else{const ir=E.rings[wi],tn=dotTurn(er,sel.d),sec=tn/E.speed;
-          setText('#dWv',euclidPattern(ir.steps,ir.hits,ir.rot).map(x=>x?'x':'·').join(''));
-          setText('#dTv',(tn>=0.995?'1':tn>=0.1?tn.toFixed(2):tn.toFixed(3))+' loop · '+(sec>=1?sec.toFixed(2)+' s':(sec*1000).toFixed(sec<0.01?2:1)+' ms'));}}}
+        const W=dotWheel(er,sel.d,view.length);
+        if(!W)setText('#dWv','one click');
+        else{const tn=dotTurn(er,sel.d),sec=tn*(vc?vc.span:1)/E.speed;let n=0;for(const c of W.rings)if(c.on)n+=c.hits;
+          setText('#dWv','a wheel · '+n+(n===1?' hit':' hits'));
+          setText('#dTv',(tn>=0.995?'1':tn>=0.1?tn.toFixed(2):tn.toFixed(3))+(vc?' turn · ':' loop · ')+(sec>=1?sec.toFixed(2)+' s':(sec*1000).toFixed(sec<0.01?2:1)+' ms'));}}}
     const z=zoneOf(E),hpl=hitsPerLoop(E),f=E.speed;
     for(const id of ['#zone','#tbZone']){setText(id,z);$(id).dataset.z=z;}
     let big,sub;
