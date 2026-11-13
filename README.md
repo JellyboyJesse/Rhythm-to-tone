@@ -104,3 +104,7 @@ tests/check.cjs   headless browser checks (needs Playwright)
 README.md         this file
 CLAUDE.md         working notes for Claude
 ```
+
+## Using it as a Mac app
+
+Open the page in Safari and choose File → Add to Dock, or in Chrome use the install button in the address bar. It then runs in its own window with its own Dock icon. Keyboard: Space starts and stops the sound, P plays the sequencer, 1–4 switch rings, ← and → move the speed by a semitone (with Shift, an octave), N shows the notes.

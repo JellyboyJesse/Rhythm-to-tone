@@ -1,6 +1,6 @@
 # Rhythm Into Tone: notes for Claude
 
-A web instrument where a looped rhythm, sped up, becomes a tone whose timbre is the rhythm. Served by GitHub Pages straight from `main`, with no build step. Everything is in `index.html`.
+A web instrument where a looped rhythm, sped up, becomes a tone whose timbre is the rhythm. Served by GitHub Pages straight from `main`, with no build step. Everything is in `index.html`, apart from the install files (`manifest.webmanifest`, `icon.svg`, `icon-*.png`) that let it be added to the Dock on a Mac or installed on a phone.
 
 ## What Jesse wants from it
 
@@ -32,6 +32,14 @@ Bus messages (keep them small and JSON-serialisable):
 | `seq-sync` | instrument → sequencers | the sequence as now in force, with the `origin` that caused it |
 | `transport` | sequencer → instrument | `play: true/false` |
 | `status` | instrument → sequencers | `running`, `playing`, `step` (about every 40 ms, and every 700 ms as a heartbeat) |
+
+## Look and desktop use
+
+- The style is a lab-instrument sheet: pale ground, one blue accent, hairline rules, numbered panels (`01 Loop` …), small monospace caps labels over live readouts (`.stats`). Ring colours stay in the blue/ink/slate family. Keep it flat: no cards, shadows or gradients.
+- Three columns from 1240 px (loop and speed, harmonics and circles, rings and click), two below that, one on a phone.
+- Window preferences (theme Auto/Light/Dark, Notes on/off) live in `localStorage` under `rit-ui-v1`, separate from the patch. Notes hides every `.hint`; it is off by default.
+- Keyboard: Space sound, P sequencer, 1–4 rings, ←/→ semitone (Shift = octave), N notes. Keys are ignored while typing in a field.
+- Every number in a stats row must come from the same `E`/`C` data as the plot above it.
 
 ## Things that must not break
 
