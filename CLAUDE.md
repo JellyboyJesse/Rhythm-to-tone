@@ -12,13 +12,14 @@ A web instrument where a looped rhythm, sped up, becomes a tone whose timbre is 
 ## How index.html is built
 
 1. **Shared maths (top of the script).** These are run on the page *and* copied into the AudioWorklet with `Function.prototype.toString`, so they may only use each other and built-ins. If you add one the Engine needs, add it to the `WORKLET_SRC` list too.
-   - **The functions:** `frac`, `clamp`, `rnd`, `lfoVal`, `lfoAmt`, `lockVal`, `newEff`, `effParams`, `euclidPattern`, `ringPos`, `ringDots`, `dotF`, `dotS`, `seqStep`, `applyMsg`.
+   - **The functions:** `frac`, `clamp`, `rnd`, `lfoVal`, `lfoAmt`, `lockVal`, `newEff`, `effParams`, `euclidPattern`, `ringPos`, `innerPos`, `ringDots`, `innerDots`, `dotF`, `dotS`, `dotWheel`, `dotTurn`, `dotSeed`, `dotPitch`, `dotLen`, `seqStep`, `applyMsg`.
    - **The `Engine` class.**
 
    Do not use `eval`/`new Function`: some hosts block it.
 2. **`effParams(S, t, step, E)`** turns saved state into the values in force at time `t`. It works in three layers: base values, then sequencer locks for the current step, then LFOs. It fills `E` in place, so it creates no garbage on the audio thread. Keep it allocation-free.
 3. **`Engine`.** One phase clock and four rings. Each hit starts a Gaussian-windowed sine grain at its exact sub-sample time. Grains run by recurrence, and each keeps the F and σ it started with. A ring's rotation offset (`off`) shifts its phase, and hits crossed by rotation alone are skipped. The engine counts loops for the sequencer's Loops clock. A soft limiter only acts above 0.8.
    **Per-dot settings.** Each ring has `dp` (pitch offset, semitones, ±24), `dl` (length offset, octaves, ±2) and `da` (level, 0–1), 16 slots each. A dot is numbered by its order in the unrotated pattern (`ringDots`), so its settings travel with it when the ring rotates. Offsets are relative to Click pitch and Click length, so LFOs and the sequencer still move every dot. The page's spectrum comes from `dotList`/`heardMag`/`heardEnv`, which sum each dot's own click spectrum (with its 3σ delay phase); the tests check the engine against them. A dot is edited by clicking it on the wheel (`#dotBox`). Each dot also has its own LFO on pitch (`pld` depth in semitones, `plr` rate, `pls` shape) and on length (`lld` in octaves, `llr`, `lls`). `dotPitch`/`dotLen` are the one place these are worked out, for the engine (at the moment a click starts) and for the page (`dotList(E,t)`). Each dot's LFO has its own start phase (`dotSeed`).
+   **Wheels inside dots.** A dot can hold a wheel in place of a click: `dw` (0 = click, 1–4 = that ring's pattern as the inner wheel) and `dt` (the inner wheel's one turn, as a fraction of the outer loop, 1/64–1), 16 slots each. When the outer playhead crosses the dot, the engine sets down the inner wheel's clicks at their exact times (a queue of pending clicks, `pT/pA/pF/pS`, no allocation). The turn is one-shot, keeps the speed it started with, and may overlap the next dot. Inner clicks take the outer dot's pitch, length and level plus the inner dot's own. A ring that is switched off can still be used as an inner wheel (`innerPos`/`innerDots` ignore `on`). It is two levels deep only: inner dots always play clicks. `dotList` expands the same way (inner click at `p + q·dt`), so the spectrum and circles stay exact; the tests check this.
 4. **Page side.** Constants, `LFOSPEC`, `state` with `sanitizeState`/`sanitizeSeq`, and the message `bus`. The bus uses BroadcastChannel and also does direct `postMessage` to a popup or opener, de-duplicated by message id.
 5. **`mountSequencer(host, opts)`.** The sequencer view, used in its own window (`#sequencer`) or docked in the instrument.
 6. **`initInstrument()`.** The instrument view, audio start, visual mirror, drawing and readouts.
@@ -62,7 +63,7 @@ Bus messages (keep them small and JSON-serialisable):
 
 ## Ideas discussed but not built
 
-- A "self-similar" mode: each hit of a slow groove plays a grain that is the same pattern at pitch speed (the slow pattern convolved with the fast one).
+- Wheels all the way down: more than two levels of wheels inside dots, as the basis of a DAW (a top wheel whose dots are sections, then patterns, notes and clicks). Two levels are built (`dw`/`dt`).
 - Morphing between two saved rhythms.
 - Tapping hits directly on the wheel.
 - Becoming a module in Jesse's Patchwork rack (repo `JellyboyJesse/Solf-ge`, see its `MODULES.md`). He chose to keep it as its own repo for now.

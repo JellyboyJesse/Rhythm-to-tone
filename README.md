@@ -111,6 +111,10 @@ Click a dot on the wheel to give that one hit its own pitch (in semitones from t
 
 The LFO buttons beside a dot's Pitch and Length give that dot its own LFO, with shape, rate and depth. Like the other click LFOs, it is read each time the dot fires, so it changes the dot hit by hit.
 
+## Wheels inside dots
+
+In the dot editor, **Inside** chooses what the dot plays: one click, or one of the four rings' patterns as a wheel of its own. When the playhead crosses the dot, the inner wheel makes one turn and stops. **Turn** sets how long that turn lasts, as a fraction of the main loop. If the turn is longer than the gap to the next dot, the two overlap. The inner clicks use the outer dot's pitch, length and level, combined with the inner ring's own per-dot settings. A ring can be switched off and still be used as an inner wheel. On the wheel, the dot is drawn hollow, with an arc for its turn and small dots for its clicks. The Heard spectrum and the circles include every inner click.
+
 ## Using it as a Mac app
 
 Open the page in Safari and choose File → Add to Dock, or in Chrome use the install button in the address bar. It then runs in its own window with its own Dock icon. Keyboard: Space starts and stops the sound, P plays the sequencer, 1–4 switch rings, ← and → move the speed by a semitone (with Shift, an octave), N shows the notes.
