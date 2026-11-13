@@ -105,6 +105,10 @@ README.md         this file
 CLAUDE.md         working notes for Claude
 ```
 
+## Per-dot pitch, length and level
+
+Click a dot on the wheel to give that one hit its own pitch (in semitones from the Click pitch), length (as a multiple of the Click length) and level. A dot with its own pitch or length gets a thin outline, and a dot at level 0 is drawn hollow and stays silent. The settings follow the dot when its ring rotates. The Heard spectrum adds up every dot's own click spectrum, so it still shows exactly what is played.
+
 ## Using it as a Mac app
 
 Open the page in Safari and choose File → Add to Dock, or in Chrome use the install button in the address bar. It then runs in its own window with its own Dock icon. Keyboard: Space starts and stops the sound, P plays the sequencer, 1–4 switch rings, ← and → move the speed by a semitone (with Shift, an octave), N shows the notes.

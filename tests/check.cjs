@@ -48,10 +48,21 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       applyMsg(e4,{S:S4,jump:true});let bad=0,peak=0;t=0;
       for(let n=0;n<sr*4;n+=128){e4.render(buf,128,t);t+=128/sr;for(const v of buf){if(!isFinite(v))bad++;else peak=Math.max(peak,Math.abs(v));}}
       stress.push({sp,bad,peak});}
-    return{err,leak,stepOk,pitchErr,rest,stress,worklet:WORKLET_SRC.length};
+    /* per-dot pitch, length and level (with a rotated ring): the engine against the page's own spectrum formula */
+    const z16=a=>Array.from({length:16},(_,i)=>a[i]===undefined?0:a[i]),o16=a=>Array.from({length:16},(_,i)=>a[i]===undefined?1:a[i]);
+    const e5=new Engine(sr),S5=JSON.parse(JSON.stringify(S));
+    S5.rings=[{on:true,steps:4,hits:4,rot:1,level:1,dp:z16([0,7,12,-5]),dl:z16([0,0.5,-0.5,0.25]),da:o16([1,0.5,0.8,0.3])},
+      {on:true,steps:5,hits:3,rot:2,level:0.7,dp:z16([3,-2,9]),dl:z16([-0.3,0,0.4]),da:o16([0.9,0,1])},
+      {on:false,steps:1,hits:0,rot:0,level:1},{on:false,steps:1,hits:0,rot:0,level:1}];
+    applyMsg(e5,{S:S5,jump:true});const out5=new Float32Array(N);for(let i=0;i<N;i+=128)e5.render(out5.subarray(i,i+128),128,i/sr);
+    const D5=dotList(effParams(S5,0,-1,newEff())),H5=[],P5=[];
+    for(let n=1;n<=24;n++){let re=0,im=0;for(let i=sr/2;i<N;i++){const a=2*Math.PI*n*100*i/sr;re+=out5[i]*Math.cos(a);im+=out5[i]*Math.sin(a);}H5.push(Math.hypot(re,im));P5.push(heardMag(D5,n,n*100));}
+    const mh5=Math.max(...H5),mp5=Math.max(...P5);let dotErr=0;H5.forEach((h,i)=>dotErr=Math.max(dotErr,Math.abs(h/mh5-P5[i]/mp5)));
+    return{err,leak,stepOk,pitchErr,rest,stress,dotErr,dots:D5.length,worklet:WORKLET_SRC.length};
   });
   check('engine harmonics match divisor sums x click spectrum',m.err<0.01,'max error '+m.err.toFixed(4));
   check('no energy between harmonics',m.leak<1e-6,m.leak.toExponential(1));
+  check('per-dot pitch, length and level match the spectrum formula',m.dotErr<0.01&&m.dots===6,'max error '+m.dotErr.toFixed(4)+', '+m.dots+' sounding dots');
   check('sequencer steps in order inside the engine',m.stepOk);
   check('sequencer pitches land on the notes',m.pitchErr<0.01,(m.pitchErr*100).toFixed(2)+'%');
   check('rest steps are silent',m.rest===0,m.rest);
@@ -93,6 +104,19 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   await inst.click('[data-go="110"]');await inst.waitForTimeout(700);
   const p2=await ctx.newPage();await p2.goto(BASE);await p2.waitForTimeout(400);
   check('settings survive a reload',(await p2.evaluate(()=>state.base.speed))===110);await p2.close();
+
+  /* 4b. clicking a dot on the wheel opens its editor */
+  await inst.click('#reset');await inst.click('#reset');await inst.waitForTimeout(300);
+  await inst.evaluate(()=>document.querySelector('#wheel').scrollIntoView({block:'center'}));await inst.waitForTimeout(150);
+  {const wb=await (await inst.$('#wheel')).boundingBox(),R=Math.min(wb.width,wb.height)/2-34,gap=(R-R*0.3)/4;
+    await inst.mouse.click(wb.x+wb.width/2,wb.y+wb.height/2-(R-gap*0.15));await inst.waitForTimeout(250);
+    check('clicking a dot selects it',/Ring 1 · dot 1 of 1/.test(await inst.textContent('#dotTitle')),await inst.textContent('#dotTitle'));
+    await inst.$eval('#dP',el=>{el.value=7;el.dispatchEvent(new Event('input'));});
+    await inst.$eval('#dA',el=>{el.value=40;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(200);
+    check('dot pitch and level are stored',await inst.evaluate(()=>state.rings[0].dp[0]===7&&state.rings[0].da[0]===0.4));
+    await inst.screenshot({path:path.join(OUT,'instrument-dot.png')});
+    await inst.click('#dotReset');await inst.keyboard.press('Escape');await inst.waitForTimeout(150);
+    check('Reset dot and Esc clear the editor',await inst.evaluate(()=>state.rings[0].dp[0]===0&&state.rings[0].da[0]===1&&document.querySelector('#dotEd').hidden));}
 
   /* 5. fallback engine when AudioWorklet is missing */
   const fb=await ctx.newPage();watch(fb,'fallback');
