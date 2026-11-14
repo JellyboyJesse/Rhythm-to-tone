@@ -116,7 +116,19 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     const XW=WT({mods:[Object.assign(newMod('wheel'),{ring:1,val:'dp',dest:'pitch',depth:1}),null,null,null]});XW.rings[1]=R({level:0,dp:z16([12])});
     const mhw=run(XW).o,modWheel=TN(mhw,880,0.52,0.62)/(TN(mhw,440,0.52,0.62)+1e-12);
     const XR=WT({mods:[Object.assign(newMod('rand'),{dest:'pitch',depth:1}),null,null,null]}),er9=run(XR).e,randSet=er9.vo.some(v=>v.rv[0]!==0);
-    return{wtSine,wtSaw,modPitch,modPos,modRel,modWheel,randSet,iBefore,iHeld,iAfter,iPitch,loopLate,loopEnd,heldLate,vPoly,vMono,vLeg,filtCut,smpIn,smpOut,smpPitch,impAt,ipk,impWide,err,leak,stepOk,pitchErr,rest,stress,dotErr,lfoMoved,dots:D5.length,nestErr,nestDots:D6.length,nestTimes:peaks.every(Boolean),e6drop:e6.dropped,worklet:WORKLET_SRC.length};
+    /* the fuller instrument: each change is made to a plain 440 Hz sine and found in the spectrum of the held note */
+    const OS=o=>{const X=JSON.parse(JSON.stringify(SI));X.inst[3]=Object.assign(newInst('t'),{src:'osc',wave:'sine',note:69,a:0.005,d:0.05,s:1,r:0.03,ft:'off',vel:1,level:1},o);return X;};
+    const BIN=(o,f)=>TN(o,f,0.52,0.62),base=run(OS({})).o,b440=BIN(base,440);
+    const f2={o2:BIN(run(OS({o2l:1,o2w:'sine',o2s:12,o2f:0})).o,880)/b440,fm:BIN(run(OS({fm:1,o2w:'sine',o2s:12,o2f:0})).o,1320)/b440,ring:BIN(run(OS({ring:1,o2w:'sine',o2s:12,o2f:0})).o,1320)/b440,
+      sub:BIN(run(OS({sub:1})).o,220)/b440,drive:BIN(run(OS({drive:1})).o,1320)/b440,clean:BIN(base,1320)/b440+BIN(base,880)/b440+BIN(base,220)/b440};
+    const eu=run(OS({uni:3,udet:50})).e,uv=eu.vo.find(v=>v.I),uniOk=uv.un===3&&uv.ur[0]<0.99&&Math.abs(uv.ur[1]-1)<1e-9&&uv.ur[2]>1.01;
+    const saw=o=>OS(Object.assign({wave:'saw',note:45,fe:0,fk:0,fq:0.2},o)),s0=BIN(run(saw({})).o,1100);
+    const fl={lp:BIN(run(saw({ft:'lp',fc:200})).o,1100)/s0,lp4:BIN(run(saw({ft:'lp4',fc:200})).o,1100)/s0,notch:BIN(run(OS({ft:'nt',fc:440,fe:0,fk:0,fq:0})).o,440)/b440};
+    const comb=run(saw({ft:'cb',fc:440,fq:0.8})).o,combOk=comb.every(isFinite)&&E2(comb,0.52,0.62)>0.5;
+    const lp=o=>run(OS(Object.assign({a:0.005,d:0.02,s:0},o))).o,loopOn=E2(lp({eloop:true}),0.59,0.62),loopOff=E2(lp({}),0.59,0.62);
+    const straight=E2(run(OS({elin:true,r:0.03})).o,0.67,0.8);
+    const presetsOk=INST_PRESETS.every(([n,o])=>{const X=OS({});X.inst[3]=sanInst(Object.assign(newInst(n),o));const r=run(X).o;return r.every(isFinite)&&E2(r,0.5,0.99)>0.01;});
+    return{f2,uniOk,fl,combOk,loopOn,loopOff,straight,presetsOk,wtSine,wtSaw,modPitch,modPos,modRel,modWheel,randSet,iBefore,iHeld,iAfter,iPitch,loopLate,loopEnd,heldLate,vPoly,vMono,vLeg,filtCut,smpIn,smpOut,smpPitch,impAt,ipk,impWide,err,leak,stepOk,pitchErr,rest,stress,dotErr,lfoMoved,dots:D5.length,nestErr,nestDots:D6.length,nestTimes:peaks.every(Boolean),e6drop:e6.dropped,worklet:WORKLET_SRC.length};
   });
   check('engine harmonics match divisor sums x click spectrum',m.err<0.01,'max error '+m.err.toFixed(4));
   check('no energy between harmonics',m.leak<1e-6,m.leak.toExponential(1));
@@ -133,6 +145,11 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   check('a drawn modulator moves pitch and wavetable position',m.modPitch>20&&m.modPos>0.4,'pitch up an octave: 880 over 440 = '+m.modPitch.toFixed(0)+'; position: 2nd harmonic '+m.modPos.toFixed(2));
   check('a modulator on Release lengthens the note',m.modRel>100,'energy after the note, with over without: '+m.modRel.toExponential(1));
   check('a wheel modulator reads a ring\'s dots; a random one draws a value per note',m.modWheel>20&&m.randSet,'880 over 440 = '+m.modWheel.toFixed(0));
+  check('second oscillator, FM, ring, sub and drive each add their partials',m.f2.o2>0.8&&m.f2.fm>0.1&&m.f2.ring>0.3&&m.f2.sub>0.8&&m.f2.drive>0.05&&m.f2.clean<0.01,'osc 2 '+m.f2.o2.toFixed(2)+', FM '+m.f2.fm.toFixed(2)+', ring '+m.f2.ring.toFixed(2)+', sub '+m.f2.sub.toFixed(2)+', drive '+m.f2.drive.toFixed(2)+', plain sine '+m.f2.clean.toFixed(4));
+  check('unison spreads its copies in pitch',m.uniOk);
+  check('the 24 dB low-pass cuts more than the 12 dB one; the notch removes its frequency; the comb is stable',m.fl.lp4<m.fl.lp*0.3&&m.fl.notch<0.05&&m.combOk,'1.1 kHz kept: 12 dB '+(m.fl.lp*100).toFixed(1)+'%, 24 dB '+(m.fl.lp4*100).toFixed(2)+'%; notch keeps '+(m.fl.notch*100).toFixed(1)+'%');
+  check('a looping envelope keeps repeating while held; a straight release ends on time',m.loopOn>m.loopOff*100&&m.loopOn>0.01&&m.straight<1e-9,'late in the note: loop '+m.loopOn.toFixed(3)+', no loop '+m.loopOff.toExponential(1)+'; after a straight release '+m.straight.toExponential(1));
+  check('every preset makes a sound',m.presetsOk);
   check('sequencer steps in order inside the engine',m.stepOk);
   check('sequencer pitches land on the notes',m.pitchErr<0.01,(m.pitchErr*100).toFixed(2)+'%');
   check('rest steps are silent',m.rest===0,m.rest);
@@ -232,6 +249,11 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       await iw.click('#i-aud');await iw.waitForTimeout(200);
       await iw.click('[data-seg="src"] [data-v="smp"]');await iw.click('[data-seg="mode"] [data-v="loop"]');await iw.waitForTimeout(300);
       check('the sample source shows its play modes',await iw.evaluate(()=>!document.querySelector('#i-play').hidden&&document.querySelector('#i-osc').hidden&&!document.querySelector('#i-ls').closest('.ctl').hidden)&&(await inst.evaluate(()=>state.inst[2].src+state.inst[2].mode))==='smploop',await iw.textContent('#i-modeNote'));
+      await iw.selectOption('#i-preset','3');await iw.waitForTimeout(300);
+      check('a preset loads into the slot',await inst.evaluate(()=>state.inst[2].name==='Bell'&&state.inst[2].fm===0.6&&state.inst[2].o2s===14),await iw.textContent('#i-stat'));
+      await iw.click('[data-seg="eloop"] [data-v="true"]');await iw.click('[data-seg="ft"] [data-v="cb"]');await iw.$eval('#i-uni',el=>{});await iw.$eval('#i-drive',el=>{el.value=500;el.dispatchEvent(new Event('input'));});await iw.waitForTimeout(300);
+      check('the new controls reach the patch',await inst.evaluate(()=>state.inst[2].eloop===true&&state.inst[2].ft==='cb'&&Math.abs(state.inst[2].drive-0.5)<0.01));
+      await iw.fill('#i-name','Glass bell');
       await iw.click('[data-seg="src"] [data-v="wt"]');await iw.click('[data-seg="wt"] [data-v="formant"]');
       await iw.click('.mod[data-q="0"] [data-mseg="type"] [data-v="draw"]');await iw.selectOption('#m0-dest','wp');await iw.click('.mod[data-q="0"] [data-mseg="sync"] [data-v="loop"]');
       await iw.click('.mod[data-q="1"] [data-mseg="type"] [data-v="wheel"]');await iw.waitForTimeout(400);
