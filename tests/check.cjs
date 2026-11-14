@@ -77,13 +77,26 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     S7.rings=[R({dk:['wheel'],dt:[0.5],kids:[{rings:[R({steps:4,hits:4}),OFF,OFF,OFF]}]}),OFF,OFF,OFF];
     applyMsg(e7,{S:S7,jump:true});const out7=new Float32Array(N);for(let i=0;i<N;i+=128)e7.render(out7.subarray(i,i+128),128,i/sr);
     const peaks=[];for(let k=0;k<4;k++){const c=Math.round((0.5+0.0625*k+0.0015)*sr);let en=0,far=0;for(let i=c-60;i<=c+60;i++)en+=out7[i]*out7[i];for(let i=c+400;i<=c+520;i++)far+=out7[i]*out7[i];peaks.push(en>1e-3&&far<en*1e-6);}
-    return{err,leak,stepOk,pitchErr,rest,stress,dotErr,lfoMoved,dots:D5.length,nestErr,nestDots:D6.length,nestTimes:peaks.every(Boolean),e6drop:e6.dropped,worklet:WORKLET_SRC.length};
+    /* a sample dot and an impulse dot. The recording is a 441 Hz sine, 1 s at 44100 Hz. Ring 1's dot plays the slice from 0.25 for 0.1 of it,
+       an octave up: 50 ms of 882 Hz, starting when the dot fires at 0.5 s. Ring 2's dot is an impulse, half a loop later (0.75 s at 2 loops/s). */
+    const e8=new Engine(sr),S8=JSON.parse(JSON.stringify(S));S8.base.speed=2;
+    const tone=new Float32Array(44100);for(let i=0;i<tone.length;i++)tone[i]=Math.sin(2*Math.PI*441*i/44100);
+    S8.rings=[R({dk:['sample'],ds:[2],dss:[0.25],dsn:[0.1],dp:z16([12])}),R({steps:2,hits:1,rot:1,dk:['impulse']}),OFF,OFF];
+    applyMsg(e8,{smp:{i:2,d:tone,sr:44100}});applyMsg(e8,{S:S8,jump:true});const out8=new Float32Array(N);for(let i=0;i<N;i+=128)e8.render(out8.subarray(i,i+128),128,i/sr);
+    const en=(a,b)=>{let v=0;for(let i=Math.round(a*sr);i<Math.round(b*sr);i++)v+=out8[i]*out8[i];return v;};
+    const tn=(f,a,b)=>{let re=0,im=0;for(let i=Math.round(a*sr);i<Math.round(b*sr);i++){const w=2*Math.PI*f*i/sr;re+=out8[i]*Math.cos(w);im+=out8[i]*Math.sin(w);}return Math.hypot(re,im);};
+    const smpIn=en(0.505,0.545),smpOut=en(0.56,0.74),smpPitch=tn(882,0.505,0.545)/(tn(441,0.505,0.545)+1e-12);
+    let ipk=0,ipi=0;for(let i=Math.round(0.74*sr);i<Math.round(0.78*sr);i++)if(Math.abs(out8[i])>ipk){ipk=Math.abs(out8[i]);ipi=i;}
+    const impAt=ipi/sr,impWide=en(0.752,0.78)/(en(0.749,0.752)+1e-12);
+    return{smpIn,smpOut,smpPitch,impAt,ipk,impWide,err,leak,stepOk,pitchErr,rest,stress,dotErr,lfoMoved,dots:D5.length,nestErr,nestDots:D6.length,nestTimes:peaks.every(Boolean),e6drop:e6.dropped,worklet:WORKLET_SRC.length};
   });
   check('engine harmonics match divisor sums x click spectrum',m.err<0.01,'max error '+m.err.toFixed(4));
   check('no energy between harmonics',m.leak<1e-6,m.leak.toExponential(1));
   check('per-dot pitch, length, level and dot LFOs match the spectrum formula',m.dotErr<0.01&&m.dots===6&&m.lfoMoved,'max error '+m.dotErr.toFixed(4)+', '+m.dots+' sounding dots, LFO applied: '+m.lfoMoved);
   check('wheels inside dots match the spectrum formula',m.nestErr<0.01&&m.nestDots===12&&m.e6drop===0,'max error '+m.nestErr.toFixed(4)+', '+m.nestDots+' sounding clicks');
   check('inner-wheel clicks land at their exact times',m.nestTimes);
+  check('a sample dot plays its slice at the right time and speed',m.smpIn>1&&m.smpOut<m.smpIn*1e-6&&m.smpPitch>20,'energy '+m.smpIn.toFixed(1)+' in the slice, '+m.smpOut.toExponential(1)+' after it, 882 Hz over 441 Hz = '+m.smpPitch.toFixed(0));
+  check('an impulse dot is one short spike at the right time',m.ipk>0.1&&Math.abs(m.impAt-(0.75+8/48000))<2/48000&&m.impWide<1e-6,'peak '+m.ipk.toFixed(2)+' at '+m.impAt.toFixed(5)+' s');
   check('sequencer steps in order inside the engine',m.stepOk);
   check('sequencer pitches land on the notes',m.pitchErr<0.01,(m.pitchErr*100).toFixed(2)+'%');
   check('rest steps are silent',m.rest===0,m.rest);
@@ -154,6 +167,23 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     check('the path leads back to the top wheel',await inst.evaluate(()=>document.querySelector('#path').hidden&&document.querySelector('#pRings').dataset.inner==='false')&&(await inst.textContent('#r0stepsv'))==='1');
     {const wb3=await (await inst.$('#wheel')).boundingBox(),R3=Math.min(wb3.width,wb3.height)/2-34,gap3=(R3-R3*0.3)/4;
       await inst.mouse.click(wb3.x+wb3.width/2,wb3.y+wb3.height/2-(R3-gap3*0.15));await inst.waitForTimeout(200);}
+    {const sr2=22050,n=sr2/2,buf=Buffer.alloc(44+n*2);buf.write('RIFF',0);buf.writeUInt32LE(36+n*2,4);buf.write('WAVEfmt ',8);buf.writeUInt32LE(16,16);buf.writeUInt16LE(1,20);buf.writeUInt16LE(1,22);
+      buf.writeUInt32LE(sr2,24);buf.writeUInt32LE(sr2*2,28);buf.writeUInt16LE(2,32);buf.writeUInt16LE(16,34);buf.write('data',36);buf.writeUInt32LE(n*2,40);
+      for(let i=0;i<n;i++)buf.writeInt16LE(Math.round(12000*Math.sin(2*Math.PI*330*i/sr2)*Math.exp(-i/3000)),44+i*2);
+      await (await inst.$$('#smps input[type=file]'))[1].setInputFiles({name:'ping.wav',mimeType:'audio/wav',buffer:buf});await inst.waitForTimeout(900);
+      check('an audio file loads into a sample slot',await inst.evaluate(()=>!!samples[1]&&samples[1].name==='ping.wav'&&Math.abs(samples[1].d.length/samples[1].sr-0.5)<0.01),await inst.textContent('#smpNote'));
+      await inst.click('#dK [data-k="sample"]');await inst.click('#dSl [data-s="1"]');
+      await inst.$eval('#dSs',el=>{el.value=250;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(300);
+      check('a dot can be set to play a sample',await inst.evaluate(()=>state.rings[0].dk[0]==='sample'&&state.rings[0].ds[0]===1&&state.rings[0].dss[0]===0.25&&!document.querySelector('#dSc').hidden)&&/ping\.wav/.test(await inst.textContent('#dSlv'))&&/125/.test(await inst.textContent('#dSsv')),await inst.textContent('#dSlv')+' | start '+await inst.textContent('#dSsv')+' | slice '+await inst.textContent('#dSnv'));
+      await inst.screenshot({path:path.join(OUT,'instrument-sample-dot.png')});
+      const kept=await ctx.newPage();await kept.goto(BASE);await kept.waitForTimeout(700);
+      check('samples are kept by the browser across a reload',await kept.evaluate(()=>!!samples[1]&&samples[1].name==='ping.wav'));await kept.close();
+      await inst.evaluate(()=>{state.base.speed=4;});await inst.$eval('#dA',el=>{el.value=100;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(1500);
+      check('the scope shows the measured signal',/last 4 s/.test(await inst.textContent('#stWin'))&&parseFloat(await inst.textContent('#stPeak'))>0.01,await inst.textContent('#stWin')+' · peak '+await inst.textContent('#stPeak'));
+      await inst.click('#dK [data-k="impulse"]');await inst.waitForTimeout(200);
+      check('a dot can be set to an impulse',await inst.evaluate(()=>state.rings[0].dk[0]==='impulse'&&document.querySelector('#dSc').hidden)&&/impulse/.test(await inst.textContent('#dWv')));
+      await inst.click('#smps .smp:nth-child(2) [data-x]');await inst.waitForTimeout(200);
+      check('a sample slot can be cleared',await inst.evaluate(()=>samples[1]===null));}
     await inst.click('#dotReset');await inst.keyboard.press('Escape');await inst.waitForTimeout(150);
     check('Reset dot and Esc clear the editor',await inst.evaluate(()=>state.rings[0].dp[0]===0&&state.rings[0].da[0]===1&&state.rings[0].pld[0]===0&&state.rings[0].dk[0]==='click'&&state.rings[0].kids[0]===null&&document.querySelector('#dotEd').hidden));}
 

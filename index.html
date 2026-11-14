@@ -20,7 +20,7 @@
    Every control has an LFO drawer. The sequencer is a second view of the same file (#sequencer) or a docked panel. */
 :root{
   --bg:#E4E7EA; --panel:#EEF0F3; --ink:#14171C; --muted:#5C6473; --line:#B7BEC8; --soft:#D6DBE1;
-  --accent:#1F5BD8; --r1:#1F5BD8; --r2:#14171C; --r3:#7BA4EE; --r4:#8A94A6; --warn:#B4452B; --lfo:#0A8399; --ok:#0B7F6C;
+  --accent:#1F5BD8; --r1:#1F5BD8; --r2:#E5352B; --r3:#E8A200; --r4:#1FA34A; --warn:#B4452B; --lfo:#0A8399; --ok:#0B7F6C;
   --shadow:none;
   --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   --display:var(--mono);
@@ -28,11 +28,11 @@
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0E1013; --panel:#14171B; --ink:#E6E9ED; --muted:#8E97A5; --line:#2D333C; --soft:#1C2026;
-  --accent:#5B8CFF; --r1:#5B8CFF; --r2:#E6E9ED; --r3:#A9C4FF; --r4:#6F7A8C; --warn:#F08B6F; --lfo:#3CC3D6; --ok:#4CC6B1;
+  --accent:#5B8CFF; --r1:#5B8CFF; --r2:#FF6B5E; --r3:#FFC53D; --r4:#4ADE80; --warn:#F08B6F; --lfo:#3CC3D6; --ok:#4CC6B1;
   color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0E1013; --panel:#14171B; --ink:#E6E9ED; --muted:#8E97A5; --line:#2D333C; --soft:#1C2026;
-  --accent:#5B8CFF; --r1:#5B8CFF; --r2:#E6E9ED; --r3:#A9C4FF; --r4:#6F7A8C; --warn:#F08B6F; --lfo:#3CC3D6; --ok:#4CC6B1;
+  --accent:#5B8CFF; --r1:#5B8CFF; --r2:#FF6B5E; --r3:#FFC53D; --r4:#4ADE80; --warn:#F08B6F; --lfo:#3CC3D6; --ok:#4CC6B1;
   color-scheme:dark}
 
 *{box-sizing:border-box}
@@ -92,7 +92,7 @@ input[type=checkbox]{accent-color:var(--accent);margin:0}
 @media (max-width:860px){
   .cols{grid-template-columns:minmax(0,1fr)}
   .col,.colC{display:contents}
-  #pLoop{order:1}#pSpeed{order:2}#pRings{order:3}#pSound{order:4}#pSpec{order:5}#pCirc{order:6}
+  #pLoop{order:1}#pSpeed{order:2}#pRings{order:3}#pSound{order:4}#pScope{order:5}#pCirc{order:6}#pSmp{order:7}
 }
 .panel{display:grid;gap:12px;min-width:0;padding-top:10px;border-top:1px solid var(--line)}
 canvas{display:block;width:100%}
@@ -112,6 +112,26 @@ canvas{display:block;width:100%}
 .path b{color:var(--ink);font-weight:600}
 #pRings[data-inner="true"] .lfob,#pRings[data-inner="true"] .lfo{display:none!important}
 .where{font:500 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0}
+/* samples */
+.smps{display:grid;gap:6px}
+.smp{display:grid;grid-template-columns:22px minmax(0,1fr) auto auto;gap:8px;align-items:center}
+.smp .n{font:600 11px var(--mono);color:var(--muted);text-align:center}
+.smp .w{position:relative;height:34px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.smp .w canvas{position:absolute;inset:0;width:100%;height:100%}
+.smp .w span{position:absolute;left:0;top:0;padding:1px 6px;background:var(--panel);font:500 10px var(--mono);letter-spacing:.06em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;pointer-events:none}
+.smp[data-over="true"] .w{box-shadow:0 0 0 2px var(--accent)}
+.smp button,.smp label.btn{padding:4px 8px;font-size:10px}
+.smp label.btn{border:1px solid var(--line);border-radius:4px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:var(--ink)}
+.smp input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.dotctls .top label{flex:none}
+.dotctls .top output{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#dSc{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 18px}
+#dSc .full{grid-column:1/-1}
+#dSw{width:100%;height:46px;background:var(--bg);box-shadow:0 0 0 1px var(--line);cursor:ew-resize;touch-action:none}
+#dSl button{padding:4px 9px;font-size:10px}
+#dSl button[aria-pressed="true"]{background:var(--c,var(--accent));color:var(--bg)}
+#dSl button[data-empty="true"]{color:var(--muted)}
+#scope{height:200px}
 .dotin .seg{width:max-content;max-width:100%;flex-wrap:wrap}
 .dotin .seg button{padding:4px 8px;font-size:10px}
 .dotin .seg button[aria-pressed="true"]{background:var(--c,var(--accent));color:var(--bg)}
@@ -172,9 +192,10 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
 .stepper button:hover{color:var(--ink);background:var(--soft)}
 .stepper output{min-width:3.6ch;text-align:center;padding:2px 4px;font:500 13px var(--mono);color:var(--ink);align-self:center}
 .ctls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 22px}
-.lfo{grid-column:1/-1;display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);align-items:end;gap:6px 14px;padding:8px 10px;background:var(--panel);border-left:2px solid var(--lfo)}
+.lfo{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:end;gap:6px 14px;padding:8px 10px;background:var(--panel);border-left:2px solid var(--lfo)}
 .lfo .ttl{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;font:600 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--lfo)}
 .lfo .ttl button{padding:2px 7px;font-size:10px}
+.lfo .shapes{grid-column:1/-1;width:max-content;max-width:100%}
 .lfo input[type=range]{--sl:var(--lfo)}
 @media (max-width:520px){.lfo{grid-template-columns:minmax(0,1fr)}}
 .shapes{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
@@ -253,7 +274,7 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
         <nav class="path" id="path" aria-label="Which wheel is shown" hidden></nav>
         <canvas id="wheel" aria-label="Rhythm wheel showing each ring's hits and playhead. Click a dot to edit it."></canvas>
         <div class="dotbox" id="dotBox">
-          <p class="sub mono" id="dotNone">Click a dot to set its pitch, length and level, or to put a wheel inside it.</p>
+          <p class="sub mono" id="dotNone">Click a dot to set its pitch, length and level, or to put a wheel or a sample inside it.</p>
           <div id="dotEd" hidden>
             <div class="row spread"><span class="dottl" id="dotTitle"></span>
               <div class="row"><button type="button" id="dotPrev" aria-label="Previous dot">‹</button><button type="button" id="dotNext" aria-label="Next dot">›</button><button type="button" id="dotReset">Reset dot</button><button type="button" id="dotClose">Done</button></div></div>
@@ -262,7 +283,14 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
               <div class="ctl"><div class="top"><label for="dL">Length</label><output id="dLv"></output><button type="button" class="lfob" id="dlb-l" aria-expanded="false" aria-label="LFO for this dot's length">LFO</button></div><input type="range" id="dL" min="-200" max="200" step="1"></div>
               <div class="ctl"><div class="top"><label for="dA">Level</label><output id="dAv"></output></div><input type="range" id="dA" min="0" max="100" step="1"></div>
               <div class="ctl dotin"><div class="top"><span class="lab">Inside</span><output id="dWv"></output></div>
-                <div class="row"><div class="seg" id="dK" role="group" aria-label="What this dot plays"><button type="button" data-k="click" aria-pressed="true">Click</button><button type="button" data-k="wheel" aria-pressed="false">Wheel</button></div><button type="button" id="dOpen" hidden>Open wheel ›</button></div></div>
+                <div class="row"><div class="seg" id="dK" role="group" aria-label="What this dot plays"><button type="button" data-k="click" aria-pressed="true">Click</button><button type="button" data-k="wheel" aria-pressed="false">Wheel</button><button type="button" data-k="sample" aria-pressed="false">Sample</button><button type="button" data-k="impulse" aria-pressed="false">Impulse</button></div><button type="button" id="dOpen" hidden>Open wheel ›</button></div></div>
+              <div id="dSc" hidden>
+                <div class="ctl full"><div class="top"><span class="lab">Slot</span><output id="dSlv"></output></div>
+                  <div class="seg" id="dSl" role="group" aria-label="Which sample this dot plays"></div></div>
+                <canvas id="dSw" class="full" aria-label="The sample, with the part this dot plays marked. Drag to move the start."></canvas>
+                <div class="ctl"><div class="top"><label for="dSs">Start</label><output id="dSsv"></output></div><input type="range" id="dSs" min="0" max="1000" step="1"></div>
+                <div class="ctl"><div class="top"><label for="dSn">Slice</label><output id="dSnv"></output></div><input type="range" id="dSn" min="0" max="1000" step="1"></div>
+              </div>
               <div class="ctl" id="dTc" hidden><div class="top"><label for="dT">Turn</label><output id="dTv"></output></div><input type="range" id="dT" min="0" max="600" step="1"></div>
             </div>
           </div>
@@ -297,22 +325,15 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
     </div>
 
     <div class="col colB">
-      <section class="panel" id="pSpec" aria-label="Spectrum">
-        <div class="row spread">
-          <h2><b>03</b>Harmonics</h2>
-          <div class="seg" role="group" aria-label="Spectrum view">
-            <button type="button" id="vRhythm" aria-pressed="true">Rhythm DFT</button>
-            <button type="button" id="vHeard" aria-pressed="false">Heard spectrum</button>
-          </div>
-        </div>
-        <canvas id="spec" class="plot" aria-label="Harmonic spectrum of the loop"></canvas>
+      <section class="panel" id="pScope" aria-label="Scope">
+        <h2><b>03</b>Scope</h2>
+        <canvas id="scope" class="plot" aria-label="The signal going to the speaker"></canvas>
         <dl class="stats">
-          <div><dt>Strongest</dt><dd id="stTop">—</dd></div>
+          <div><dt>Showing</dt><dd id="stWin">—</dd></div>
+          <div><dt>Peak</dt><dd id="stPeak">—</dd></div>
           <div><dt>Loop rate</dt><dd id="stF">0.50 /s</dd></div>
-          <div><dt>Formant</dt><dd id="stFormant">700 Hz</dd></div>
-          <div><dt>Click</dt><dd id="stClick">1.20 ms</dd></div>
         </dl>
-        <p class="hint" id="specHint"></p>
+        <p class="hint">This is the signal on its way to the speaker, measured, not calculated. When the loop is fast enough to be a tone it shows two turns of the loop as a waveform. When it is a rhythm it shows the level over the last four seconds.</p>
       </section>
 
       <section class="panel" id="pCirc" aria-label="Circles">
@@ -323,21 +344,28 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
         <canvas id="circ" class="plot" aria-label="Fourier circles drawing the rhythm pattern"></canvas>
         <p class="hint">Circle n spins n times per loop. Its size and starting angle come from the pattern's nth Fourier coefficient. Chained together, the circles draw the pattern: each spike is a hit. More circles give sharper hits.</p>
       </section>
+
+      <section class="panel" id="pSmp" aria-label="Samples">
+        <h2><b>05</b>Samples</h2>
+        <div class="smps" id="smps"></div>
+        <p class="sub mono" id="smpNote">Load or drop an audio file on a slot. Then set a dot to Sample.</p>
+        <p class="hint">A sample dot plays a slice of the recording each time it fires. Pitch changes the playback speed, Start and Slice choose the part, and Length scales the slice. Short slices get soft edges, so at tone speeds a sample works as a grain. Samples are kept in this browser, not in the patch.</p>
+      </section>
     </div>
 
     <div class="col colC">
       <section class="panel" id="pRings" aria-label="Rings">
-        <h2><b>05</b>Rings</h2>
+        <h2><b>06</b>Rings</h2>
         <p class="where" id="ringsWhere" hidden></p>
         <p class="hint">Each ring spreads its hits as evenly as possible over its steps (a Euclidean rhythm). A ring with equal steps and hits is a plain pulse. An LFO on Rotate turns the ring smoothly, between steps.</p>
         <div class="rings" id="rings"></div>
       </section>
 
       <section class="panel" id="pSound" aria-label="Click and fusion">
-        <h2><b>06</b>Click and fusion</h2>
+        <h2><b>07</b>Click and fusion</h2>
         <div class="ctls" id="soundCtls"></div>
         <div class="row"><button type="button" id="resync">Re-align rings</button><span class="sub mono" id="engineNote"></span></div>
-        <p class="warn" id="dropWarn" hidden>Too many overlapping clicks: some were dropped. Shorten the click or slow down.</p>
+        <p class="warn" id="dropWarn" hidden>Too many overlapping sounds: some were dropped. Shorten the click or the sample slice, or slow down.</p>
         <p class="hint">Click pitch sets a formant. It stays fixed in Hz while the loop pitch moves, like a vowel. Each click keeps the pitch and length it had when it started, so LFOs on the click change it hit by hit. Detune gives each ring a slightly different speed, so the tone splits into separate beating voices. Shared vibrato wobbles every ring together, which helps the ear hear one sound.</p>
       </section>
     </div>
@@ -402,14 +430,14 @@ function lockVal(key,u){
 }
 function newEff(){
   const rings=[];
-  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,dp:null,dl:null,da:null,dk:null,dt:null,kids:null,pld:null,plr:null,pls:null,lld:null,llr:null,lls:null,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level']});
+  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,dp:null,dl:null,da:null,dk:null,dt:null,kids:null,ds:null,dss:null,dsn:null,pld:null,plr:null,pls:null,lld:null,llr:null,lls:null,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level']});
   return{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6,gate:true,glide:false,rings};
 }
 /* base values -> sequencer locks -> LFOs. Fills E in place (no allocation, safe for the audio thread) */
 function effParams(S,t,step,E){
   const B=S.base,L=S.lfo||{},q=S.seq;
   let sp=B.speed,F=B.F,sg=B.sigma,det=B.det,vib=B.vib,vol=B.vol;
-  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;o.dp=r.dp||null;o.dl=r.dl||null;o.da=r.da||null;o.dk=r.dk||null;o.dt=r.dt||null;o.kids=r.kids||null;o.pld=r.pld||null;o.plr=r.plr||null;o.pls=r.pls||null;o.lld=r.lld||null;o.llr=r.llr||null;o.lls=r.lls||null;}
+  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;o.dp=r.dp||null;o.dl=r.dl||null;o.da=r.da||null;o.dk=r.dk||null;o.dt=r.dt||null;o.kids=r.kids||null;o.ds=r.ds||null;o.dss=r.dss||null;o.dsn=r.dsn||null;o.pld=r.pld||null;o.plr=r.plr||null;o.pls=r.pls||null;o.lld=r.lld||null;o.llr=r.llr||null;o.lls=r.lls||null;}
   E.gate=true;E.glide=false;
   if(step>=0&&q){
     E.gate=q.gate[step]!==false;E.glide=!!q.glide[step];
@@ -457,6 +485,11 @@ function dotS(sg,o){return o?clamp(sg*Math.pow(2,o),0.05,40):sg;}
    dt = how long the inner wheel's one turn lasts, as a fraction of the turn of the wheel it sits in. depth 0 is the top wheel; wheels nest
    three levels below it. dotWheel gives the wheel a dot plays, or null for a click. */
 function dotWheel(r,d,depth){if(depth>=3||!r.dk||r.dk[d]!=='wheel'||!r.kids)return null;const w=r.kids[d];return w&&w.rings?w:null;}
+/* A sample dot plays a slice of the recording in slot ds[d]: it starts at dss[d] (0-1 of the recording) and lasts dsn[d] (0-1 of the
+   recording) times 2^ol, where ol is the dot's Length in octaves, cut off at the end of the recording. n = recording length in samples.
+   dotSliceA gives the first sample, dotSliceN how many. Engine and page both use these. */
+function dotSliceA(r,d,n){return clamp(r.dss?r.dss[d]||0:0,0,1)*n;}
+function dotSliceN(r,d,ol,n){const q=r.dsn?r.dsn[d]:1;return Math.max(0,Math.min(clamp(q===undefined||q===null?1:q,0.001,1)*Math.pow(2,ol)*n,n-1-dotSliceA(r,d,n)));}
 function dotTurn(er,d){return clamp(er.dt?er.dt[d]||0.25:0.25,1/64,1);}
 function dotSeed(ri,d){return frac((ri*32+d+1)*0.6180339887);}
 function dotPitch(er,ri,d,t,L){let v=er.dp?er.dp[d]||0:0;const dep=er.pld?er.pld[d]||0:0;
@@ -490,8 +523,15 @@ class Engine{
     this.pT=new Float64Array(PM);this.pA=new Float64Array(PM);this.pP=new Float64Array(PM);this.pL=new Float64Array(PM);this.pW=new Float64Array(PM);
     this.pI=new Int8Array(PM);this.pD=new Int8Array(PM);this.pZ=new Int8Array(PM);this.pR=new Array(PM).fill(null);
     this.pc=new WeakMap();this.dirty=true;this.nl=0;
+    /* samples: the recordings (8 slots), and the slices now playing: recording, place in it, speed, time played and to play, edge length, level */
+    this.smp=[null,null,null,null,null,null,null,null];
+    const VM=this.VM=128;this.vN=0;this.vD=new Array(VM).fill(null);
+    this.vPos=new Float64Array(VM);this.vInc=new Float64Array(VM);this.vT=new Float64Array(VM);this.vLen=new Float64Array(VM);this.vF=new Float64Array(VM);this.vA=new Float32Array(VM);
+    /* impulses: each is written into this short ring as a band-limited spike (a windowed sinc, 8 samples late) */
+    this.ib=new Float32Array(64);this.ip=0;
     this.seqOn=false;this.seqT0=0;this.seqL0=0;this.step=-1;
   }
+  setSample(i,d,sr){if(i>=0&&i<8)this.smp[i]=d&&d.length>2?{d,sr:sr||this.sr}:null;}
   setState(S,jump){this.S=S;this.dirty=true;this.update(this.t);if(jump)this.lf=this.lt;}
   /* an inner ring's hit positions and dot numbers, worked out once and kept until its pattern changes */
   pat(r){let c=this.pc.get(r);if(!c){c={k:-1,p:[],d:[]};this.pc.set(r,c);}
@@ -499,7 +539,7 @@ class Engine{
   /* how many clicks one top loop makes, counting every level (stops counting past 4096) */
   leaves(rings,depth){let n=0;
     for(let i=0;i<4;i++){const r=rings[i];if(!r||!r.on)continue;const ds=depth?this.pat(r).d:this.rings[i].dot;
-      for(let j=0;j<ds.length;j++){const W=dotWheel(r,ds[j],depth);n+=W?this.leaves(W.rings,depth+1):1;if(n>4096)return n;}}
+      for(let j=0;j<ds.length;j++){const W=dotWheel(r,ds[j],depth);const k=r.dk?r.dk[ds[j]]:'click';n+=W?this.leaves(W.rings,depth+1):(k==='sample'||k==='impulse'?0:1);if(n>4096)return n;}}
     return n;}
   seek(r){r.ph-=Math.floor(r.ph);r.base=0;let k=0;while(k<r.pos.length&&r.pos[k]<=r.ph)k++;if(k===r.pos.length){k=0;r.base=1;}r.next=k;}
   resync(){for(const r of this.rings){r.ph=this.master-r.off;this.seek(r);}}
@@ -545,7 +585,23 @@ class Engine{
           else if(this.pN<this.PM){const q=this.pN++,tm=this.n+dly;this.pT[q]=tm;this.pR[q]=c;this.pI[q]=ci;this.pD[q]=pc.d[j];this.pA[q]=a;this.pP[q]=st;this.pL[q]=ol;this.pW[q]=T;this.pZ[q]=depth+1;if(tm<this.pMin)this.pMin=tm;}
           else this.dropped++;}}
       return;}
+    const kd=r.dk?r.dk[d]:'click';
+    if(kd==='sample'){this.slice(age,amp,r,d,st,ol);return;}
+    if(kd==='impulse'){this.spike(age,amp);return;}
     this.click(age,amp,dotF(this.E.F,st),dotS(this.E.sigma,ol));
+  }
+  /* start one slice of a recording. Pitch is playback speed; the slice gets raised-cosine edges of 5 ms, or half its length if it is shorter. */
+  slice(age,amp,r,d,st,ol){
+    const S=this.smp[r.ds?r.ds[d]|0:0];if(!S)return;
+    const n=S.d.length,inc=Math.pow(2,st/12)*S.sr/this.sr,len=dotSliceN(r,d,ol,n)/inc;
+    if(!(len>=2))return;
+    if(this.vN>=this.VM){this.dropped++;return;}
+    const k=this.vN++;this.vD[k]=S.d;this.vInc[k]=inc;this.vPos[k]=dotSliceA(r,d,n)+age*inc;this.vT[k]=age;this.vLen[k]=len;this.vF[k]=Math.min(len*0.5,0.005*this.sr);this.vA[k]=amp;
+  }
+  spike(age,amp){
+    const c=8-age,B=this.ib,p=this.ip;
+    for(let k=0;k<17;k++){const x=k-c,ax=x<0?-x:x;if(ax>=8)continue;
+      const px=Math.PI*x;B[(p+k)&63]+=amp*(ax<1e-9?1:Math.sin(px)/px)*(0.5+0.5*Math.cos(px/8));}
   }
   click(age,amp,F,sg){
     if(this.gN>=this.MAX){this.dropped++;return;}
@@ -597,7 +653,14 @@ class Engine{
         const c=C[g],sn=Sn[g];C[g]=c*Cr[g]-sn*Sr[g];Sn[g]=sn*Cr[g]+c*Sr[g];
         R[g]--;g++;
       }
-      let v=s*E.vol*this.comp*0.5;const av=v<0?-v:v;
+      let s2=this.ib[this.ip];this.ib[this.ip]=0;this.ip=(this.ip+1)&63;   /* impulses, then sample slices */
+      for(let k=0;k<this.vN;){const tt=this.vT[k],ln=this.vLen[k];
+        if(tt>=ln){const l=--this.vN;this.vD[k]=this.vD[l];this.vD[l]=null;this.vPos[k]=this.vPos[l];this.vInc[k]=this.vInc[l];this.vT[k]=this.vT[l];this.vLen[k]=this.vLen[l];this.vF[k]=this.vF[l];this.vA[k]=this.vA[l];continue;}
+        const d=this.vD[k],ps=this.vPos[k],i0=ps|0,fr=ps-i0,fd=this.vF[k];
+        if(i0+1<d.length){let en=1;if(tt<fd)en=0.5-0.5*Math.cos(Math.PI*tt/fd);else if(ln-tt<fd)en=0.5-0.5*Math.cos(Math.PI*(ln-tt)/fd);
+          s2+=this.vA[k]*en*(d[i0]+(d[i0+1]-d[i0])*fr);}
+        this.vPos[k]=ps+this.vInc[k];this.vT[k]=tt+1;k++;}
+      let v=(s*this.comp+s2)*E.vol*0.5;const av=v<0?-v:v;
       if(av>0.8)v=(v<0?-1:1)*(0.8+0.2*Math.tanh((av-0.8)/0.2));   /* safety limiter: untouched below 0.8 */
       out[i]=v;
     }
@@ -606,9 +669,9 @@ class Engine{
   }
   report(){const r=[];for(const x of this.rings)r.push(frac(x.ph+x.off));return{m:this.master,r,f:Math.exp(this.lf),d:this.dropped,t:this.t,step:this.step};}
 }
-function applyMsg(e,d){if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();}
+function applyMsg(e,d){if(d.smp)e.setSample(d.smp.i,d.smp.d,d.smp.sr);if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();}
 
-const WORKLET_SRC=[frac,clamp,rnd,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotWheel,dotTurn,dotSeed,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
+const WORKLET_SRC=[frac,clamp,rnd,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotWheel,dotSliceA,dotSliceN,dotTurn,dotSeed,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
  +'\n'+Engine.toString()+`
 class RTProcessor extends AudioWorkletProcessor{
   constructor(){super();this.e=new Engine(sampleRate);this.c=0;this.port.onmessage=m=>applyMsg(this.e,m.data);}
@@ -648,8 +711,9 @@ function noteName(f,short){const m=69+12*Math.log2(f/440),r=Math.round(m),c=Math
 const fmtHz=f=>f>=1000?(f/1000).toFixed(2)+' kHz':f>=100?f.toFixed(0)+' Hz':f.toFixed(1)+' Hz';
 const snapSemi=f=>440*Math.pow(2,Math.round(12*Math.log2(f/440))/12);
 
+const DOT_KINDS=['click','wheel','sample','impulse'];
 function mkRing(steps,hits,on){return{on:!!on,steps,hits,rot:0,level:1,dp:Array(16).fill(0),dl:Array(16).fill(0),da:Array(16).fill(1),
-  dk:Array(16).fill('click'),dt:Array(16).fill(0.25),kids:Array(16).fill(null),
+  dk:Array(16).fill('click'),dt:Array(16).fill(0.25),kids:Array(16).fill(null),ds:Array(16).fill(0),dss:Array(16).fill(0),dsn:Array(16).fill(1),
   pld:Array(16).fill(0),plr:Array(16).fill(0.5),pls:Array(16).fill('sine'),lld:Array(16).fill(0),llr:Array(16).fill(0.5),lls:Array(16).fill('sine')};}
 function defaultRings(){return[1,2,3,4].map(n=>mkRing(n,n,true));}
 function newWheel(){return{rings:[mkRing(4,4,true),mkRing(3,3,false),mkRing(2,2,false),mkRing(1,1,false)]};}
@@ -675,7 +739,8 @@ function sanRing(x,r,depth){x=x&&typeof x==='object'?x:{};const steps=Math.round
   const shp=a=>Array.from({length:16},(_,k)=>Array.isArray(a)&&SHAPE_IDS.includes(a[k])?a[k]:'sine');
   return{on:typeof x.on==='boolean'?x.on:r.on,steps,hits:Math.round(num(x.hits,0,steps,Math.min(r.hits,steps))),rot:Math.round(num(x.rot,0,steps-1,0)),level:num(x.level,0,1,1),
     dp:arr(x.dp,-24,24,0),dl:arr(x.dl,-2,2,0),da:arr(x.da,0,1,1),
-    dk:Array.from({length:16},(_,k)=>Array.isArray(x.dk)&&x.dk[k]==='wheel'?'wheel':'click'),dt:arr(x.dt,1/64,1,0.25),
+    dk:Array.from({length:16},(_,k)=>Array.isArray(x.dk)&&DOT_KINDS.includes(x.dk[k])?x.dk[k]:'click'),dt:arr(x.dt,1/64,1,0.25),
+    ds:arr(x.ds,0,7,0).map(Math.round),dss:arr(x.dss,0,1,0),dsn:arr(x.dsn,0.001,1,1),
     kids:Array.from({length:16},(_,k)=>{const w=Array.isArray(x.kids)?x.kids[k]:null;if(depth>=3||!w||!Array.isArray(w.rings))return null;
       return{rings:newWheel().rings.map((nr,i)=>sanRing(w.rings[i],nr,depth+1))};}),
     pld:arr(x.pld,0,24,0),plr:arr(x.plr,0.02,20,0.5),pls:shp(x.pls),lld:arr(x.lld,0,2,0),llr:arr(x.llr,0.02,20,0.5),lls:shp(x.lls)};}
@@ -694,6 +759,23 @@ let state=sanitizeState(readStore());
 function saveNow(){try{localStorage.setItem(STORE,JSON.stringify(Object.assign({},state,{seq:Object.assign({},state.seq,{playing:false})})));}catch(e){}}
 let saveT=0;function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,400);}
 
+/* Samples: eight slots of mono recordings, kept in this browser's IndexedDB (they are far too big for the patch in localStorage).
+   A slot is {name, d: Float32Array, sr, pk: peaks for drawing}. The patch only stores which slot a dot plays. */
+const SMPN=8,SMPMAX=120,samples=Array(SMPN).fill(null);
+let smpChanged=()=>{};
+function smpPeaks(d){const N=400,pk=new Float32Array(N),st=d.length/N;for(let i=0;i<N;i++){let m=0;const a=Math.floor(i*st),b=Math.min(d.length,Math.floor((i+1)*st)+1);for(let j=a;j<b;j++){const v=d[j]<0?-d[j]:d[j];if(v>m)m=v;}pk[i]=m;}return pk;}
+function smpDb(){return new Promise((res,rej)=>{let q;try{q=indexedDB.open('rit-samples-v1',1);}catch(e){rej(e);return;}
+  q.onupgradeneeded=()=>q.result.createObjectStore('s');q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}
+function smpStore(i){smpDb().then(db=>{const st=db.transaction('s','readwrite').objectStore('s'),x=samples[i];
+  if(x)st.put({name:x.name,d:x.d,sr:x.sr},i);else st.delete(i);}).catch(()=>{});}
+function smpLoadAll(){smpDb().then(db=>{const st=db.transaction('s','readonly').objectStore('s');
+  for(let i=0;i<SMPN;i++){const q=st.get(i);q.onsuccess=()=>{const x=q.result;if(x&&x.d&&x.d.length>2&&!samples[i]){samples[i]={name:String(x.name||'sample'),d:x.d,sr:x.sr||44100,pk:smpPeaks(x.d)};smpChanged(i);}};}}).catch(()=>{});}
+function smpDecode(buf){const OC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+  return new Promise((res,rej)=>{if(!OC){rej(new Error('no decoder'));return;}const oc=new OC(1,2,44100),p=oc.decodeAudioData(buf,res,rej);if(p&&p.catch)p.catch(rej);})
+    .then(ab=>{const n=Math.min(ab.length,Math.floor(SMPMAX*ab.sampleRate)),d=new Float32Array(n),C=ab.numberOfChannels;
+      for(let c=0;c<C;c++){const x=ab.getChannelData(c);for(let i=0;i<n;i++)d[i]+=x[i]/C;}
+      return{d,sr:ab.sampleRate,cut:ab.length>n};});}
+
 /* The loop as a list of dots, and its spectrum. Each click is exp(-t²/2σ²)·sin(2πFt), centred 3σ after its hit, so its spectrum is
    σ·[exp(-2π²σ²(ν-F)²) − exp(-2π²σ²(ν+F)²)] with a delay phase. Summing that over the dots gives exactly what the engine plays. */
 function dotList(E,t){const out=[],L={shape:'sine',rate:1,seed:0};t=t||0;out.mod=false;out.cut=false;
@@ -706,7 +788,7 @@ function dotList(E,t){const out=[],L={shape:'sine',rate:1,seed:0};t=t||0;out.mod
         const st=st0+dotPitch(r,i,d,t,L),ol=ol0+dotLen(r,i,d,t,L),p=p0+(pos[j]+off)*span,W=dotWheel(r,d,depth),ri=depth?ri0:i,dd=depth?d0:d;
         if(W){walk(W.rings,depth+1,p,span*dotTurn(r,d),a,st,ol,ri,dd);continue;}
         if(out.length>=4096){out.cut=true;return;}
-        out.push({ri,d:dd,p,a,F:dotF(E.F,st),s:dotS(E.sigma,ol)/1000});}}};
+        out.push({ri,d:dd,p,a,F:dotF(E.F,st),s:dotS(E.sigma,ol)/1000,k:r.dk?r.dk[d]:'click'});}}};
   walk(E.rings,0,0,1,1,0,0,0,0);
   return out;}
 function heardMag(D,n,nu){let re=0,im=0;
@@ -817,7 +899,7 @@ function mountSequencer(host,opts){
   let st={at:0,running:false,playing:false,step:-1};
   let tool='draw',dirty=false,queued=false,hover=null,drag=null;
   host.innerHTML=`
-    <div class="row spread"><h2><b>07</b>Sequencer</h2><span class="chip" data-r="conn">Looking for the instrument…</span></div>
+    <div class="row spread"><h2><b>08</b>Sequencer</h2><span class="chip" data-r="conn">Looking for the instrument…</span></div>
     <div class="seqbar">
       <button type="button" class="playbtn" data-r="play" aria-pressed="false">Play</button>
       <div class="fld"><span>Clock</span><div class="seg" role="group" aria-label="Clock" data-r="clock"><button type="button" data-v="tempo">Tempo</button><button type="button" data-v="loops">Loops</button></div></div>
@@ -976,6 +1058,8 @@ function initInstrument(){
   const eachRing=(rs,f)=>rs.forEach(r=>{f(r);r.kids.forEach(w=>{if(w)eachRing(w.rings,f);});});
   function sendState(jump){audio.send({S:JSON.parse(JSON.stringify(state)),jump:!!jump});}
   function changed(){sendState();saveSoon();}
+  function sendSample(i){const x=samples[i];audio.send({smp:{i,d:x?x.d:null,sr:x?x.sr:0}});}
+  const fmtSec=t=>t>=1?t.toFixed(2)+' s':(t*1000).toFixed(t<0.01?2:1)+' ms';
   let toastT=0;function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,6000);}
 
   /* --- generic controls --- */
@@ -1040,6 +1124,9 @@ function initInstrument(){
     const r=VR()[sel.ri];box.style.setProperty('--c',`var(${RC[sel.ri]})`);
     const isW=r.dk[sel.d]==='wheel';
     $$('#dK button').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.k===r.dk[sel.d]?'true':'false');if(b.dataset.k==='wheel')b.disabled=view.length>=3&&!isW;});
+    const isS=r.dk[sel.d]==='sample';$('#dSc').hidden=!isS;
+    $$('#dSl button').forEach(b=>{b.setAttribute('aria-pressed',+b.dataset.s===r.ds[sel.d]?'true':'false');b.dataset.empty=!samples[+b.dataset.s];});
+    $('#dSs').value=Math.round(r.dss[sel.d]*1000);$('#dSn').value=Math.round(1000*(1+Math.log10(r.dsn[sel.d])/3));
     $('#dOpen').hidden=!(isW&&r.kids[sel.d]&&view.length<3);$('#dTc').hidden=!isW;$('#dT').value=Math.round(600+100*Math.log2(r.dt[sel.d]));
     $('#dP').value=r.dp[sel.d];$('#dL').value=Math.round(r.dl[sel.d]*100);$('#dA').value=Math.round(r.da[sel.d]*100);
     for(const w in DL){const c=DL[w],p=$('#dlfo-'+w),b=$('#dlb-'+w),dep=r[c.dep][sel.d],on=dep>0;
@@ -1074,6 +1161,47 @@ function initInstrument(){
   $$('#dK button').forEach(b=>b.onclick=()=>{if(!sel)return;const r=VR()[sel.ri];r.dk[sel.d]=b.dataset.k;
     if(b.dataset.k==='wheel'&&!r.kids[sel.d])r.kids[sel.d]=newWheel();   /* a wheel that was made stays kept if the dot goes back to a click */
     syncDotUI(true);changed();});
+  /* a dot that plays a sample: which slot, where the slice starts and how long it is */
+  $('#dSl').innerHTML=Array.from({length:SMPN},(_,i)=>`<button type="button" data-s="${i}" aria-pressed="false">${i+1}</button>`).join('');
+  $$('#dSl button').forEach(b=>b.onclick=()=>{if(sel){VR()[sel.ri].ds[sel.d]=+b.dataset.s;syncDotUI(true);changed();}});
+  $('#dSs').oninput=e=>{if(sel){VR()[sel.ri].dss[sel.d]=+e.target.value/1000;changed();}};
+  $('#dSn').oninput=e=>{if(sel){VR()[sel.ri].dsn[sel.d]=clamp(Math.pow(10,3*(+e.target.value/1000-1)),0.001,1);changed();}};
+  {const cv=$('#dSw');let down=false;
+    const at=e=>{if(!sel)return;const b=cv.getBoundingClientRect();VR()[sel.ri].dss[sel.d]=clamp((e.clientX-b.left)/Math.max(1,b.width),0,1);$('#dSs').value=Math.round(VR()[sel.ri].dss[sel.d]*1000);changed();};
+    cv.addEventListener('pointerdown',e=>{down=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}at(e);});
+    cv.addEventListener('pointermove',e=>{if(down)at(e);});
+    cv.addEventListener('pointerup',()=>{down=false;});cv.addEventListener('pointercancel',()=>{down=false;});}
+  function drawWave(g,w,h,x,col){const pk=x.pk,m=h/2;g.fillStyle=col;
+    for(let i=0;i<w;i++){const v=pk[Math.min(pk.length-1,Math.floor(i/w*pk.length))],bh=Math.max(1,v*(h-4));g.fillRect(i,m-bh/2,1,bh);}}
+  function drawDotSample(E){if(!sel)return;const r=VR()[sel.ri];if(!r||r.dk[sel.d]!=='sample')return;
+    const {g,w,h}=fit($('#dSw'));g.clearRect(0,0,w,h);const x=samples[r.ds[sel.d]];
+    if(!x){g.fillStyle=T['--muted'];g.font=font(11);g.textAlign='center';g.fillText(`Slot ${r.ds[sel.d]+1} is empty: load a file in Samples`,w/2,h/2+4);return;}
+    const n=x.d.length,a=dotSliceA(r,sel.d,n)/n,ln=dotSliceN(r,sel.d,dotLen(r,sel.ri,sel.d,vis.t,dotL),n)/n;
+    g.globalAlpha=0.35;drawWave(g,w,h,x,T['--muted']);g.globalAlpha=1;
+    g.save();g.beginPath();g.rect(a*w,0,Math.max(1.5,ln*w),h);g.clip();drawWave(g,w,h,x,T[RC[sel.ri]]);g.restore();
+    g.fillStyle=T['--ink'];g.fillRect(a*w,0,1.5,h);}
+
+  /* --- samples: eight slots --- */
+  const smpEls=[];
+  function drawSmp(i){const el=smpEls[i];if(!el)return;const x=samples[i],{g,w,h}=fit(el.cv);g.clearRect(0,0,w,h);
+    setTextEl(el.name,x?x.name:'empty');el.clr.disabled=!x;if(x){g.globalAlpha=0.8;drawWave(g,w,h,x,T['--ink']);g.globalAlpha=1;}}
+  function loadSample(i,file){if(!file)return;setText('#smpNote',`Reading ${file.name}…`);
+    file.arrayBuffer().then(smpDecode).then(o=>{samples[i]={name:file.name,d:o.d,sr:o.sr,pk:smpPeaks(o.d)};smpStore(i);smpChanged(i);
+      setText('#smpNote',`Slot ${i+1}: ${file.name} · ${fmtSec(o.d.length/o.sr)}`+(o.cut?` (only the first ${SMPMAX} s are kept)`:''));})
+      .catch(()=>{setText('#smpNote','That file could not be read as audio.');toast('That file could not be read as audio.');});}
+  for(let i=0;i<SMPN;i++){const d=document.createElement('div');d.className='smp';
+    d.innerHTML=`<span class="n">${i+1}</span><div class="w"><canvas aria-label="Waveform of sample ${i+1}"></canvas><span>empty</span></div><label class="btn">Load<input type="file" accept="audio/*" aria-label="Load a file into sample slot ${i+1}"></label><button type="button" data-x aria-label="Clear sample slot ${i+1}">Clear</button>`;
+    $('#smps').appendChild(d);const inp=d.querySelector('input'),clr=d.querySelector('[data-x]');
+    smpEls.push({cv:d.querySelector('canvas'),name:d.querySelector('.w span'),clr});
+    inp.onchange=()=>{loadSample(i,inp.files[0]);inp.value='';};
+    clr.onclick=()=>{samples[i]=null;smpStore(i);smpChanged(i);setText('#smpNote',`Slot ${i+1} cleared.`);};
+    d.addEventListener('dragover',e=>{e.preventDefault();d.dataset.over='true';});
+    d.addEventListener('dragleave',()=>{d.dataset.over='false';});
+    d.addEventListener('drop',e=>{e.preventDefault();d.dataset.over='false';loadSample(i,e.dataTransfer&&e.dataTransfer.files[0]);});}
+  smpChanged=i=>{drawSmp(i);sendSample(i);syncDotUI(true);};
+  for(let i=0;i<SMPN;i++)drawSmp(i);
+  smpLoadAll();
+
   function syncView(){const p=$('#path');p.hidden=!view.length;p.textContent='';
     if(view.length){const add=(t,n)=>{const b=document.createElement(n===view.length?'b':'button');if(n<view.length){b.type='button';b.onclick=()=>goTo(n);}b.textContent=t;p.appendChild(b);
         if(n<view.length)p.appendChild(document.createTextNode('›'));};
@@ -1088,7 +1216,7 @@ function initInstrument(){
     let best=null,bd=24*24;for(const h of wheelHits){const q=(h.x-x)*(h.x-x)+(h.y-y)*(h.y-y);if(q<bd){bd=q;best=h;}}
     if(best)openDot(best.ri,best.d);});
   $('#dT').oninput=e=>{if(sel){VR()[sel.ri].dt[sel.d]=Math.pow(2,(+e.target.value-600)/100);changed();}};
-  $('#dotReset').onclick=()=>{if(!sel)return;const r=VR()[sel.ri];r.dk[sel.d]='click';r.kids[sel.d]=null;r.dt[sel.d]=0.25;r.dp[sel.d]=0;r.dl[sel.d]=0;r.da[sel.d]=1;r.pld[sel.d]=0;r.lld[sel.d]=0;syncDotUI();changed();};
+  $('#dotReset').onclick=()=>{if(!sel)return;const r=VR()[sel.ri];r.dk[sel.d]='click';r.kids[sel.d]=null;r.dt[sel.d]=0.25;r.ds[sel.d]=0;r.dss[sel.d]=0;r.dsn[sel.d]=1;r.dp[sel.d]=0;r.dl[sel.d]=0;r.da[sel.d]=1;r.pld[sel.d]=0;r.lld[sel.d]=0;syncDotUI();changed();};
   $('#dotClose').onclick=()=>selectDot(null);
   const stepDot=s=>{if(!sel)return;const n=Math.max(1,VR()[sel.ri].hits);selectDot({ri:sel.ri,d:((sel.d+s)%n+n)%n});};
   $('#dotPrev').onclick=()=>stepDot(-1);$('#dotNext').onclick=()=>stepDot(1);
@@ -1115,8 +1243,6 @@ function initInstrument(){
   makeCtl(sc,{id:'O',key:'vol',label:'Volume',min:0,max:100,value:60,oninput:v=>{B().vol=v/100;changed();}});
   ['F','sigma','det','vib','vol'].forEach(k=>makeLfoPanel(sc,k));
   $('#resync').onclick=()=>{audio.send({resync:true});vis.rings=vis.rings.map(()=>vis.master);};
-  const setView=v=>{ui.view=v;$('#vRhythm').setAttribute('aria-pressed',v==='rhythm');$('#vHeard').setAttribute('aria-pressed',v==='heard');};
-  $('#vRhythm').onclick=()=>setView('rhythm');$('#vHeard').onclick=()=>setView('heard');
   $('#nc').oninput=e=>{ui.nc=+e.target.value;setText('#ncv',String(ui.nc));};
   $('#calm').onchange=e=>{ui.calm=e.target.checked;};
   syncPrefsUI=()=>{$('#notes').checked=uiPrefs.notes;setText('#theme','Theme: '+uiPrefs.theme[0].toUpperCase()+uiPrefs.theme.slice(1));};
@@ -1152,6 +1278,7 @@ function initInstrument(){
     audio.ctx=ctx;
     const comp=ctx.createDynamicsCompressor();comp.threshold.value=-8;comp.knee.value=6;comp.ratio.value=12;comp.attack.value=0.002;comp.release.value=0.15;
     comp.connect(ctx.destination);
+    try{const an=ctx.createAnalyser();an.fftSize=8192;comp.connect(an);audio.an=an;audio.buf=new Float32Array(an.fftSize);}catch(e){}
     try{
       if(!ctx.audioWorklet)throw new Error('no worklet');
       const url=URL.createObjectURL(new Blob([WORKLET_SRC],{type:'application/javascript'}));
@@ -1165,7 +1292,7 @@ function initInstrument(){
       sp.onaudioprocess=ev=>{const o=ev.outputBuffer.getChannelData(0);eng.render(o,o.length,ctx.currentTime);audio.rep=Object.assign(eng.report(),{pt:performance.now()});postStatus(false);};
       sp.connect(comp);audio.send=d=>applyMsg(eng,d);audio.mode='fallback engine';
     }
-    audio.sr=ctx.sampleRate;sendState(true);
+    audio.sr=ctx.sampleRate;sendState(true);for(let i=0;i<SMPN;i++)if(samples[i])sendSample(i);
     try{await resumed;}catch(e){}
     if(ctx.state!=='running'){try{await ctx.resume();}catch(e){}}
     audio.running=ctx.state==='running';
@@ -1274,6 +1401,9 @@ function initInstrument(){
         const d=hit?ids[hc++]:-1,dlv=hit&&o.r.da&&o.r.da[d]!==undefined?o.r.da[d]:1,rr=hit?dot*(0.4+0.6*o.r.level*dlv):dot*0.45;
         g.beginPath();g.arc(x,y,rr,0,Math.PI*2);
         if(hit){wheelHits.push({x,y,ri:o.i,d});
+          const kd=o.r.dk?o.r.dk[d]:'click';   /* a square is a sample, a spike is an impulse */
+          if(kd==='sample'){const q=Math.max(3,rr*0.9);g.beginPath();g.rect(x-q,y-q,q*2,q*2);}
+          else if(kd==='impulse'){const ux=Math.cos(aa),uy=Math.sin(aa),a1=Math.max(5,rr*1.7),b1=Math.max(1.6,rr*0.4);g.beginPath();g.moveTo(x+ux*a1,y+uy*a1);g.lineTo(x-uy*b1,y+ux*b1);g.lineTo(x-ux*a1,y-uy*a1);g.lineTo(x+uy*b1,y-ux*b1);g.closePath();}
           const W=dotWheel(o.r,d,view.length);
           if(dlv>0&&!W){g.fillStyle=col;g.fill();}else if(dlv>0){g.fillStyle=T['--bg'];g.fill();g.strokeStyle=col;g.lineWidth=1.6;g.stroke();
             /* a wheel inside this dot: its turn as an arc, its first level of hits as small dots along it */
@@ -1299,48 +1429,33 @@ function initInstrument(){
     g.fillText(z==='Tone'?noteName(E.speed,true):z,cx,cy+4);
     g.fillStyle=T['--muted'];g.font=font(11);g.fillText(z==='Tone'?fmtHz(E.speed):(1/E.speed).toFixed(2)+' s',cx,cy+22);
   }
-  function drawSpec(E,C){
-    const {g,w,h}=fit($('#spec'));g.clearRect(0,0,w,h);
-    const pl=34,pr=8,pt=10,pb=22,W=w-pl-pr,H=h-pt-pb,labels=['0','.25','.5','.75','1'];
-    g.strokeStyle=T['--line'];g.lineWidth=1;g.font=font(10);g.fillStyle=T['--muted'];
-    for(let q=0;q<=4;q++){const y=pt+H-H*q/4;g.globalAlpha=q?0.6:1;g.beginPath();g.moveTo(pl,y);g.lineTo(pl+W,y);g.stroke();g.globalAlpha=1;g.textAlign='right';g.fillText(labels[q],pl-5,y+3);}
-    let hint='';
-    if(C.c0<=0){g.textAlign='center';g.fillText('No hits in the loop',pl+W/2,pt+H/2);setText('#specHint','');return;}
-    const detuned=Math.abs(E.det)>0.05;
-    g.globalAlpha=detuned?0.25:1;
-    if(ui.view==='rhythm'){
-      const N=32,bw=W/N;
-      for(let n=1;n<=N;n++){const c=C.at(n),v=Math.min(1,Math.hypot(c[0],c[1])/C.c0);
-        g.fillStyle=T['--accent'];g.fillRect(pl+(n-1)*bw+bw*0.15,pt+H-v*H,bw*0.7,v*H);}
-      g.fillStyle=T['--muted'];g.textAlign='center';
-      for(let n=1;n<=N;n++)if(n===1||n%4===0)g.fillText(String(n),pl+(n-0.5)*bw,h-6);
-      hint='Bar n shows how strongly the pattern repeats n times per loop, from 0 (not at all) to 1 (every hit lines up). Once the loop is fast enough to be a pitch, bar n is the strength of harmonic n.';
-    }else{
-      const f=vis.f,lo=30,hi=Math.min(8000,audio.sr/2),X=nu=>pl+Math.log(nu/lo)/Math.log(hi/lo)*W;
-      const D=C.D,nm=heardNorm(D)||1;
-      const cols=new Float32Array(Math.ceil(W)+1);
-      const n0=Math.max(1,Math.ceil(lo/f)),nTop=Math.floor(hi/f),n1=Math.min(nTop,n0+3000);
-      for(let n=n0;n<=n1;n++){const v=Math.min(1,heardMag(D,n,n*f)/nm);
-        const xi=Math.round(X(n*f)-pl);if(xi>=0&&xi<cols.length&&v>cols[xi])cols[xi]=v;}
-      g.fillStyle=T['--accent'];
-      for(let i=0;i<cols.length;i++)if(cols[i]>0.002)g.fillRect(pl+i-0.75,pt+H-cols[i]*H,1.5,cols[i]*H);
-      g.strokeStyle=T['--r3'];g.setLineDash([4,3]);g.lineWidth=1.2;g.beginPath();
-      for(let i=0;i<=200;i++){const nu=lo*Math.pow(hi/lo,i/200),y=pt+H-Math.min(1,heardEnv(D,nu)/nm)*H;i?g.lineTo(X(nu),y):g.moveTo(X(nu),y);}
-      g.stroke();g.setLineDash([]);
-      if(f>=lo){g.strokeStyle=T['--ink'];g.globalAlpha=detuned?0.15:0.6;g.beginPath();g.moveTo(X(f),pt);g.lineTo(X(f),pt+H);g.stroke();g.globalAlpha=detuned?0.25:1;
-        g.fillStyle=T['--ink'];g.textAlign='left';g.fillText('loop rate',Math.min(X(f)+4,pl+W-56),pt+10);}
-      g.fillStyle=T['--muted'];g.textAlign='center';
-      [50,100,200,500,1000,2000,5000].forEach(nu=>{if(nu<hi)g.fillText(nu>=1000?nu/1000+'k':String(nu),X(nu),h-6);});
-      hint='Lines are the harmonics that reach the speaker: every dot\'s click spectrum, added up with its place in the loop. The dashed curve is the most the clicks could give at each frequency, if they all lined up. ';
-      if(f<20)hint+=`At ${f<1?f.toFixed(2):f.toFixed(1)} loops/s the harmonics are only that many Hz apart, too close to hear as a pitch, so you hear the rhythm instead.`;
-      if(nTop>n1)hint+=` Showing harmonics up to ${fmtHz(n1*f)}.`;
-      if(E.vib>0)hint+=' Vibrato smears each harmonic slightly.';
-    }
-    g.globalAlpha=1;
-    if(activeLfos().length||curStep()>=0||C.D.mod)hint+=' The LFOs or sequencer are moving the loop, so this is a snapshot of it at this instant.';
-    setText('#specHint',hint);
-    if(detuned){g.fillStyle=T['--warn'];g.font=font(12,500);g.textAlign='center';
-      g.fillText('Rings are detuned: the loop never repeats exactly,',pl+W/2,pt+H/2-8);g.fillText('so it has no exact harmonic spectrum.',pl+W/2,pt+H/2+8);}
+  /* The scope: the signal after the output limiter, read back from the audio graph. As a tone, two turns of the loop, lined up on the
+     highest point so the picture stands still. As a rhythm, the level over the last four seconds. */
+  const scope={hist:new Float32Array(240),hp:0,last:0,pk:0,win:'—'};
+  function drawScope(E){
+    const {g,w,h}=fit($('#scope'));g.clearRect(0,0,w,h);const mid=h/2;
+    g.strokeStyle=T['--line'];g.lineWidth=1;g.beginPath();g.moveTo(0,mid);g.lineTo(w,mid);g.stroke();
+    if(!audio.an||!audio.running){scope.pk=0;scope.win='—';g.fillStyle=T['--muted'];g.font=font(12);g.textAlign='center';g.fillText('Start sound to see the signal',w/2,mid-10);return;}
+    const B=audio.buf,N=B.length,now=performance.now();audio.an.getFloatTimeDomainData(B);
+    const f=vis.f,per=audio.sr/f;
+    if(f>=20&&per*3.3<N){
+      let bi=0,bv=-Infinity,pk=0;const i0=Math.floor(per*0.2),i1=Math.floor(per*1.2);
+      for(let i=i0;i<i1;i++)if(B[i]>bv){bv=B[i];bi=i;}
+      const st=Math.max(0,bi-Math.floor(per*0.1)),n=Math.floor(per*2);
+      for(let i=st;i<st+n;i++){const v=B[i]<0?-B[i]:B[i];if(v>pk)pk=v;}
+      const sc=(mid-8)/Math.max(pk,0.02);
+      g.strokeStyle=T['--line'];g.setLineDash([3,4]);g.beginPath();g.moveTo(w/2,4);g.lineTo(w/2,h-4);g.stroke();g.setLineDash([]);
+      g.strokeStyle=T['--accent'];g.lineWidth=1.4;g.beginPath();
+      const step=Math.max(1,n/(w*2));for(let k=0;k<=n;k+=step){const x=k/n*w,y=mid-B[st+Math.floor(k)]*sc;k?g.lineTo(x,y):g.moveTo(x,y);}
+      g.stroke();scope.pk=pk;scope.win='2 loops · '+fmtSec(2/f);scope.last=now;return;}
+    /* rhythm: one column per 1/60 s, each the loudest moment since the column before */
+    const H=scope.hist,cols=Math.min(H.length,Math.max(0,Math.floor((now-(scope.last||now))*0.06)));
+    if(cols>0||!scope.last){const m=Math.min(N,Math.ceil(Math.max(1,cols)/60*audio.sr));let v=0;for(let i=N-m;i<N;i++){const a=B[i]<0?-B[i]:B[i];if(a>v)v=a;}
+      for(let c=0;c<Math.max(1,cols);c++){H[scope.hp]=v;scope.hp=(scope.hp+1)%H.length;}scope.last=scope.last?scope.last+cols/0.06:now;}
+    let pk=0;for(let i=0;i<H.length;i++)if(H[i]>pk)pk=H[i];
+    const sc=(mid-8)/Math.max(pk,0.02),bw=w/H.length;g.fillStyle=T['--accent'];
+    for(let i=0;i<H.length;i++){const v=H[(scope.hp+i)%H.length]*sc;if(v>0.3)g.fillRect(i*bw,mid-v,Math.max(1,bw-0.5),v*2);}
+    scope.pk=pk;scope.win='last 4 s';
   }
   function drawCirc(E,C){
     const {g,w,h}=fit($('#circ'));g.clearRect(0,0,w,h);
@@ -1387,14 +1502,24 @@ function initInstrument(){
       if(!sr.on||sel.d>=sr.hits)selectDot(null);
       else{const er=RS[sel.ri],pm=sr.pld[sel.d]>0,lm=sr.lld[sel.d]>0,st=dotPitch(er,sel.ri,sel.d,vis.t,dotL),ol=dotLen(er,sel.ri,sel.d,vis.t,dotL);
         setText('#dotTitle',`Ring ${sel.ri+1} · dot ${sel.d+1} of ${sr.hits}`);
-        setText('#dPv',(st>0?'+':st<0?'−':'')+Math.abs(st).toFixed(pm?1:0)+' st · '+fmtHz(dotF(E.F,st)));$('#dPv').classList.toggle('mod',pm);
-        setText('#dLv','×'+Math.pow(2,ol).toFixed(2)+' · '+dotS(E.sigma,ol).toFixed(2)+' ms');$('#dLv').classList.toggle('mod',lm);
+        const kd=sr.dk[sel.d],sg=(st>0?'+':st<0?'−':'')+Math.abs(st).toFixed(pm?1:0)+' st';
+        $('#dPv').classList.toggle('mod',pm);$('#dLv').classList.toggle('mod',lm);
         setText('#dAv',Math.round(sr.da[sel.d]*100)+'%');
-        const W=dotWheel(er,sel.d,view.length);
-        if(!W)setText('#dWv','one click');
-        else{const tn=dotTurn(er,sel.d),sec=tn*(vc?vc.span:1)/E.speed;let n=0;for(const c of W.rings)if(c.on)n+=c.hits;
-          setText('#dWv','a wheel · '+n+(n===1?' hit':' hits'));
-          setText('#dTv',(tn>=0.995?'1':tn>=0.1?tn.toFixed(2):tn.toFixed(3))+(vc?' turn · ':' loop · ')+(sec>=1?sec.toFixed(2)+' s':(sec*1000).toFixed(sec<0.01?2:1)+' ms'));}}}
+        if(kd==='sample'){const x=samples[sr.ds[sel.d]],rate=Math.pow(2,st/12);
+          setText('#dPv',sg+' · ×'+rate.toFixed(2));setText('#dWv','sample '+(sr.ds[sel.d]+1));
+          setText('#dSlv',x?x.name:'empty slot');
+          if(x){const n=x.d.length;setText('#dLv','×'+Math.pow(2,ol).toFixed(2)+' · '+fmtSec(dotSliceN(er,sel.d,ol,n)/x.sr/rate));
+            setText('#dSsv',fmtSec(dotSliceA(er,sel.d,n)/x.sr));setText('#dSnv',fmtSec(sr.dsn[sel.d]*n/x.sr));}
+          else{setText('#dLv','×'+Math.pow(2,ol).toFixed(2));setText('#dSsv',Math.round(sr.dss[sel.d]*100)+'%');setText('#dSnv',(sr.dsn[sel.d]*100).toFixed(1)+'%');}}
+        else if(kd==='impulse'){setText('#dPv','no pitch');setText('#dLv','one spike');setText('#dWv','one impulse');}
+        else{
+          setText('#dPv',sg+' · '+fmtHz(dotF(E.F,st)));
+          setText('#dLv','×'+Math.pow(2,ol).toFixed(2)+' · '+dotS(E.sigma,ol).toFixed(2)+' ms');
+          const W=dotWheel(er,sel.d,view.length);
+          if(!W)setText('#dWv','one click');
+          else{const tn=dotTurn(er,sel.d),sec=tn*(vc?vc.span:1)/E.speed;let n=0;for(const c of W.rings)if(c.on)n+=c.hits;
+            setText('#dWv','a wheel · '+n+(n===1?' hit':' hits'));
+            setText('#dTv',(tn>=0.995?'1':tn>=0.1?tn.toFixed(2):tn.toFixed(3))+(vc?' turn · ':' loop · ')+fmtSec(sec));}}}}
     const z=zoneOf(E),hpl=hitsPerLoop(E),f=E.speed;
     for(const id of ['#zone','#tbZone']){setText(id,z);$(id).dataset.z=z;}
     let big,sub;
@@ -1406,22 +1531,17 @@ function initInstrument(){
     setText('#stHits',String(hpl));setText('#stRate',f*hpl>=1000?(f*hpl/1000).toFixed(2)+' k':(f*hpl).toFixed(1));
     setText('#stNote',z==='Tone'?noteName(f,true):z.toLowerCase());
     setText('#stF',f>=20?fmtHz(f):(f<1?f.toFixed(2):f.toFixed(1))+' /s');
-    setText('#stFormant',fmtHz(E.F));setText('#stClick',E.sigma.toFixed(2)+' ms');
-    /* strongest harmonic, from the same coefficients the plot draws */
-    let top='—';
-    if(C.c0>0&&Math.abs(E.det)<=0.05){let bn=0,bv=0;
-      if(ui.view==='rhythm'){for(let n=1;n<=32;n++){const c=C.at(n),v=Math.hypot(c[0],c[1]);if(v>bv*1.0001){bv=v;bn=n;}}if(bn)top='n = '+bn;}
-      else{const ff=vis.f,hi=Math.min(8000,audio.sr/2),n0=Math.max(1,Math.ceil(30/ff)),n1=Math.min(Math.floor(hi/ff),n0+3000);
-        for(let n=n0;n<=n1;n++){const v=heardMag(C.D,n,n*ff);if(v>bv*1.0001){bv=v;bn=n;}}if(bn)top=fmtHz(bn*ff);}}
-    setText('#stTop',top);setText('#tbVal',z==='Tone'?noteName(f,true)+' · '+fmtHz(f):big);
+    setText('#stWin',scope.win);setText('#stPeak',audio.an&&audio.running?scope.pk.toFixed(2):'—');
+    setText('#tbVal',z==='Tone'?noteName(f,true)+' · '+fmtHz(f):big);
     const tp=$('#tbPlay');tp.setAttribute('aria-pressed',!!state.seq.playing);setTextEl(tp,state.seq.playing?'Stop':'Play');
     setText('#tbStep',state.seq.playing?(step>=0?`${step+1}/${state.seq.steps}`:'waiting for sound'):'');
   }
 
-  let lastRO=0;
+  let lastRO=0,lastSm=0;
   function frame(now){
     if(!document.hidden){const E=tick(now),C=coefs(E);
-      drawWheel(E);drawSpec(E,C);drawCirc(E,C);
+      drawWheel(E);drawScope(E);drawCirc(E,C);drawDotSample(E);
+      if(now-lastSm>700){lastSm=now;for(let i=0;i<SMPN;i++)drawSmp(i);}
       if(now-lastRO>80){lastRO=now;updateReadouts(E,C);}}
     requestAnimationFrame(frame);}
 

@@ -17,9 +17,7 @@ Press **Start sound** in the bar at the top. Everything else works without sound
   - Above about 20 loops a second the loop fuses into one pitch at the loop rate.
   
   **Sweep** glides from half a loop a second up to 220 Hz. **Snap to notes** rounds the speed to semitones once it is a pitch.
-- **Harmonics.**
-  - *Rhythm DFT* shows how strongly the pattern repeats 1, 2, 3… times per loop. Once the loop is a pitch, bar n is the strength of harmonic n.
-  - *Heard spectrum* shows what reaches the speaker: those harmonics multiplied by the click's own spectrum (the dashed curve).
+- **Scope.** The signal on its way to the speaker, measured from the audio. As a tone it shows two turns of the loop; as a rhythm, the level over the last four seconds.
 - **The loop as circles.** Circle n spins n times per loop. Its size and starting angle come from the pattern's nth Fourier coefficient. Chained together, the circles draw the pattern.
 - **Click and fusion.**
   - Click pitch sets a formant, which stays fixed in Hz while the loop pitch moves, like a vowel. Click length sets how long each click lasts.
@@ -107,7 +105,7 @@ CLAUDE.md         working notes for Claude
 
 ## Per-dot pitch, length and level
 
-Click a dot on the wheel to give that one hit its own pitch (in semitones from the Click pitch), length (as a multiple of the Click length) and level. A dot with its own pitch or length gets a thin outline, and a dot at level 0 is drawn hollow and stays silent. The settings follow the dot when its ring rotates. The Heard spectrum adds up every dot's own click spectrum, so it still shows exactly what is played.
+Click a dot on the wheel to give that one hit its own pitch (in semitones from the Click pitch), length (as a multiple of the Click length) and level. A dot with its own pitch or length gets a thin outline, and a dot at level 0 is drawn hollow and stays silent. The settings follow the dot when its ring rotates. 
 
 The LFO buttons beside a dot's Pitch and Length give that dot its own LFO, with shape, rate and depth. Like the other click LFOs, it is read each time the dot fires, so it changes the dot hit by hit.
 
@@ -115,8 +113,14 @@ The LFO buttons beside a dot's Pitch and Length give that dot its own LFO, with 
 
 In the dot editor, **Inside** chooses what the dot plays: one click, or a wheel of its own. **Open wheel** (or a double-click on the dot) shows that wheel in place of the main one, with the same four rings, presets and per-dot settings. Its dots can hold wheels too, down to three levels below the top. The path above the wheel shows where you are and leads back up.
 
-When a playhead crosses a dot, the wheel inside makes one turn and stops. **Turn** sets how long that turn lasts, as a fraction of the turn of the wheel the dot sits in. If it is longer than the gap to the next dot, the two overlap. Level multiplies and pitch and length add up on the way down. On the wheel, a dot holding a wheel is drawn hollow, with an arc for its turn and small dots for the hits inside. The Heard spectrum and the circles include every click at every level.
+When a playhead crosses a dot, the wheel inside makes one turn and stops. **Turn** sets how long that turn lasts, as a fraction of the turn of the wheel the dot sits in. If it is longer than the gap to the next dot, the two overlap. Level multiplies and pitch and length add up on the way down. On the wheel, a dot holding a wheel is drawn hollow, with an arc for its turn and small dots for the hits inside. The circles include every click at every level.
+
+## Samples and impulses
+
+**Inside** can also be Sample or Impulse. The Samples panel has eight slots: load an audio file with Load, or drop one on a slot. A sample dot plays a slice of its slot's recording each time it fires. Pitch changes the playback speed, Start and Slice choose the part (drag on the small waveform to move the start), and Length scales the slice. Slices get soft edges, so at tone speeds a sample works as a grain. An impulse dot is a single spike with no pitch. On the wheel a sample is a square and an impulse is a spike. Recordings are kept in the browser on that machine (up to 120 seconds each, mono) and are not part of the patch.
+
+The Scope shows the signal going to the speaker: two turns of the loop when it is a tone, the level over the last four seconds when it is a rhythm.
 
 ## Using it as a Mac app
 
-Open the page in Safari and choose File → Add to Dock, or in Chrome use the install button in the address bar. It then runs in its own window with its own Dock icon. Keyboard: Space starts and stops the sound, P plays the sequencer, 1–4 switch rings, ← and → move the speed by a semitone (with Shift, an octave), N shows the notes.
+In Chrome use the install button in the address bar. In Safari on macOS Sonoma or later, choose File → Add to Dock. It then runs in its own window with its own Dock icon. Keyboard: Space starts and stops the sound, P plays the sequencer, 1–4 switch rings, ← and → move the speed by a semitone (with Shift, an octave), N shows the notes.
