@@ -92,7 +92,7 @@ input[type=checkbox]{accent-color:var(--accent);margin:0}
 @media (max-width:860px){
   .cols{grid-template-columns:minmax(0,1fr)}
   .col,.colC{display:contents}
-  #pLoop{order:1}#pSpeed{order:2}#pRings{order:3}#pSound{order:4}#pScope{order:5}#pCirc{order:6}#pSmp{order:7}
+  #pLoop{order:1}#pSpeed{order:2}#pRings{order:3}#pSound{order:4}#pScope{order:5}#pCirc{order:6}#pSmp{order:7}#pInst{order:8}
 }
 .panel{display:grid;gap:12px;min-width:0;padding-top:10px;border-top:1px solid var(--line)}
 canvas{display:block;width:100%}
@@ -125,12 +125,35 @@ canvas{display:block;width:100%}
 .smp input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .dotctls .top label{flex:none}
 .dotctls .top output{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#dSc{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 18px}
-#dSc .full{grid-column:1/-1}
+#dSc,#dIc{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 18px}
+#dSc .full,#dIc .full{grid-column:1/-1}
 #dSw{width:100%;height:46px;background:var(--bg);box-shadow:0 0 0 1px var(--line);cursor:ew-resize;touch-action:none}
-#dSl button{padding:4px 9px;font-size:10px}
-#dSl button[aria-pressed="true"]{background:var(--c,var(--accent));color:var(--bg)}
-#dSl button[data-empty="true"]{color:var(--muted)}
+#dSl button,#dIl button{padding:4px 9px;font-size:10px}
+#dIl button[aria-pressed="true"],#dSl button[aria-pressed="true"]{background:var(--c,var(--accent));color:var(--bg)}
+#dSl button[data-empty="true"],#dIl button[data-empty="true"]{color:var(--muted)}
+.insts{display:grid;gap:6px}
+.instr{display:grid;grid-template-columns:22px minmax(0,1fr) auto auto;gap:8px;align-items:center}
+.instr .n{font:600 11px var(--mono);color:var(--muted);text-align:center}
+.instr .nm{font:400 13px var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.instr .nm[data-empty="true"]{color:var(--muted)}
+.instr button{padding:4px 8px;font-size:10px}
+/* the instrument window */
+.iw-top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 18px;padding-bottom:14px;border-bottom:2px solid var(--ink);margin-bottom:22px}
+.iw-top h1{font:600 12px var(--mono);letter-spacing:.24em;text-transform:uppercase;margin:0;align-self:center}
+.iw-top .tag{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);border:1.5px solid var(--accent);border-radius:3px;padding:2px 7px;align-self:center}
+.iw-top .fld{display:grid;gap:3px;min-width:0}
+.iw-top .fld.grow{flex:1 1 180px}
+.iw-top input[type=text]{font:400 14px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 8px;min-width:0;width:100%;box-sizing:border-box}
+.iw .seg button[aria-pressed="true"]{background:var(--accent);color:var(--bg)}
+.iw .seg{flex-wrap:wrap;align-self:start;justify-self:start;max-width:100%}
+.iw .ctls2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 22px}
+.iw canvas.env{width:100%;height:170px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.iw canvas.fenv{width:100%;height:70px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.iw canvas.swv{width:100%;height:90px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.iw .map{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:6px 0;border-bottom:1px solid var(--soft);font:400 12px var(--mono)}
+.iw .map span:first-child{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.iw .lab{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.iw .btn-on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
 #scope{height:200px}
 .dotin .seg{width:max-content;max-width:100%;flex-wrap:wrap}
 .dotin .seg button{padding:4px 8px;font-size:10px}
@@ -283,13 +306,18 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
               <div class="ctl"><div class="top"><label for="dL">Length</label><output id="dLv"></output><button type="button" class="lfob" id="dlb-l" aria-expanded="false" aria-label="LFO for this dot's length">LFO</button></div><input type="range" id="dL" min="-200" max="200" step="1"></div>
               <div class="ctl"><div class="top"><label for="dA">Level</label><output id="dAv"></output></div><input type="range" id="dA" min="0" max="100" step="1"></div>
               <div class="ctl dotin"><div class="top"><span class="lab">Inside</span><output id="dWv"></output></div>
-                <div class="row"><div class="seg" id="dK" role="group" aria-label="What this dot plays"><button type="button" data-k="click" aria-pressed="true">Click</button><button type="button" data-k="wheel" aria-pressed="false">Wheel</button><button type="button" data-k="sample" aria-pressed="false">Sample</button><button type="button" data-k="impulse" aria-pressed="false">Impulse</button></div><button type="button" id="dOpen" hidden>Open wheel ›</button></div></div>
+                <div class="row"><div class="seg" id="dK" role="group" aria-label="What this dot plays"><button type="button" data-k="click" aria-pressed="true">Click</button><button type="button" data-k="wheel" aria-pressed="false">Wheel</button><button type="button" data-k="sample" aria-pressed="false">Sample</button><button type="button" data-k="impulse" aria-pressed="false">Impulse</button><button type="button" data-k="inst" aria-pressed="false">Instrument</button></div><button type="button" id="dOpen" hidden>Open wheel ›</button></div></div>
               <div id="dSc" hidden>
                 <div class="ctl full"><div class="top"><span class="lab">Slot</span><output id="dSlv"></output></div>
                   <div class="seg" id="dSl" role="group" aria-label="Which sample this dot plays"></div></div>
                 <canvas id="dSw" class="full" aria-label="The sample, with the part this dot plays marked. Drag to move the start."></canvas>
                 <div class="ctl"><div class="top"><label for="dSs">Start</label><output id="dSsv"></output></div><input type="range" id="dSs" min="0" max="1000" step="1"></div>
                 <div class="ctl"><div class="top"><label for="dSn">Slice</label><output id="dSnv"></output></div><input type="range" id="dSn" min="0" max="1000" step="1"></div>
+              </div>
+              <div id="dIc" hidden>
+                <div class="ctl full"><div class="top"><span class="lab">Instrument slot</span><output id="dIlv"></output></div>
+                  <div class="seg" id="dIl" role="group" aria-label="Which instrument this dot plays"></div></div>
+                <div class="row full"><button type="button" id="dIe">Edit instrument ›</button></div>
               </div>
               <div class="ctl" id="dTc" hidden><div class="top"><label for="dT">Turn</label><output id="dTv"></output></div><input type="range" id="dT" min="0" max="600" step="1"></div>
             </div>
@@ -351,18 +379,25 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
         <p class="sub mono" id="smpNote">Load or drop an audio file on a slot. Then set a dot to Sample.</p>
         <p class="hint">A sample dot plays a slice of the recording each time it fires. Pitch changes the playback speed, Start and Slice choose the part, and Length scales the slice. Short slices get soft edges, so at tone speeds a sample works as a grain. Samples are kept in this browser, not in the patch.</p>
       </section>
+
+
+      <section class="panel" id="pInst" aria-label="Instruments">
+        <h2><b>06</b>Instruments</h2>
+        <div class="insts" id="insts"></div>
+        <p class="hint">An instrument is a full voice: a source, an envelope, a filter and a way of playing. It is edited in its own window and saved in a slot here. A dot set to Instrument plays it as a note: Pitch is the note, Level the velocity, Length how long it is held.</p>
+      </section>
     </div>
 
     <div class="col colC">
       <section class="panel" id="pRings" aria-label="Rings">
-        <h2><b>06</b>Rings</h2>
+        <h2><b>07</b>Rings</h2>
         <p class="where" id="ringsWhere" hidden></p>
         <p class="hint">Each ring spreads its hits as evenly as possible over its steps (a Euclidean rhythm). A ring with equal steps and hits is a plain pulse. An LFO on Rotate turns the ring smoothly, between steps.</p>
         <div class="rings" id="rings"></div>
       </section>
 
       <section class="panel" id="pSound" aria-label="Click and fusion">
-        <h2><b>07</b>Click and fusion</h2>
+        <h2><b>08</b>Click and fusion</h2>
         <div class="ctls" id="soundCtls"></div>
         <div class="row"><button type="button" id="resync">Re-align rings</button><span class="sub mono" id="engineNote"></span></div>
         <p class="warn" id="dropWarn" hidden>Too many overlapping sounds: some were dropped. Shorten the click or the sample slice, or slow down.</p>
@@ -381,6 +416,8 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
     <span><kbd>N</kbd>Notes</span>
   </footer>
 </div>
+
+<div class="wrap iw" id="instOnly" hidden><div id="instHost"></div></div>
 
 <div class="wrap" id="seqOnly" hidden>
   <header>
@@ -430,14 +467,14 @@ function lockVal(key,u){
 }
 function newEff(){
   const rings=[];
-  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,dp:null,dl:null,da:null,dk:null,dt:null,kids:null,ds:null,dss:null,dsn:null,pld:null,plr:null,pls:null,lld:null,llr:null,lls:null,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level']});
+  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,dp:null,dl:null,da:null,dk:null,dt:null,kids:null,ds:null,dss:null,dsn:null,di:null,pld:null,plr:null,pls:null,lld:null,llr:null,lls:null,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level']});
   return{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6,gate:true,glide:false,rings};
 }
 /* base values -> sequencer locks -> LFOs. Fills E in place (no allocation, safe for the audio thread) */
 function effParams(S,t,step,E){
   const B=S.base,L=S.lfo||{},q=S.seq;
   let sp=B.speed,F=B.F,sg=B.sigma,det=B.det,vib=B.vib,vol=B.vol;
-  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;o.dp=r.dp||null;o.dl=r.dl||null;o.da=r.da||null;o.dk=r.dk||null;o.dt=r.dt||null;o.kids=r.kids||null;o.ds=r.ds||null;o.dss=r.dss||null;o.dsn=r.dsn||null;o.pld=r.pld||null;o.plr=r.plr||null;o.pls=r.pls||null;o.lld=r.lld||null;o.llr=r.llr||null;o.lls=r.lls||null;}
+  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;o.dp=r.dp||null;o.dl=r.dl||null;o.da=r.da||null;o.dk=r.dk||null;o.dt=r.dt||null;o.kids=r.kids||null;o.ds=r.ds||null;o.dss=r.dss||null;o.dsn=r.dsn||null;o.di=r.di||null;o.pld=r.pld||null;o.plr=r.plr||null;o.pls=r.pls||null;o.lld=r.lld||null;o.llr=r.llr||null;o.lls=r.lls||null;}
   E.gate=true;E.glide=false;
   if(step>=0&&q){
     E.gate=q.gate[step]!==false;E.glide=!!q.glide[step];
@@ -529,6 +566,9 @@ class Engine{
     this.vPos=new Float64Array(VM);this.vInc=new Float64Array(VM);this.vT=new Float64Array(VM);this.vLen=new Float64Array(VM);this.vF=new Float64Array(VM);this.vA=new Float32Array(VM);
     /* impulses: each is written into this short ring as a band-limited spike (a windowed sinc, 8 samples late) */
     this.ib=new Float32Array(64);this.ip=0;
+    /* instrument voices: a fixed pool, so a mono instrument can find and re-use its own voice */
+    this.NV=32;this.vo=[];
+    for(let i=0;i<this.NV;i++)this.vo.push({on:false,slot:0,I:null,d:null,ph:0,pos:0,dir:1,ls:0,le:0,inc:0,tinc:0,gl:1,t:0,gate:0,env:0,stg:0,ka:0,kd:0,kr:0,fen:0,fst:0,fka:0,fkd:0,fkr:0,ic1:0,ic2:0,g:0,k:2,amp:0,st:0,seed:1+i*7919});
     this.seqOn=false;this.seqT0=0;this.seqL0=0;this.step=-1;
   }
   setSample(i,d,sr){if(i>=0&&i<8)this.smp[i]=d&&d.length>2?{d,sr:sr||this.sr}:null;}
@@ -539,7 +579,7 @@ class Engine{
   /* how many clicks one top loop makes, counting every level (stops counting past 4096) */
   leaves(rings,depth){let n=0;
     for(let i=0;i<4;i++){const r=rings[i];if(!r||!r.on)continue;const ds=depth?this.pat(r).d:this.rings[i].dot;
-      for(let j=0;j<ds.length;j++){const W=dotWheel(r,ds[j],depth);const k=r.dk?r.dk[ds[j]]:'click';n+=W?this.leaves(W.rings,depth+1):(k==='sample'||k==='impulse'?0:1);if(n>4096)return n;}}
+      for(let j=0;j<ds.length;j++){const W=dotWheel(r,ds[j],depth);const k=r.dk?r.dk[ds[j]]:'click';n+=W?this.leaves(W.rings,depth+1):(k==='sample'||k==='impulse'||k==='inst'?0:1);if(n>4096)return n;}}
     return n;}
   seek(r){r.ph-=Math.floor(r.ph);r.base=0;let k=0;while(k<r.pos.length&&r.pos[k]<=r.ph)k++;if(k===r.pos.length){k=0;r.base=1;}r.next=k;}
   resync(){for(const r of this.rings){r.ph=this.master-r.off;this.seek(r);}}
@@ -587,6 +627,7 @@ class Engine{
       return;}
     const kd=r.dk?r.dk[d]:'click';
     if(kd==='sample'){this.slice(age,amp,r,d,st,ol);return;}
+    if(kd==='inst'){this.note(r.di?r.di[d]|0:0,age,amp,st,Lp*0.25*Math.pow(2,ol));return;}
     if(kd==='impulse'){this.spike(age,amp);return;}
     this.click(age,amp,dotF(this.E.F,st),dotS(this.E.sigma,ol));
   }
@@ -598,6 +639,32 @@ class Engine{
     if(this.vN>=this.VM){this.dropped++;return;}
     const k=this.vN++;this.vD[k]=S.d;this.vInc[k]=inc;this.vPos[k]=dotSliceA(r,d,n)+age*inc;this.vT[k]=age;this.vLen[k]=len;this.vF[k]=Math.min(len*0.5,0.005*this.sr);this.vA[k]=amp;
   }
+  /* A dot plays a note on an instrument slot. st = the note in semitones from the instrument's root, amp = velocity, gate = how long it is
+     held, in samples (a quarter of the turn the dot sits in, times 2^Length). The instrument itself is read from the patch (S.inst). */
+  note(slot,age,amp,st,gate){
+    const I=this.S&&this.S.inst?this.S.inst[slot]:null;if(!I)return;
+    const sr=this.sr;let d=null,dsr=sr;
+    if(I.src==='smp'){const S=this.smp[I.ss|0];if(!S)return;d=S.d;dsr=S.sr;}
+    const semi=st+I.fine/100,inc=d?Math.pow(2,semi/12)*dsr/sr:440*Math.pow(2,(I.note-69+semi)/12)/sr;
+    const VO=this.vo,mono=I.vm!=='poly';let v=null,cnt=0,old=null;
+    for(let q=0;q<this.NV;q++){const x=VO[q];if(x.on&&x.slot===slot){cnt++;if(!old||x.t>old.t)old=x;}}
+    if(mono&&old){v=old;
+      if(I.vm==='legato'&&v.stg<3&&v.t<v.gate){v.tinc=inc;v.gl=I.glide>0?1-Math.exp(-1/(I.glide*sr)):1;v.gate=v.t+gate;v.st=semi;return;}}   /* legato: slide to the new note, no new attack */
+    else if(old&&cnt>=I.vn)v=old;                                   /* out of voices for this slot: take the oldest */
+    else{for(let q=0;q<this.NV;q++)if(!VO[q].on){v=VO[q];break;}if(!v){this.dropped++;return;}}
+    const was=v.on,slide=mono&&was&&I.glide>0&&!d;
+    v.slot=slot;v.I=I;v.d=d;v.tinc=inc;if(!slide)v.inc=inc;v.gl=slide?1-Math.exp(-1/(I.glide*sr)):1;
+    v.t=age;v.gate=d&&I.mode==='one'?Infinity:Math.max(1,gate);v.stg=0;v.fst=0;v.st=semi;v.g=0;
+    if(!was){v.env=0;v.fen=0;v.ic1=0;v.ic2=0;v.ph=0;}           /* a re-used voice carries on from its level, so there is no click */
+    v.ka=1/(Math.max(0.0005,I.a)*sr);v.kd=1-Math.exp(-4/(Math.max(0.002,I.d)*sr));v.kr=1-Math.exp(-4/(Math.max(0.002,I.r)*sr));
+    v.fka=1/(Math.max(0.0005,I.fa)*sr);v.fkd=1-Math.exp(-4/(Math.max(0.002,I.fd)*sr));v.fkr=1-Math.exp(-4/(Math.max(0.002,I.fr)*sr));
+    v.amp=amp>0?(1-I.vel)+I.vel*amp:0;
+    if(d){const n=d.length;let ls=clamp(I.ls,0,1)*n,le=clamp(I.le,0,1)*n;if(!(le>ls+4)){ls=0;le=n-1;}v.ls=ls;v.le=Math.min(le,n-1);
+      if(I.mode==='rev'){v.dir=-1;v.pos=v.le-1-age*inc;}else{v.dir=1;v.pos=clamp(I.st,0,1)*n+age*inc;}}
+    v.on=true;
+  }
+  /* band-limiting correction for the saw and square edges */
+  pb(t,dt){if(t<dt){t/=dt;return t+t-t*t-1;}if(t>1-dt){t=(t-1)/dt;return t*t+t+t+1;}return 0;}
   spike(age,amp){
     const c=8-age,B=this.ib,p=this.ip;
     for(let k=0;k<17;k++){const x=k-c,ax=x<0?-x:x;if(ax>=8)continue;
@@ -660,7 +727,35 @@ class Engine{
         if(i0+1<d.length){let en=1;if(tt<fd)en=0.5-0.5*Math.cos(Math.PI*tt/fd);else if(ln-tt<fd)en=0.5-0.5*Math.cos(Math.PI*(ln-tt)/fd);
           s2+=this.vA[k]*en*(d[i0]+(d[i0+1]-d[i0])*fr);}
         this.vPos[k]=ps+this.vInc[k];this.vT[k]=tt+1;k++;}
-      let v=(s*this.comp+s2)*E.vol*0.5;const av=v<0?-v:v;
+      /* instrument voices: source -> filter -> envelope */
+      let s3=0;
+      for(let q=0;q<this.NV;q++){const o=this.vo[q];if(!o.on)continue;const I=o.I;
+        if(o.stg<3&&o.t>=o.gate)o.stg=3;
+        if(o.stg===0){o.env+=o.ka;if(o.env>=1){o.env=1;o.stg=1;}}
+        else if(o.stg===1)o.env+=(I.s-o.env)*o.kd;
+        else{o.env-=o.env*o.kr;if(o.env<0.0003){o.on=false;o.d=null;continue;}}
+        o.inc+=(o.tinc-o.inc)*o.gl;
+        let x;
+        if(o.d){const d=o.d,n=d.length,m=I.mode;let p=o.pos;
+          if(m==='loop'){if(p>=o.le)p=o.ls+(p-o.le)%(o.le-o.ls);}
+          else if(m==='ping'){if(o.dir>0&&p>=o.le){o.dir=-1;p=o.le-(p-o.le);}else if(o.dir<0&&p<=o.ls){o.dir=1;p=o.ls+(o.ls-p);}}
+          if(!(p>=0&&p<n-1)){o.on=false;o.d=null;continue;}                 /* ran off the end of the recording */
+          const i0=p|0;x=d[i0]+(d[i0+1]-d[i0])*(p-i0);
+          if(m!=='loop'&&m!=='ping'){const edge=o.dir>0?n-1-p:p,fz=o.inc*0.003*sr;if(edge<fz)x*=edge/fz;}   /* 3 ms soft end */
+          o.pos=p+o.dir*o.inc;
+        }else{const w=I.wave,dt=o.inc;let ph=o.ph;
+          if(w==='noise'){o.seed=(Math.imul(o.seed,1664525)+1013904223)>>>0;x=o.seed/2147483648-1;}
+          else if(w==='saw')x=2*ph-1-this.pb(ph,dt);
+          else if(w==='square'){const p2=ph+0.5;x=(ph<0.5?1:-1)+this.pb(ph,dt)-this.pb(p2>=1?p2-1:p2,dt);}
+          else x=Math.sin(2*Math.PI*ph);
+          ph+=dt;if(ph>=1)ph-=1;o.ph=ph;}
+        if(I.ft!=='off'){
+          if(o.fst===0){o.fen+=o.fka;if(o.fen>=1){o.fen=1;o.fst=1;}}else if(o.stg===3)o.fen-=o.fen*o.fkr;else o.fen+=(I.fs-o.fen)*o.fkd;
+          if((i&7)===0||o.g===0){o.g=Math.tan(Math.PI*clamp(I.fc*Math.pow(2,I.fe*o.fen+I.fk*o.st/12),20,0.45*sr)/sr);o.k=2-1.94*I.fq;}
+          const g=o.g,k=o.k,a1=1/(1+g*(g+k)),a2=g*a1,v3=x-o.ic2,v1=a1*o.ic1+a2*v3,v2=o.ic2+a2*o.ic1+g*a2*v3;o.ic1=2*v1-o.ic1;o.ic2=2*v2-o.ic2;
+          x=I.ft==='lp'?v2:I.ft==='bp'?v1:x-k*v1-v2;}
+        s3+=x*o.env*o.amp*I.level;o.t++;}
+      let v=(s*this.comp+s2+s3*0.6)*E.vol*0.5;const av=v<0?-v:v;
       if(av>0.8)v=(v<0?-1:1)*(0.8+0.2*Math.tanh((av-0.8)/0.2));   /* safety limiter: untouched below 0.8 */
       out[i]=v;
     }
@@ -669,7 +764,7 @@ class Engine{
   }
   report(){const r=[];for(const x of this.rings)r.push(frac(x.ph+x.off));return{m:this.master,r,f:Math.exp(this.lf),d:this.dropped,t:this.t,step:this.step};}
 }
-function applyMsg(e,d){if(d.smp)e.setSample(d.smp.i,d.smp.d,d.smp.sr);if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();}
+function applyMsg(e,d){if(d.smp)e.setSample(d.smp.i,d.smp.d,d.smp.sr);if(d.note&&e.ready)e.note(d.note.i,0,d.note.amp,d.note.st,d.note.gate*e.sr);if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();}
 
 const WORKLET_SRC=[frac,clamp,rnd,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotWheel,dotSliceA,dotSliceN,dotTurn,dotSeed,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
  +'\n'+Engine.toString()+`
@@ -711,9 +806,23 @@ function noteName(f,short){const m=69+12*Math.log2(f/440),r=Math.round(m),c=Math
 const fmtHz=f=>f>=1000?(f/1000).toFixed(2)+' kHz':f>=100?f.toFixed(0)+' Hz':f.toFixed(1)+' Hz';
 const snapSemi=f=>440*Math.pow(2,Math.round(12*Math.log2(f/440))/12);
 
-const DOT_KINDS=['click','wheel','sample','impulse'];
+const num=(v,a,b,d)=>typeof v==='number'&&isFinite(v)?clamp(v,a,b):d;
+const DOT_KINDS=['click','wheel','sample','impulse','inst'];
+/* Instruments: eight slots saved in the patch (state.inst). A dot of kind 'inst' plays a note on slot di[d].
+   src osc|smp, wave, ss = sample slot, note = root as a MIDI note (oscillator), fine in cents, mode = how a sample plays,
+   st/ls/le = start and loop points (0-1 of the recording), a d s r = envelope (seconds, s 0-1), vel = how much velocity sets the level,
+   ft fc fq fe fk = filter type, cutoff Hz, resonance, envelope amount in octaves, how far the cutoff follows the note, fa fd fs fr = its envelope,
+   vm vn glide level = voice mode, voice count, glide seconds, output level. */
+const INST_WAVES=['sine','saw','square','noise'],INST_MODES=['one','held','loop','ping','rev'],INST_FT=['off','lp','bp','hp'],INST_VM=['poly','mono','legato'];
+function newInst(name){return{name:name||'Instrument',src:'osc',wave:'saw',ss:0,note:48,fine:0,mode:'held',st:0,ls:0.25,le:0.75,a:0.01,d:0.2,s:0.6,r:0.4,vel:0.7,
+  ft:'lp',fc:1800,fq:0.3,fe:2,fk:0.5,fa:0.005,fd:0.5,fs:0.3,fr:0.3,vm:'poly',vn:8,glide:0,level:0.8};}
+function sanInst(x){if(!x||typeof x!=='object')return null;const pick=(v,l,d)=>l.includes(v)?v:d;
+  return{name:String(x.name||'Instrument').slice(0,40),src:x.src==='smp'?'smp':'osc',wave:pick(x.wave,INST_WAVES,'saw'),ss:Math.round(num(x.ss,0,7,0)),note:Math.round(num(x.note,12,96,48)),fine:num(x.fine,-100,100,0),
+    mode:pick(x.mode,INST_MODES,'held'),st:num(x.st,0,1,0),ls:num(x.ls,0,1,0.25),le:num(x.le,0,1,0.75),a:num(x.a,0.001,5,0.01),d:num(x.d,0.005,10,0.2),s:num(x.s,0,1,0.6),r:num(x.r,0.005,10,0.4),vel:num(x.vel,0,1,0.7),
+    ft:pick(x.ft,INST_FT,'lp'),fc:num(x.fc,20,16000,1800),fq:num(x.fq,0,1,0.3),fe:num(x.fe,-4,4,2),fk:num(x.fk,0,1,0.5),fa:num(x.fa,0.001,5,0.005),fd:num(x.fd,0.005,10,0.5),fs:num(x.fs,0,1,0.3),fr:num(x.fr,0.005,10,0.3),
+    vm:pick(x.vm,INST_VM,'poly'),vn:Math.round(num(x.vn,1,8,8)),glide:num(x.glide,0,2,0),level:num(x.level,0,1,0.8)};}
 function mkRing(steps,hits,on){return{on:!!on,steps,hits,rot:0,level:1,dp:Array(16).fill(0),dl:Array(16).fill(0),da:Array(16).fill(1),
-  dk:Array(16).fill('click'),dt:Array(16).fill(0.25),kids:Array(16).fill(null),ds:Array(16).fill(0),dss:Array(16).fill(0),dsn:Array(16).fill(1),
+  dk:Array(16).fill('click'),dt:Array(16).fill(0.25),kids:Array(16).fill(null),ds:Array(16).fill(0),dss:Array(16).fill(0),dsn:Array(16).fill(1),di:Array(16).fill(0),
   pld:Array(16).fill(0),plr:Array(16).fill(0.5),pls:Array(16).fill('sine'),lld:Array(16).fill(0),llr:Array(16).fill(0.5),lls:Array(16).fill('sine')};}
 function defaultRings(){return[1,2,3,4].map(n=>mkRing(n,n,true));}
 function newWheel(){return{rings:[mkRing(4,4,true),mkRing(3,3,false),mkRing(2,2,false),mkRing(1,1,false)]};}
@@ -721,8 +830,8 @@ const blank=()=>Array(16).fill(null);
 function defaultSeq(){return{playing:false,steps:8,bpm:96,div:2,swing:0,clock:'tempo',loopsPerStep:1,glideTime:0.12,
   gate:Array(16).fill(true),glide:Array(16).fill(false),
   lanes:[{key:'speed',snap:true,vals:blank()},{key:'F',snap:false,vals:blank()},{key:'r0rot',snap:false,vals:blank()},{key:'',snap:false,vals:blank()}]};}
-function defaults(){return{base:{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6},rings:defaultRings(),lfo:{},seq:defaultSeq()};}
-const num=(v,a,b,d)=>typeof v==='number'&&isFinite(v)?clamp(v,a,b):d;
+function defaults(){return{base:{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6},rings:defaultRings(),lfo:{},seq:defaultSeq(),inst:Array(8).fill(null)};}
+
 function sanitizeSeq(q){
   const d=defaultSeq();if(!q||typeof q!=='object')return d;
   d.playing=!!q.playing;d.steps=Math.round(num(q.steps,1,16,8));d.bpm=num(q.bpm,20,300,96);d.div=[1,2,4].includes(q.div)?q.div:2;
@@ -740,7 +849,7 @@ function sanRing(x,r,depth){x=x&&typeof x==='object'?x:{};const steps=Math.round
   return{on:typeof x.on==='boolean'?x.on:r.on,steps,hits:Math.round(num(x.hits,0,steps,Math.min(r.hits,steps))),rot:Math.round(num(x.rot,0,steps-1,0)),level:num(x.level,0,1,1),
     dp:arr(x.dp,-24,24,0),dl:arr(x.dl,-2,2,0),da:arr(x.da,0,1,1),
     dk:Array.from({length:16},(_,k)=>Array.isArray(x.dk)&&DOT_KINDS.includes(x.dk[k])?x.dk[k]:'click'),dt:arr(x.dt,1/64,1,0.25),
-    ds:arr(x.ds,0,7,0).map(Math.round),dss:arr(x.dss,0,1,0),dsn:arr(x.dsn,0.001,1,1),
+    ds:arr(x.ds,0,7,0).map(Math.round),di:arr(x.di,0,7,0).map(Math.round),dss:arr(x.dss,0,1,0),dsn:arr(x.dsn,0.001,1,1),
     kids:Array.from({length:16},(_,k)=>{const w=Array.isArray(x.kids)?x.kids[k]:null;if(depth>=3||!w||!Array.isArray(w.rings))return null;
       return{rings:newWheel().rings.map((nr,i)=>sanRing(w.rings[i],nr,depth+1))};}),
     pld:arr(x.pld,0,24,0),plr:arr(x.plr,0.02,20,0.5),pls:shp(x.pls),lld:arr(x.lld,0,2,0),llr:arr(x.llr,0.02,20,0.5),lls:shp(x.lls)};}
@@ -751,6 +860,7 @@ function sanitizeState(o){
   if(Array.isArray(o.rings))d.rings=d.rings.map((r,i)=>sanRing(o.rings[i],r,0));
   if(o.lfo&&typeof o.lfo==='object')for(const k in o.lfo){if(!LFOSPEC[k])continue;const l=o.lfo[k]||{};
     d.lfo[k]={shape:SHAPE_IDS.includes(l.shape)?l.shape:'sine',rate:num(l.rate,0.02,20,0.2),depth:num(l.depth,0,LFOSPEC[k].max,0),seed:hashKey(k)};}
+  d.inst=Array.from({length:8},(_,i)=>sanInst(Array.isArray(o.inst)?o.inst[i]:null));
   d.seq=sanitizeSeq(o.seq);d.seq.playing=false;
   return d;
 }
@@ -899,7 +1009,7 @@ function mountSequencer(host,opts){
   let st={at:0,running:false,playing:false,step:-1};
   let tool='draw',dirty=false,queued=false,hover=null,drag=null;
   host.innerHTML=`
-    <div class="row spread"><h2><b>08</b>Sequencer</h2><span class="chip" data-r="conn">Looking for the instrument…</span></div>
+    <div class="row spread"><h2><b>09</b>Sequencer</h2><span class="chip" data-r="conn">Looking for the instrument…</span></div>
     <div class="seqbar">
       <button type="button" class="playbtn" data-r="play" aria-pressed="false">Play</button>
       <div class="fld"><span>Clock</span><div class="seg" role="group" aria-label="Clock" data-r="clock"><button type="button" data-v="tempo">Tempo</button><button type="button" data-v="loops">Loops</button></div></div>
@@ -1124,7 +1234,8 @@ function initInstrument(){
     const r=VR()[sel.ri];box.style.setProperty('--c',`var(${RC[sel.ri]})`);
     const isW=r.dk[sel.d]==='wheel';
     $$('#dK button').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.k===r.dk[sel.d]?'true':'false');if(b.dataset.k==='wheel')b.disabled=view.length>=3&&!isW;});
-    const isS=r.dk[sel.d]==='sample';$('#dSc').hidden=!isS;
+    const isS=r.dk[sel.d]==='sample',isI=r.dk[sel.d]==='inst';$('#dSc').hidden=!isS;$('#dIc').hidden=!isI;
+    $$('#dIl button').forEach(b=>{b.setAttribute('aria-pressed',+b.dataset.s===r.di[sel.d]?'true':'false');b.dataset.empty=!state.inst[+b.dataset.s];});
     $$('#dSl button').forEach(b=>{b.setAttribute('aria-pressed',+b.dataset.s===r.ds[sel.d]?'true':'false');b.dataset.empty=!samples[+b.dataset.s];});
     $('#dSs').value=Math.round(r.dss[sel.d]*1000);$('#dSn').value=Math.round(1000*(1+Math.log10(r.dsn[sel.d])/3));
     $('#dOpen').hidden=!(isW&&r.kids[sel.d]&&view.length<3);$('#dTc').hidden=!isW;$('#dT').value=Math.round(600+100*Math.log2(r.dt[sel.d]));
@@ -1159,8 +1270,38 @@ function initInstrument(){
   $('#dL').oninput=e=>{if(sel){VR()[sel.ri].dl[sel.d]=+e.target.value/100;changed();}};
   $('#dA').oninput=e=>{if(sel){VR()[sel.ri].da[sel.d]=+e.target.value/100;changed();}};
   $$('#dK button').forEach(b=>b.onclick=()=>{if(!sel)return;const r=VR()[sel.ri];r.dk[sel.d]=b.dataset.k;
+    if(b.dataset.k==='inst')needInst(r.di[sel.d]);
     if(b.dataset.k==='wheel'&&!r.kids[sel.d])r.kids[sel.d]=newWheel();   /* a wheel that was made stays kept if the dot goes back to a click */
     syncDotUI(true);changed();});
+  /* --- instruments: eight slots in the patch, edited in their own window --- */
+  function needInst(i){if(!state.inst[i]){state.inst[i]=newInst('Instrument '+(i+1));drawInsts();postInst(null);}}
+  function postInst(origin){bus.post({type:'inst-sync',inst:state.inst,smp:samples.map(x=>x?x.name:null),origin});}
+  let instWin=null;
+  function openInst(i){needInst(i);changed();
+    const url=location.href.split('#')[0]+'#instrument-'+(i+1);
+    try{if(instWin&&!instWin.closed){instWin.location.href=url;instWin.location.reload();instWin.focus();return;}}catch(e){}
+    let w=null;try{w=window.open(url,'rit-instrument','popup=yes,width=1180,height=860');}catch(e){}
+    if(!w){toast('The browser did not open a new window. Allow pop-ups for this page, then press Edit again.');return;}
+    instWin=w;bus.addPeer(w);}
+  function drawInsts(){const h=$('#insts');h.textContent='';
+    for(let i=0;i<8;i++){const x=state.inst[i],d=document.createElement('div');d.className='instr';
+      d.innerHTML=`<span class="n">${i+1}</span><span class="nm" data-empty="${!x}"></span><button type="button" data-e aria-label="${x?'Edit':'Make'} instrument ${i+1}">${x?'Edit ›':'New ›'}</button><button type="button" data-x aria-label="Clear instrument slot ${i+1}"${x?'':' disabled'}>Clear</button>`;
+      d.querySelector('.nm').textContent=x?x.name+' · '+(x.src==='smp'?'sample '+(x.ss+1):x.wave):'empty';
+      d.querySelector('[data-e]').onclick=()=>openInst(i);
+      d.querySelector('[data-x]').onclick=()=>{state.inst[i]=null;drawInsts();syncDotUI(true);changed();postInst(null);};
+      h.appendChild(d);}
+    $$('#dIl button').forEach(b=>{const x=state.inst[+b.dataset.s];b.dataset.empty=!x;b.title=x?x.name:'empty';});}
+  $('#dIl').innerHTML=Array.from({length:8},(_,i)=>`<button type="button" data-s="${i}" aria-pressed="false">${i+1}</button>`).join('');
+  $$('#dIl button').forEach(b=>b.onclick=()=>{if(sel){VR()[sel.ri].di[sel.d]=+b.dataset.s;needInst(+b.dataset.s);syncDotUI(true);changed();}});
+  $('#dIe').onclick=()=>{if(sel)openInst(VR()[sel.ri].di[sel.d]);};
+  drawInsts();
+  bus.on((m,local)=>{
+    if(m.type==='inst-hello')postInst(null);
+    else if(m.type==='inst-set'&&!local){if(!(m.i>=0&&m.i<8))return;state.inst[m.i]=sanInst(m.v);drawInsts();syncDotUI(true);changed();postInst(m.origin);}
+    else if(m.type==='inst-note'){if(!audio.running){toast('Start sound in this window to hear the instrument.');return;}
+      audio.send({note:{i:m.i,amp:1,st:+m.st||0,gate:num(m.gate,0.02,10,0.6)}});}
+  });
+
   /* a dot that plays a sample: which slot, where the slice starts and how long it is */
   $('#dSl').innerHTML=Array.from({length:SMPN},(_,i)=>`<button type="button" data-s="${i}" aria-pressed="false">${i+1}</button>`).join('');
   $$('#dSl button').forEach(b=>b.onclick=()=>{if(sel){VR()[sel.ri].ds[sel.d]=+b.dataset.s;syncDotUI(true);changed();}});
@@ -1198,7 +1339,7 @@ function initInstrument(){
     d.addEventListener('dragover',e=>{e.preventDefault();d.dataset.over='true';});
     d.addEventListener('dragleave',()=>{d.dataset.over='false';});
     d.addEventListener('drop',e=>{e.preventDefault();d.dataset.over='false';loadSample(i,e.dataTransfer&&e.dataTransfer.files[0]);});}
-  smpChanged=i=>{drawSmp(i);sendSample(i);syncDotUI(true);};
+  smpChanged=i=>{drawSmp(i);sendSample(i);syncDotUI(true);postInst(null);};
   for(let i=0;i<SMPN;i++)drawSmp(i);
   smpLoadAll();
 
@@ -1216,7 +1357,7 @@ function initInstrument(){
     let best=null,bd=24*24;for(const h of wheelHits){const q=(h.x-x)*(h.x-x)+(h.y-y)*(h.y-y);if(q<bd){bd=q;best=h;}}
     if(best)openDot(best.ri,best.d);});
   $('#dT').oninput=e=>{if(sel){VR()[sel.ri].dt[sel.d]=Math.pow(2,(+e.target.value-600)/100);changed();}};
-  $('#dotReset').onclick=()=>{if(!sel)return;const r=VR()[sel.ri];r.dk[sel.d]='click';r.kids[sel.d]=null;r.dt[sel.d]=0.25;r.ds[sel.d]=0;r.dss[sel.d]=0;r.dsn[sel.d]=1;r.dp[sel.d]=0;r.dl[sel.d]=0;r.da[sel.d]=1;r.pld[sel.d]=0;r.lld[sel.d]=0;syncDotUI();changed();};
+  $('#dotReset').onclick=()=>{if(!sel)return;const r=VR()[sel.ri];r.dk[sel.d]='click';r.kids[sel.d]=null;r.dt[sel.d]=0.25;r.ds[sel.d]=0;r.dss[sel.d]=0;r.dsn[sel.d]=1;r.di[sel.d]=0;r.dp[sel.d]=0;r.dl[sel.d]=0;r.da[sel.d]=1;r.pld[sel.d]=0;r.lld[sel.d]=0;syncDotUI();changed();};
   $('#dotClose').onclick=()=>selectDot(null);
   const stepDot=s=>{if(!sel)return;const n=Math.max(1,VR()[sel.ri].hits);selectDot({ri:sel.ri,d:((sel.d+s)%n+n)%n});};
   $('#dotPrev').onclick=()=>stepDot(-1);$('#dotNext').onclick=()=>stepDot(1);
@@ -1403,6 +1544,7 @@ function initInstrument(){
         if(hit){wheelHits.push({x,y,ri:o.i,d});
           const kd=o.r.dk?o.r.dk[d]:'click';   /* a square is a sample, a spike is an impulse */
           if(kd==='sample'){const q=Math.max(3,rr*0.9);g.beginPath();g.rect(x-q,y-q,q*2,q*2);}
+          else if(kd==='inst'){const q=Math.max(4.5,rr*1.3);g.beginPath();g.moveTo(x,y-q);g.lineTo(x+q,y);g.lineTo(x,y+q);g.lineTo(x-q,y);g.closePath();}   /* a diamond is an instrument */
           else if(kd==='impulse'){const ux=Math.cos(aa),uy=Math.sin(aa),a1=Math.max(5,rr*1.7),b1=Math.max(1.6,rr*0.4);g.beginPath();g.moveTo(x+ux*a1,y+uy*a1);g.lineTo(x-uy*b1,y+ux*b1);g.lineTo(x-ux*a1,y-uy*a1);g.lineTo(x+uy*b1,y-ux*b1);g.closePath();}
           const W=dotWheel(o.r,d,view.length);
           if(dlv>0&&!W){g.fillStyle=col;g.fill();}else if(dlv>0){g.fillStyle=T['--bg'];g.fill();g.strokeStyle=col;g.lineWidth=1.6;g.stroke();
@@ -1511,6 +1653,9 @@ function initInstrument(){
           if(x){const n=x.d.length;setText('#dLv','×'+Math.pow(2,ol).toFixed(2)+' · '+fmtSec(dotSliceN(er,sel.d,ol,n)/x.sr/rate));
             setText('#dSsv',fmtSec(dotSliceA(er,sel.d,n)/x.sr));setText('#dSnv',fmtSec(sr.dsn[sel.d]*n/x.sr));}
           else{setText('#dLv','×'+Math.pow(2,ol).toFixed(2));setText('#dSsv',Math.round(sr.dss[sel.d]*100)+'%');setText('#dSnv',(sr.dsn[sel.d]*100).toFixed(1)+'%');}}
+        else if(kd==='inst'){const I=state.inst[sr.di[sel.d]],gt=0.25*Math.pow(2,ol)*(vc?vc.span:1)/E.speed;
+          setText('#dPv',sg+(I?' · '+(I.src==='osc'?noteName(440*Math.pow(2,(I.note-69+st)/12),true):'×'+Math.pow(2,st/12).toFixed(2)):''));
+          setText('#dLv','held '+fmtSec(gt));setText('#dWv','instrument '+(sr.di[sel.d]+1));setText('#dIlv',I?I.name:'empty slot');}
         else if(kd==='impulse'){setText('#dPv','no pitch');setText('#dLv','one spike');setText('#dWv','one impulse');}
         else{
           setText('#dPv',sg+' · '+fmtHz(dotF(E.F,st)));
@@ -1545,16 +1690,124 @@ function initInstrument(){
       if(now-lastRO>80){lastRO=now;updateReadouts(E,C);}}
     requestAnimationFrame(frame);}
 
-  syncAllUI();
+  syncAllUI();drawInsts();
   requestAnimationFrame(frame);
   addEventListener('pagehide',saveNow);
 }
 
 /* =====================================================================
+   Instrument window (#instrument-N). It edits one instrument slot of the patch held by the main window, over the bus:
+   it asks with inst-hello, gets inst-sync, and sends each change as inst-set. Audition asks the main window to play a note.
+   ===================================================================== */
+function mountInstEditor(host,slot0){
+  const me=bus.id;let inst=Array(8).fill(null),names=Array(8).fill(null),cur=clamp(slot0|0,0,7),linked=false;
+  const lin=(lo,hi)=>({to:v=>(v-lo)/(hi-lo),from:x=>lo+(hi-lo)*x}),lg=(lo,hi)=>({to:v=>Math.log(v/lo)/Math.log(hi/lo),from:x=>lo*Math.pow(hi/lo,x)});
+  const sec=t=>t>=1?t.toFixed(2)+' s':Math.round(t*1000)+' ms',pct=v=>Math.round(v*100)+'%';
+  const NN=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'],nn=m=>NN[m%12]+(Math.floor(m/12)-1);
+  const smpT=(v,I)=>{const x=samples[I.ss];return x?sec(v*x.d.length/x.sr):pct(v);};
+  const C={note:{l:'Root note',m:lin(12,96),f:v=>nn(v),int:1},fine:{l:'Fine tune',m:lin(-100,100),f:v=>(v>0?'+':'')+Math.round(v)+' ¢',int:1},
+    st:{l:'Start',m:lin(0,1),f:smpT},ls:{l:'Loop start',m:lin(0,1),f:smpT},le:{l:'Loop end',m:lin(0,1),f:smpT},
+    a:{l:'Attack',m:lg(0.001,5),f:sec},d:{l:'Decay',m:lg(0.005,10),f:sec},s:{l:'Sustain',m:lin(0,1),f:pct},r:{l:'Release',m:lg(0.005,10),f:sec},vel:{l:'Velocity to level',m:lin(0,1),f:pct},
+    fc:{l:'Cutoff',m:lg(20,16000),f:v=>fmtHz(v)},fq:{l:'Resonance',m:lin(0,1),f:pct},fe:{l:'Envelope amount',m:lin(-4,4),f:v=>(v>0?'+':'')+v.toFixed(1)+' oct'},fk:{l:'Follow the note',m:lin(0,1),f:pct},
+    fa:{l:'Attack',m:lg(0.001,5),f:sec},fd:{l:'Decay',m:lg(0.005,10),f:sec},fs:{l:'Sustain',m:lin(0,1),f:pct},fr:{l:'Release',m:lg(0.005,10),f:sec},
+    vn:{l:'Voices',m:lin(1,8),f:v=>String(v),int:1},glide:{l:'Glide',m:lg(0.001,2),f:v=>v<=0.0011?'off':sec(v),zero:0.001},level:{l:'Level',m:lin(0,1),f:pct}};
+  const ctl=k=>`<div class="ctl"><div class="top"><label for="i-${k}">${C[k].l}</label><output id="i-${k}v"></output></div><input type="range" id="i-${k}" data-k="${k}" min="0" max="1000" step="1"></div>`;
+  const seg=(k,opts,label)=>`<div class="seg" role="group" aria-label="${label}" data-seg="${k}">${opts.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="false">${t}</button>`).join('')}</div>`;
+  const pan=(n,t,body,id)=>`<section class="panel"${id?` id="${id}"`:''}><h2><b>${n}</b>${t}</h2>${body}</section>`;
+  host.innerHTML=`<header class="iw-top"><h1>Rhythm Into Tone</h1><span class="tag">Instrument</span>
+      <div class="fld"><span class="lab">Slot</span>${seg('slot',[0,1,2,3,4,5,6,7].map(i=>[i,i+1]),'Instrument slot')}</div>
+      <div class="fld grow"><label class="lab" for="i-name">Name</label><input type="text" id="i-name" maxlength="40"></div>
+      <div class="row"><button type="button" id="i-aud" class="btn-on">Audition</button><button type="button" id="i-copy">Copy</button><button type="button" id="i-paste">Paste</button><button type="button" id="i-clear">Clear</button><button type="button" id="i-close">Close window</button></div>
+      <span class="sub mono" id="i-stat">Looking for the main window…</span></header>
+    <p class="sub mono" id="i-empty" hidden>This slot is empty. <button type="button" id="i-new">New instrument</button></p>
+    <div class="cols" id="i-body">
+      <div class="col">${pan('01','Source',`${seg('src',[['osc','Oscillator'],['smp','Sample']],'Sound source')}
+          <div id="i-osc" class="col" style="gap:12px">${seg('wave',[['sine','Sine'],['saw','Saw'],['square','Square'],['noise','Noise']],'Oscillator shape')}<div class="ctls2">${ctl('note')}${ctl('fine')}</div></div>
+          <div id="i-smp" class="col" style="gap:12px"><div class="row"><span class="lab">Sample slot</span>${seg('ss',[0,1,2,3,4,5,6,7].map(i=>[i,i+1]),'Sample slot')}<span class="sub mono" id="i-ssn"></span></div>
+            <canvas class="swv" id="i-wave" aria-label="The sample, with the start point and the loop marked"></canvas><div class="ctls2">${ctl('fine')}</div></div>
+          <p class="hint">An oscillator plays the root note when the dot's pitch is 0. A sample plays at its recorded speed when the dot's pitch is 0.</p>`)}
+        ${pan('02','Play mode',`${seg('mode',[['one','One-shot'],['held','Held'],['loop','Loop'],['ping','Ping-pong'],['rev','Reverse']],'How the sample plays')}
+          <div class="ctls2">${ctl('st')}${ctl('ls')}${ctl('le')}</div>
+          <p class="sub mono" id="i-modeNote"></p>`,'i-play')}</div>
+      <div class="col">${pan('03','Envelope',`<canvas class="env" id="i-env" aria-label="Envelope curve: attack, decay, sustain while the note is held, release"></canvas>
+          <div class="ctls2">${ctl('a')}${ctl('d')}${ctl('s')}${ctl('r')}${ctl('vel')}</div>`)}
+        ${pan('04','Filter',`${seg('ft',[['off','Off'],['lp','Low-pass'],['bp','Band-pass'],['hp','High-pass']],'Filter type')}
+          <div id="i-filt" class="col" style="gap:12px"><div class="ctls2">${ctl('fc')}${ctl('fq')}${ctl('fe')}${ctl('fk')}</div>
+          <span class="lab">Filter envelope</span><canvas class="fenv" id="i-fenv" aria-label="Filter envelope curve"></canvas>
+          <div class="ctls2">${ctl('fa')}${ctl('fd')}${ctl('fs')}${ctl('fr')}</div></div>`)}</div>
+      <div class="col">${pan('05','Voices',`${seg('vm',[['poly','Poly'],['mono','Mono'],['legato','Legato']],'Voice mode')}
+          <div class="ctls2">${ctl('vn')}${ctl('glide')}${ctl('level')}</div>
+          <p class="sub mono" id="i-vmNote"></p>`)}
+        ${pan('06','What the dot sends',`<div><div class="map"><span>Dot pitch</span><span>the note, in semitones from the root</span></div><div class="map"><span>Dot level</span><span>velocity</span></div>
+          <div class="map"><span>Dot length</span><span>how long the note is held: a quarter of the wheel's turn, times the dot's Length</span></div><div class="map"><span>Dot LFOs</span><span>move the note and its length, hit by hit</span></div></div>
+          <p class="sub mono">Every dot that plays this slot changes when you edit it here.</p>`)}</div>
+    </div>`;
+  /* the duplicate Fine tune (one per source) shares a key: give the second its own ids */
+  {const f=host.querySelectorAll('#i-fine');if(f[1]){f[1].id='i-fine2';const o=host.querySelectorAll('#i-finev');o[1].id='i-fine2v';host.querySelector('#i-smp label[for="i-fine"]').htmlFor='i-fine2';}}
+  const q=sel=>host.querySelector(sel),qa=sel=>[...host.querySelectorAll(sel)];
+  const I=()=>inst[cur];
+  function commit(){bus.post({type:'inst-set',i:cur,v:inst[cur],origin:me});}
+  const MODE={one:'Plays to the end of the recording, whatever the note length.',held:'Plays while the note is held, then fades with the release.',loop:'Repeats the marked region while the note sounds.',ping:'Runs back and forth across the marked region while the note sounds.',rev:'Plays backwards from the loop end.'};
+  const VM={poly:'Notes overlap, up to the voice count.',mono:'One voice. A new note cuts the last one, with a new attack.',legato:'One voice. A note that arrives while the last is held slides to the new pitch without a new attack.'};
+  function sync(){const x=I();
+    qa('[data-seg="slot"] button').forEach(b=>{b.setAttribute('aria-pressed',+b.dataset.v===cur?'true':'false');b.title=inst[+b.dataset.v]?inst[+b.dataset.v].name:'empty';});
+    q('#i-empty').hidden=!!x;q('#i-body').hidden=!x;q('#i-name').disabled=!x;qa('#i-aud,#i-copy,#i-clear').forEach(b=>b.disabled=!x);
+    if(!x){if(document.activeElement!==q('#i-name'))q('#i-name').value='';return;}
+    if(document.activeElement!==q('#i-name'))q('#i-name').value=x.name;
+    for(const k of['src','wave','ss','mode','ft','vm'])qa(`[data-seg="${k}"] button`).forEach(b=>b.setAttribute('aria-pressed',String(x[k])===b.dataset.v?'true':'false'));
+    qa('input[type=range][data-k]').forEach(el=>{const k=el.dataset.k,c=C[k];if(document.activeElement!==el)el.value=Math.round(clamp(c.m.to(Math.max(x[k],c.zero||-Infinity)),0,1)*1000);
+      host.querySelector('#'+el.id+'v').textContent=c.f(x[k],x);});
+    const smp=x.src==='smp';q('#i-osc').hidden=smp;q('#i-smp').hidden=!smp;q('#i-play').hidden=!smp;q('#i-filt').hidden=x.ft==='off';
+    q('#i-ssn').textContent=names[x.ss]||'empty slot';q('#i-modeNote').textContent=MODE[x.mode];q('#i-vmNote').textContent=VM[x.vm];
+    q('#i-ls').closest('.ctl').hidden=q('#i-le').closest('.ctl').hidden=!(x.mode==='loop'||x.mode==='ping'||x.mode==='rev');
+    q('#i-vn').closest('.ctl').hidden=x.vm!=='poly';q('#i-glide').closest('.ctl').hidden=x.vm==='poly'||smp;
+    draw();}
+  function curve(cv,a,d,s,r,col){const {g,w,h}=fit(cv);g.clearRect(0,0,w,h);const pad=10,hold=Math.max(0.05,(a+d+r)*0.35),tot=a+d+hold+r,X=t=>pad+t/tot*(w-2*pad),Y=v=>h-pad-v*(h-2*pad);
+    g.strokeStyle=T['--soft'];g.lineWidth=1;g.beginPath();g.moveTo(pad,Y(0));g.lineTo(w-pad,Y(0));g.stroke();
+    g.fillStyle=T['--ink'];g.globalAlpha=0.7;g.fillRect(X(0),h-pad+2,X(a+d+hold)-X(0),3);g.globalAlpha=1;
+    g.beginPath();g.moveTo(X(0),Y(0));g.lineTo(X(a),Y(1));
+    for(let i=1;i<=40;i++){const t=d*i/40;g.lineTo(X(a+t),Y(s+(1-s)*Math.exp(-4*t/d)));}
+    g.lineTo(X(a+d+hold),Y(s));const s1=s+(1-s)*Math.exp(-4);
+    for(let i=1;i<=40;i++){const t=r*i/40;g.lineTo(X(a+d+hold+t),Y(s1*Math.exp(-4*t/r)));}
+    g.strokeStyle=col;g.lineWidth=2;g.stroke();g.lineTo(X(tot),Y(0));g.closePath();g.globalAlpha=0.12;g.fillStyle=col;g.fill();g.globalAlpha=1;
+    g.fillStyle=T['--muted'];g.font=font(10);g.textAlign='left';g.fillText('note held',X(0)+2,h-pad-4);g.textAlign='right';g.fillText(sec(tot),w-pad,pad+8);}
+  function draw(){const x=I();if(!x)return;curve(q('#i-env'),x.a,x.d,x.s,x.r,T['--accent']);if(x.ft!=='off')curve(q('#i-fenv'),x.fa,x.fd,x.fs,x.fr,T['--ink']);
+    if(x.src==='smp'){const {g,w,h}=fit(q('#i-wave'));g.clearRect(0,0,w,h);const sm=samples[x.ss];
+      if(!sm){g.fillStyle=T['--muted'];g.font=font(11);g.textAlign='center';g.fillText(`Sample slot ${x.ss+1} is empty: load a file in the main window`,w/2,h/2+4);return;}
+      const lp=x.mode==='loop'||x.mode==='ping'||x.mode==='rev';
+      if(lp&&x.le>x.ls){g.fillStyle=T['--accent'];g.globalAlpha=0.16;g.fillRect(x.ls*w,0,(x.le-x.ls)*w,h);g.globalAlpha=1;}
+      g.fillStyle=T['--muted'];for(let i=0;i<w;i++){const v=sm.pk[Math.min(sm.pk.length-1,Math.floor(i/w*sm.pk.length))],bh=Math.max(1,v*(h-6));g.fillRect(i,h/2-bh/2,1,bh);}
+      if(lp){g.fillStyle=T['--accent'];g.fillRect(x.ls*w,0,2,h);g.fillRect(x.le*w-2,0,2,h);}
+      if(x.mode!=='rev'){g.fillStyle=T['--ink'];g.fillRect(x.st*w,0,1.5,h);}}}
+  qa('[data-seg] button').forEach(b=>b.onclick=()=>{const k=b.closest('[data-seg]').dataset.seg,v=b.dataset.v;
+    if(k==='slot'){cur=+v;try{history.replaceState(null,'','#instrument-'+(cur+1));}catch(e){}sync();return;}
+    const x=I();if(!x)return;x[k]=k==='ss'?+v:v;sync();commit();});
+  qa('input[type=range][data-k]').forEach(el=>el.oninput=()=>{const x=I();if(!x)return;const c=C[el.dataset.k];let v=c.m.from(+el.value/1000);if(c.int)v=Math.round(v);if(c.zero&&+el.value===0)v=0;x[el.dataset.k]=v;sync();commit();});
+  q('#i-name').oninput=e=>{const x=I();if(!x)return;x.name=e.target.value.slice(0,40)||'Instrument';commit();};
+  q('#i-new').onclick=()=>{inst[cur]=newInst('Instrument '+(cur+1));sync();commit();};
+  q('#i-clear').onclick=()=>{inst[cur]=null;sync();commit();};
+  q('#i-copy').onclick=()=>{try{localStorage.setItem('rit-inst-clip',JSON.stringify(I()));q('#i-stat').textContent='Copied.';}catch(e){}};
+  q('#i-paste').onclick=()=>{let v=null;try{v=sanInst(JSON.parse(localStorage.getItem('rit-inst-clip')));}catch(e){}if(!v){q('#i-stat').textContent='Nothing copied yet.';return;}inst[cur]=v;sync();commit();q('#i-stat').textContent='Pasted into slot '+(cur+1)+'.';};
+  q('#i-aud').onclick=()=>bus.post({type:'inst-note',i:cur,st:0,gate:0.6});
+  q('#i-close').onclick=()=>window.close();
+  bus.on(m=>{if(m.type!=='inst-sync')return;linked=true;names=m.smp||names;
+    if(m.origin!==me||!inst.some(Boolean))inst=(m.inst||[]).map(sanInst).concat(Array(8).fill(null)).slice(0,8);
+    q('#i-stat').textContent='Saved in the patch · slot '+(cur+1);sync();});
+  smpChanged=()=>sync();smpLoadAll();
+  addEventListener('resize',draw);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>setTimeout(draw,50));
+  sync();bus.post({type:'inst-hello'});
+  setTimeout(()=>{if(!linked)q('#i-stat').textContent='The main window is not open. Open Rhythm Into Tone, then press Edit on an instrument.';},2500);
+}
+
+/* =====================================================================
    Route: the same file is the instrument (default) or the sequencer (#sequencer)
    ===================================================================== */
-const ROUTE_SEQ=location.hash==='#sequencer';
-if(ROUTE_SEQ){
+const ROUTE_SEQ=location.hash==='#sequencer',ROUTE_INST=/^#instrument/.test(location.hash);
+if(ROUTE_INST){
+  $('#app').hidden=true;$('#instOnly').hidden=false;document.title='Instrument · Rhythm Into Tone';
+  try{if(window.opener)bus.addPeer(window.opener);}catch(e){}
+  mountInstEditor($('#instHost'),(parseInt(location.hash.split('-')[1],10)||1)-1);
+}else if(ROUTE_SEQ){
   $('#app').hidden=true;$('#seqOnly').hidden=false;
   try{if(window.opener)bus.addPeer(window.opener);}catch(e){}
   mountSequencer($('#seqHost'),{docked:false});
@@ -1563,7 +1816,7 @@ if(ROUTE_SEQ){
 }else{
   initInstrument();
 }
-addEventListener('hashchange',()=>{if((location.hash==='#sequencer')!==ROUTE_SEQ){saveNow();location.reload();}});
+addEventListener('hashchange',()=>{if((location.hash==='#sequencer')!==ROUTE_SEQ||/^#instrument/.test(location.hash)!==ROUTE_INST){if(!ROUTE_INST)saveNow();location.reload();}});
 </script>
 
 </body>

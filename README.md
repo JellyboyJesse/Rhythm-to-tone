@@ -121,6 +121,10 @@ When a playhead crosses a dot, the wheel inside makes one turn and stops. **Turn
 
 The Scope shows the signal going to the speaker: two turns of the loop when it is a tone, the level over the last four seconds when it is a rhythm.
 
+## Instruments
+
+**Inside** can also be Instrument. The Instruments panel has eight slots, saved with the patch. Edit (or New) opens the instrument window, where an instrument is built from a source (a sine, saw, square or noise oscillator, or a sample), a play mode for samples (one-shot, held, loop, ping-pong, reverse), an ADSR envelope, a filter with its own envelope, and a voice mode (poly, mono, legato with glide). Audition plays one note. A dot set to Instrument plays the slot as a note: Pitch is the note in semitones from the root, Level the velocity, and Length how long the note is held, starting from a quarter of the wheel's turn. On the wheel an instrument dot is a diamond. Keep the main window open while the instrument window is in use: it holds the patch and makes the sound.
+
 ## Using it as a Mac app
 
 In Chrome use the install button in the address bar. In Safari on macOS Sonoma or later, choose File → Add to Dock. It then runs in its own window with its own Dock icon. Keyboard: Space starts and stops the sound, P plays the sequencer, 1–4 switch rings, ← and → move the speed by a semitone (with Shift, an octave), N shows the notes.

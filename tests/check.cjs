@@ -88,7 +88,25 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     const smpIn=en(0.505,0.545),smpOut=en(0.56,0.74),smpPitch=tn(882,0.505,0.545)/(tn(441,0.505,0.545)+1e-12);
     let ipk=0,ipi=0;for(let i=Math.round(0.74*sr);i<Math.round(0.78*sr);i++)if(Math.abs(out8[i])>ipk){ipk=Math.abs(out8[i]);ipi=i;}
     const impAt=ipi/sr,impWide=en(0.752,0.78)/(en(0.749,0.752)+1e-12);
-    return{smpIn,smpOut,smpPitch,impAt,ipk,impWide,err,leak,stepOk,pitchErr,rest,stress,dotErr,lfoMoved,dots:D5.length,nestErr,nestDots:D6.length,nestTimes:peaks.every(Boolean),e6drop:e6.dropped,worklet:WORKLET_SRC.length};
+    /* instruments. One dot at 2 loops/s plays a note held for a quarter of the loop (125 ms), first crossing at 0.5 s.
+       A: a sine oscillator with root A4 (440 Hz), attack 10 ms, release 50 ms. B: a 0.1 s recording looped, so it sounds for longer than it is.
+       C: two dots 62.5 ms apart with long notes: Poly keeps two voices, Mono keeps one. */
+    const run=(S9,pre)=>{const e=new Engine(sr);if(pre)pre(e);applyMsg(e,{S:S9,jump:true});const o=new Float32Array(N);for(let i=0;i<N;i+=128)e.render(o.subarray(i,i+128),128,i/sr);return{e,o};};
+    const E2=(o,a,b)=>{let v=0;for(let i=Math.round(a*sr);i<Math.round(b*sr);i++)v+=o[i]*o[i];return v;};
+    const TN=(o,f,a,b)=>{let re=0,im=0;for(let i=Math.round(a*sr);i<Math.round(b*sr);i++){const w=2*Math.PI*f*i/sr;re+=o[i]*Math.cos(w);im+=o[i]*Math.sin(w);}return Math.hypot(re,im);};
+    const SI=JSON.parse(JSON.stringify(S));SI.base.speed=2;SI.rings=[R({dk:['inst'],di:[3]}),OFF,OFF,OFF];SI.inst=Array(8).fill(null);
+    SI.inst[3]=Object.assign(newInst('t'),{src:'osc',wave:'sine',note:69,a:0.01,d:0.05,s:0.8,r:0.05,ft:'off',vel:1,level:1});
+    const A=run(SI).o,iBefore=E2(A,0.3,0.499),iHeld=E2(A,0.52,0.62),iAfter=E2(A,0.9,0.99),iPitch=TN(A,440,0.52,0.62)/(TN(A,880,0.52,0.62)+TN(A,220,0.52,0.62)+1e-12);
+    const SJ=JSON.parse(JSON.stringify(SI));SJ.inst[3]=Object.assign(newInst('t'),{src:'smp',ss:1,mode:'loop',st:0,ls:0,le:1,a:0.002,d:0.05,s:1,r:0.02,ft:'off',vel:1,level:1});
+    const short=new Float32Array(4410);for(let i=0;i<short.length;i++)short[i]=Math.sin(2*Math.PI*400*i/44100);
+    const Bo=run(SJ,e=>applyMsg(e,{smp:{i:1,d:short,sr:44100}})).o,loopLate=E2(Bo,0.605,0.62),loopEnd=E2(Bo,0.75,0.9);
+    SJ.inst[3].mode='held';const Ho=run(SJ,e=>applyMsg(e,{smp:{i:1,d:short,sr:44100}})).o,heldLate=E2(Ho,0.605,0.62);
+    const SK=JSON.parse(JSON.stringify(SI));SK.rings=[R({steps:8,hits:2,dk:['inst','inst'],di:[3,3],dl:z16([2,2]),dp:z16([0,7])}),OFF,OFF,OFF];
+    const voices=vm=>{SK.inst[3].vm=vm;const e=new Engine(sr);applyMsg(e,{S:SK,jump:true});const o=new Float32Array(128);let mx=0;for(let i=0;i<Math.round(0.6*sr);i+=128){e.render(o,128,i/sr);mx=Math.max(mx,e.vo.filter(v=>v.on).length);}return mx;};
+    const vPoly=voices('poly'),vMono=voices('mono'),vLeg=voices('legato');
+    SI.inst[3].ft='lp';SI.inst[3].fc=200;SI.inst[3].fe=0;SI.inst[3].fk=0;SI.inst[3].wave='saw';SI.inst[3].note=45;const Lp=run(SI).o;
+    SI.inst[3].ft='off';const Lo=run(SI).o,filtCut=TN(Lp,1100,0.52,0.62)/(TN(Lo,1100,0.52,0.62)+1e-12);
+    return{iBefore,iHeld,iAfter,iPitch,loopLate,loopEnd,heldLate,vPoly,vMono,vLeg,filtCut,smpIn,smpOut,smpPitch,impAt,ipk,impWide,err,leak,stepOk,pitchErr,rest,stress,dotErr,lfoMoved,dots:D5.length,nestErr,nestDots:D6.length,nestTimes:peaks.every(Boolean),e6drop:e6.dropped,worklet:WORKLET_SRC.length};
   });
   check('engine harmonics match divisor sums x click spectrum',m.err<0.01,'max error '+m.err.toFixed(4));
   check('no energy between harmonics',m.leak<1e-6,m.leak.toExponential(1));
@@ -97,6 +115,10 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   check('inner-wheel clicks land at their exact times',m.nestTimes);
   check('a sample dot plays its slice at the right time and speed',m.smpIn>1&&m.smpOut<m.smpIn*1e-6&&m.smpPitch>20,'energy '+m.smpIn.toFixed(1)+' in the slice, '+m.smpOut.toExponential(1)+' after it, 882 Hz over 441 Hz = '+m.smpPitch.toFixed(0));
   check('an impulse dot is one short spike at the right time',m.ipk>0.1&&Math.abs(m.impAt-(0.75+8/48000))<2/48000&&m.impWide<1e-6,'peak '+m.ipk.toFixed(2)+' at '+m.impAt.toFixed(5)+' s');
+  check('an instrument dot plays a note with its envelope',m.iBefore<1e-9&&m.iHeld>1&&m.iAfter<m.iHeld*1e-5&&m.iPitch>20,'energy '+m.iHeld.toFixed(1)+' while held, '+m.iAfter.toExponential(1)+' after the release, 440 Hz over its neighbours = '+m.iPitch.toFixed(0));
+  check('a looped sample outlasts its recording; a held one stops at its end',m.loopLate>0.5&&m.heldLate<m.loopLate*1e-4&&m.loopEnd<m.loopLate*1e-5,'looped '+m.loopLate.toFixed(2)+', held '+m.heldLate.toExponential(1)+', after release '+m.loopEnd.toExponential(1));
+  check('poly keeps overlapping notes, mono and legato keep one voice',m.vPoly===2&&m.vMono===1&&m.vLeg===1,'voices: poly '+m.vPoly+', mono '+m.vMono+', legato '+m.vLeg);
+  check('the low-pass filter removes the high harmonics',m.filtCut<0.1,'harmonic at 1.1 kHz kept: '+(m.filtCut*100).toFixed(1)+'%');
   check('sequencer steps in order inside the engine',m.stepOk);
   check('sequencer pitches land on the notes',m.pitchErr<0.01,(m.pitchErr*100).toFixed(2)+'%');
   check('rest steps are silent',m.rest===0,m.rest);
@@ -184,6 +206,24 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       check('a dot can be set to an impulse',await inst.evaluate(()=>state.rings[0].dk[0]==='impulse'&&document.querySelector('#dSc').hidden)&&/impulse/.test(await inst.textContent('#dWv')));
       await inst.click('#smps .smp:nth-child(2) [data-x]');await inst.waitForTimeout(200);
       check('a sample slot can be cleared',await inst.evaluate(()=>samples[1]===null));}
+    {await inst.click('#dK [data-k="inst"]');await inst.click('#dIl [data-s="2"]');await inst.waitForTimeout(200);
+      check('a dot can be set to play an instrument',await inst.evaluate(()=>state.rings[0].dk[0]==='inst'&&state.rings[0].di[0]===2&&!!state.inst[2]&&!document.querySelector('#dIc').hidden)&&/Instrument 3/.test(await inst.textContent('#dIlv')),await inst.textContent('#dIlv')+' | '+await inst.textContent('#dPv')+' | '+await inst.textContent('#dLv'));
+      const iw=await ctx.newPage();watch(iw,'instrument window');await iw.goto(BASE+'#instrument-3');await iw.waitForTimeout(700);
+      check('the instrument window loads the slot from the main window',await iw.inputValue('#i-name')==='Instrument 3'&&/Saved in the patch/.test(await iw.textContent('#i-stat')),await iw.textContent('#i-stat'));
+      await iw.click('[data-seg="wave"] [data-v="square"]');await iw.$eval('#i-a',el=>{el.value=500;el.dispatchEvent(new Event('input'));});
+      await iw.fill('#i-name','Glass bell');await iw.click('[data-seg="vm"] [data-v="mono"]');await iw.waitForTimeout(400);
+      const got=await inst.evaluate(()=>state.inst[2]);
+      check('edits in the instrument window reach the patch',got.wave==='square'&&got.name==='Glass bell'&&got.vm==='mono'&&got.a>0.05&&got.a<0.1,got.name+' · '+got.wave+' · '+got.vm+' · attack '+got.a.toFixed(3)+' s');
+      check('the main window lists the instrument by name',/Glass bell/.test(await inst.textContent('#insts'))&&/Glass bell/.test(await inst.textContent('#dIlv')));
+      await iw.click('#i-aud');await iw.waitForTimeout(200);
+      await iw.click('[data-seg="src"] [data-v="smp"]');await iw.click('[data-seg="mode"] [data-v="loop"]');await iw.waitForTimeout(300);
+      check('the sample source shows its play modes',await iw.evaluate(()=>!document.querySelector('#i-play').hidden&&document.querySelector('#i-osc').hidden&&!document.querySelector('#i-ls').closest('.ctl').hidden)&&(await inst.evaluate(()=>state.inst[2].src+state.inst[2].mode))==='smploop',await iw.textContent('#i-modeNote'));
+      await iw.screenshot({path:path.join(OUT,'instrument-window.png'),fullPage:true});
+      await iw.setViewportSize({width:390,height:800});await iw.waitForTimeout(200);
+      check('the instrument window at 390 px has no sideways scroll',await iw.evaluate(()=>document.documentElement.scrollWidth)<=390);
+      await iw.close();
+      const saved=await inst.evaluate(()=>{saveNow();return JSON.parse(localStorage.getItem('rit-state-v1')).inst[2].name;});
+      check('instruments are saved with the patch',saved==='Glass bell');}
     await inst.click('#dotReset');await inst.keyboard.press('Escape');await inst.waitForTimeout(150);
     check('Reset dot and Esc clear the editor',await inst.evaluate(()=>state.rings[0].dp[0]===0&&state.rings[0].da[0]===1&&state.rings[0].pld[0]===0&&state.rings[0].dk[0]==='click'&&state.rings[0].kids[0]===null&&document.querySelector('#dotEd').hidden));}
 
