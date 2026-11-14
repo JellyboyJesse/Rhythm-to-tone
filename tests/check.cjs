@@ -106,7 +106,17 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     const vPoly=voices('poly'),vMono=voices('mono'),vLeg=voices('legato');
     SI.inst[3].ft='lp';SI.inst[3].fc=200;SI.inst[3].fe=0;SI.inst[3].fk=0;SI.inst[3].wave='saw';SI.inst[3].note=45;const Lp=run(SI).o;
     SI.inst[3].ft='off';const Lo=run(SI).o,filtCut=TN(Lp,1100,0.52,0.62)/(TN(Lo,1100,0.52,0.62)+1e-12);
-    return{iBefore,iHeld,iAfter,iPitch,loopLate,loopEnd,heldLate,vPoly,vMono,vLeg,filtCut,smpIn,smpOut,smpPitch,impAt,ipk,impWide,err,leak,stepOk,pitchErr,rest,stress,dotErr,lfoMoved,dots:D5.length,nestErr,nestDots:D6.length,nestTimes:peaks.every(Boolean),e6drop:e6.dropped,worklet:WORKLET_SRC.length};
+    /* wavetable and modulators, on the same one-note pattern (root A4 = 440 Hz) */
+    const WT=(o)=>{const X=JSON.parse(JSON.stringify(SI));X.inst[3]=Object.assign(newInst('t'),{src:'wt',wt:'saw',wp:0,note:69,a:0.005,d:0.05,s:1,r:0.03,ft:'off',vel:1,level:1},o);return X;};
+    const flat=v=>Object.assign(newMod('draw'),{pts:Array(16).fill(v),sync:'note',depth:0.5});
+    const w0=run(WT({wp:0})).o,w1=run(WT({wp:1})).o,wtSine=TN(w0,880,0.52,0.62)/(TN(w0,440,0.52,0.62)+1e-12),wtSaw=TN(w1,880,0.52,0.62)/(TN(w1,440,0.52,0.62)+1e-12);
+    const mq=run(WT({mods:[Object.assign(flat(1),{dest:'pitch'}),null,null,null]})).o,modPitch=TN(mq,880,0.52,0.62)/(TN(mq,440,0.52,0.62)+1e-12);
+    const mwp=run(WT({mods:[Object.assign(flat(1),{dest:'wp',depth:1}),null,null,null]})).o,modPos=TN(mwp,880,0.52,0.62)/(TN(mwp,440,0.52,0.62)+1e-12);
+    const mrl=run(WT({mods:[Object.assign(flat(1),{dest:'r',depth:1}),null,null,null]})).o,modRel=E2(mrl,0.70,0.80)/(E2(w0,0.70,0.80)+1e-12);
+    const XW=WT({mods:[Object.assign(newMod('wheel'),{ring:1,val:'dp',dest:'pitch',depth:1}),null,null,null]});XW.rings[1]=R({level:0,dp:z16([12])});
+    const mhw=run(XW).o,modWheel=TN(mhw,880,0.52,0.62)/(TN(mhw,440,0.52,0.62)+1e-12);
+    const XR=WT({mods:[Object.assign(newMod('rand'),{dest:'pitch',depth:1}),null,null,null]}),er9=run(XR).e,randSet=er9.vo.some(v=>v.rv[0]!==0);
+    return{wtSine,wtSaw,modPitch,modPos,modRel,modWheel,randSet,iBefore,iHeld,iAfter,iPitch,loopLate,loopEnd,heldLate,vPoly,vMono,vLeg,filtCut,smpIn,smpOut,smpPitch,impAt,ipk,impWide,err,leak,stepOk,pitchErr,rest,stress,dotErr,lfoMoved,dots:D5.length,nestErr,nestDots:D6.length,nestTimes:peaks.every(Boolean),e6drop:e6.dropped,worklet:WORKLET_SRC.length};
   });
   check('engine harmonics match divisor sums x click spectrum',m.err<0.01,'max error '+m.err.toFixed(4));
   check('no energy between harmonics',m.leak<1e-6,m.leak.toExponential(1));
@@ -119,6 +129,10 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   check('a looped sample outlasts its recording; a held one stops at its end',m.loopLate>0.5&&m.heldLate<m.loopLate*1e-4&&m.loopEnd<m.loopLate*1e-5,'looped '+m.loopLate.toFixed(2)+', held '+m.heldLate.toExponential(1)+', after release '+m.loopEnd.toExponential(1));
   check('poly keeps overlapping notes, mono and legato keep one voice',m.vPoly===2&&m.vMono===1&&m.vLeg===1,'voices: poly '+m.vPoly+', mono '+m.vMono+', legato '+m.vLeg);
   check('the low-pass filter removes the high harmonics',m.filtCut<0.1,'harmonic at 1.1 kHz kept: '+(m.filtCut*100).toFixed(1)+'%');
+  check('a wavetable morphs from a sine to a saw with Position',m.wtSine<0.01&&m.wtSaw>0.4&&m.wtSaw<0.6,'2nd harmonic: '+m.wtSine.toFixed(3)+' at position 0, '+m.wtSaw.toFixed(2)+' at position 1');
+  check('a drawn modulator moves pitch and wavetable position',m.modPitch>20&&m.modPos>0.4,'pitch up an octave: 880 over 440 = '+m.modPitch.toFixed(0)+'; position: 2nd harmonic '+m.modPos.toFixed(2));
+  check('a modulator on Release lengthens the note',m.modRel>100,'energy after the note, with over without: '+m.modRel.toExponential(1));
+  check('a wheel modulator reads a ring\'s dots; a random one draws a value per note',m.modWheel>20&&m.randSet,'880 over 440 = '+m.modWheel.toFixed(0));
   check('sequencer steps in order inside the engine',m.stepOk);
   check('sequencer pitches land on the notes',m.pitchErr<0.01,(m.pitchErr*100).toFixed(2)+'%');
   check('rest steps are silent',m.rest===0,m.rest);
@@ -218,6 +232,12 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       await iw.click('#i-aud');await iw.waitForTimeout(200);
       await iw.click('[data-seg="src"] [data-v="smp"]');await iw.click('[data-seg="mode"] [data-v="loop"]');await iw.waitForTimeout(300);
       check('the sample source shows its play modes',await iw.evaluate(()=>!document.querySelector('#i-play').hidden&&document.querySelector('#i-osc').hidden&&!document.querySelector('#i-ls').closest('.ctl').hidden)&&(await inst.evaluate(()=>state.inst[2].src+state.inst[2].mode))==='smploop',await iw.textContent('#i-modeNote'));
+      await iw.click('[data-seg="src"] [data-v="wt"]');await iw.click('[data-seg="wt"] [data-v="formant"]');
+      await iw.click('.mod[data-q="0"] [data-mseg="type"] [data-v="draw"]');await iw.selectOption('#m0-dest','wp');await iw.click('.mod[data-q="0"] [data-mseg="sync"] [data-v="loop"]');
+      await iw.click('.mod[data-q="1"] [data-mseg="type"] [data-v="wheel"]');await iw.waitForTimeout(400);
+      {const cb=await (await iw.$('.mod[data-q="0"] canvas')).boundingBox();await iw.mouse.click(cb.x+cb.width*0.5,cb.y+8);await iw.waitForTimeout(300);}
+      const gm=await inst.evaluate(()=>state.inst[2]);
+      check('the wavetable source and the modulators reach the patch',gm.src==='wt'&&gm.wt==='formant'&&gm.mods[0]&&gm.mods[0].type==='draw'&&gm.mods[0].dest==='wp'&&gm.mods[0].sync==='loop'&&gm.mods[0].pts[8]>0.9&&gm.mods[1]&&gm.mods[1].type==='wheel'&&gm.mods[2]===null,gm.src+' '+gm.wt+' · mod 1 '+(gm.mods[0]&&gm.mods[0].type)+' to '+(gm.mods[0]&&gm.mods[0].dest)+', point 9 = '+(gm.mods[0]&&gm.mods[0].pts[8])+' · mod 2 '+(gm.mods[1]&&gm.mods[1].type));
       await iw.screenshot({path:path.join(OUT,'instrument-window.png'),fullPage:true});
       await iw.setViewportSize({width:390,height:800});await iw.waitForTimeout(200);
       check('the instrument window at 390 px has no sideways scroll',await iw.evaluate(()=>document.documentElement.scrollWidth)<=390);

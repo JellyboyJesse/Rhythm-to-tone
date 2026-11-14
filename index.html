@@ -152,6 +152,12 @@ canvas{display:block;width:100%}
 .iw canvas.swv{width:100%;height:90px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
 .iw .map{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:6px 0;border-bottom:1px solid var(--soft);font:400 12px var(--mono)}
 .iw .map span:first-child{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.iw canvas.wtv{width:100%;height:90px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.iw canvas.mdraw{width:100%;height:120px;background:var(--panel);box-shadow:0 0 0 1px var(--line);touch-action:none;cursor:crosshair}
+.iw .mod{display:grid;gap:10px;padding:12px 0;border-top:1px solid var(--soft);min-width:0}
+.iw .mod:first-child{border-top:0;padding-top:0}
+.iw .mod .seg button{padding:4px 8px;font-size:10px}
+.iw select{font:400 12px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 8px;max-width:100%}
 .iw .lab{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .iw .btn-on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
 #scope{height:200px}
@@ -527,6 +533,21 @@ function dotWheel(r,d,depth){if(depth>=3||!r.dk||r.dk[d]!=='wheel'||!r.kids)retu
    dotSliceA gives the first sample, dotSliceN how many. Engine and page both use these. */
 function dotSliceA(r,d,n){return clamp(r.dss?r.dss[d]||0:0,0,1)*n;}
 function dotSliceN(r,d,ol,n){const q=r.dsn?r.dsn[d]:1;return Math.max(0,Math.min(clamp(q===undefined||q===null?1:q,0.001,1)*Math.pow(2,ol)*n,n-1-dotSliceA(r,d,n)));}
+/* A built-in wavetable: 16 single-cycle frames of 2048 samples, each a sum of up to 32 harmonics, so the frames morph smoothly.
+   saw: a sine that gains harmonics until it is a saw. pulse: a square that narrows. formant: a resonant peak that climbs the harmonics.
+   bell: a few sparse partials that spread apart. */
+function wtMake(kind){const F=16,N=2048,o=new Float32Array(F*N);
+  for(let f=0;f<F;f++){const x=f/(F-1),b=f*N;
+    for(let h=1;h<=32;h++){let a=0;
+      if(kind==='pulse')a=Math.sin(Math.PI*h*(0.5-0.45*x))/h;
+      else if(kind==='formant'){const c=1+15*x;a=Math.exp(-0.5*(h-c)*(h-c)/2.25)+(h===1?0.4:0);}
+      else if(kind==='bell')a=(h===1?1:0)+(h===Math.round(2+6*x)?0.6:0)+(h===Math.round(5+14*x)?0.4:0)+(h===Math.round(9+22*x)?0.25:0);
+      else{const top=1+31*x;a=h<=top?1/h:h-top<1?(1-(h-top))/h:0;}
+      if(a<0?a>-1e-6:a<1e-6)continue;
+      for(let i=0;i<N;i++)o[b+i]+=a*Math.sin(2*Math.PI*h*i/N);}
+    let pk=1e-9;for(let i=0;i<N;i++){const v=o[b+i]<0?-o[b+i]:o[b+i];if(v>pk)pk=v;}
+    for(let i=0;i<N;i++)o[b+i]/=pk;}
+  return o;}
 function dotTurn(er,d){return clamp(er.dt?er.dt[d]||0.25:0.25,1/64,1);}
 function dotSeed(ri,d){return frac((ri*32+d+1)*0.6180339887);}
 function dotPitch(er,ri,d,t,L){let v=er.dp?er.dp[d]||0:0;const dep=er.pld?er.pld[d]||0:0;
@@ -568,11 +589,14 @@ class Engine{
     this.ib=new Float32Array(64);this.ip=0;
     /* instrument voices: a fixed pool, so a mono instrument can find and re-use its own voice */
     this.NV=32;this.vo=[];
-    for(let i=0;i<this.NV;i++)this.vo.push({on:false,slot:0,I:null,d:null,ph:0,pos:0,dir:1,ls:0,le:0,inc:0,tinc:0,gl:1,t:0,gate:0,env:0,stg:0,ka:0,kd:0,kr:0,fen:0,fst:0,fka:0,fkd:0,fkr:0,ic1:0,ic2:0,g:0,k:2,amp:0,st:0,seed:1+i*7919});
+    for(let i=0;i<this.NV;i++)this.vo.push({on:false,slot:0,I:null,d:null,ph:0,pos:0,dir:1,ls:0,le:0,inc:0,tinc:0,gl:1,t:0,gate:0,env:0,stg:0,ka:0,kd:0,kr:0,fen:0,fst:0,fka:0,fkd:0,fkr:0,ic1:0,ic2:0,g:0,k:2,amp:0,st:0,seed:1+i*7919,w:null,nf:1,es:0,efs:0,pm:1,mF:0,mW:0,mL:1,fresh:true,glen:1,rv:[0,0,0,0],ms:[0,0,0,0]});
+    this.wt={};
     this.seqOn=false;this.seqT0=0;this.seqL0=0;this.step=-1;
   }
   setSample(i,d,sr){if(i>=0&&i<8)this.smp[i]=d&&d.length>2?{d,sr:sr||this.sr}:null;}
-  setState(S,jump){this.S=S;this.dirty=true;this.update(this.t);if(jump)this.lf=this.lt;}
+  setState(S,jump){
+    if(S.inst)for(let i=0;i<8;i++){const I=S.inst[i];if(I&&I.src==='wt'&&I.wt!=='smp'&&!this.wt[I.wt])this.wt[I.wt]=wtMake(I.wt);}   /* built here, not when a note starts */
+    this.S=S;this.dirty=true;this.update(this.t);if(jump)this.lf=this.lt;}
   /* an inner ring's hit positions and dot numbers, worked out once and kept until its pattern changes */
   pat(r){let c=this.pc.get(r);if(!c){c={k:-1,p:[],d:[]};this.pc.set(r,c);}
     const k=r.on?((r.steps*17+r.hits)*17+r.rot):-2;if(c.k!==k){c.k=k;c.p=ringPos(r);c.d=ringDots(r);}return c;}
@@ -645,6 +669,9 @@ class Engine{
     const I=this.S&&this.S.inst?this.S.inst[slot]:null;if(!I)return;
     const sr=this.sr;let d=null,dsr=sr;
     if(I.src==='smp'){const S=this.smp[I.ss|0];if(!S)return;d=S.d;dsr=S.sr;}
+    let W=null,nf=1;
+    if(I.src==='wt'){if(I.wt==='smp'){const S=this.smp[I.ss|0];if(!S||S.d.length<2048)return;W=S.d;nf=Math.min(256,Math.floor(S.d.length/2048));}
+      else{W=this.wt[I.wt];if(!W)return;nf=16;}}
     const semi=st+I.fine/100,inc=d?Math.pow(2,semi/12)*dsr/sr:440*Math.pow(2,(I.note-69+semi)/12)/sr;
     const VO=this.vo,mono=I.vm!=='poly';let v=null,cnt=0,old=null;
     for(let q=0;q<this.NV;q++){const x=VO[q];if(x.on&&x.slot===slot){cnt++;if(!old||x.t>old.t)old=x;}}
@@ -654,14 +681,35 @@ class Engine{
     else{for(let q=0;q<this.NV;q++)if(!VO[q].on){v=VO[q];break;}if(!v){this.dropped++;return;}}
     const was=v.on,slide=mono&&was&&I.glide>0&&!d;
     v.slot=slot;v.I=I;v.d=d;v.tinc=inc;if(!slide)v.inc=inc;v.gl=slide?1-Math.exp(-1/(I.glide*sr)):1;
-    v.t=age;v.gate=d&&I.mode==='one'?Infinity:Math.max(1,gate);v.stg=0;v.fst=0;v.st=semi;v.g=0;
+    v.t=age;v.gate=d&&I.mode==='one'?Infinity:Math.max(1,gate);v.stg=0;v.fst=0;v.st=semi;v.g=0;v.es=I.s;v.efs=I.fs;
     if(!was){v.env=0;v.fen=0;v.ic1=0;v.ic2=0;v.ph=0;}           /* a re-used voice carries on from its level, so there is no click */
-    v.ka=1/(Math.max(0.0005,I.a)*sr);v.kd=1-Math.exp(-4/(Math.max(0.002,I.d)*sr));v.kr=1-Math.exp(-4/(Math.max(0.002,I.r)*sr));
-    v.fka=1/(Math.max(0.0005,I.fa)*sr);v.fkd=1-Math.exp(-4/(Math.max(0.002,I.fd)*sr));v.fkr=1-Math.exp(-4/(Math.max(0.002,I.fr)*sr));
+    v.w=W;v.nf=nf;v.fresh=true;v.glen=v.gate<Infinity?v.gate:d?d.length/inc:sr;
+    /* modulators aimed at the envelope or the sample start are read once, as the note starts */
+    let ea=I.a,ed=I.d,es=I.s,er=I.r,fa=I.fa,fd=I.fd,fs=I.fs,fr=I.fr,sst=I.st;const Ms=I.mods;
+    if(Ms)for(let q=0;q<4;q++){const M=Ms[q];v.ms[q]=0;if(!M)continue;
+      v.seed=(Math.imul(v.seed,1664525)+1013904223)>>>0;v.rv[q]=v.seed/2147483648-1;
+      if(!(M.depth>0))continue;const ds=M.dest;if(ds==='pitch'||ds==='fc'||ds==='wp'||ds==='level')continue;
+      const x=this.modv(M,v,q)*M.depth,tm=Math.pow(2,3*x);
+      if(ds==='a')ea*=tm;else if(ds==='d')ed*=tm;else if(ds==='r')er*=tm;else if(ds==='s')es=clamp(es+x,0,1);
+      else if(ds==='fa')fa*=tm;else if(ds==='fd')fd*=tm;else if(ds==='fr')fr*=tm;else if(ds==='fs')fs=clamp(fs+x,0,1);else if(ds==='st')sst=clamp(sst+x,0,1);}
+    v.es=es;v.efs=fs;
+    v.ka=1/(Math.max(0.0005,ea)*sr);v.kd=1-Math.exp(-4/(Math.max(0.002,ed)*sr));v.kr=1-Math.exp(-4/(Math.max(0.002,er)*sr));
+    v.fka=1/(Math.max(0.0005,fa)*sr);v.fkd=1-Math.exp(-4/(Math.max(0.002,fd)*sr));v.fkr=1-Math.exp(-4/(Math.max(0.002,fr)*sr));
     v.amp=amp>0?(1-I.vel)+I.vel*amp:0;
     if(d){const n=d.length;let ls=clamp(I.ls,0,1)*n,le=clamp(I.le,0,1)*n;if(!(le>ls+4)){ls=0;le=n-1;}v.ls=ls;v.le=Math.min(le,n-1);
-      if(I.mode==='rev'){v.dir=-1;v.pos=v.le-1-age*inc;}else{v.dir=1;v.pos=clamp(I.st,0,1)*n+age*inc;}}
+      if(I.mode==='rev'){v.dir=-1;v.pos=v.le-1-age*inc;}else{v.dir=1;v.pos=sst*n+age*inc;}}
     v.on=true;
+  }
+  /* One modulator's value now, -1 to 1 (a wheel's dot level is 0 to 1). Its clock is free (Hz), locked to the loop (cycles per loop),
+     or one pass over the note. o = the voice, q = which of the four. */
+  modv(M,o,q){
+    if(M.type==='rand')return o.rv[q];
+    if(M.type==='wheel'){const r=this.rings[M.ring|0],er=this.E.rings[M.ring|0],P=r.pos;if(!P.length)return 0;
+      const ph=frac(r.ph);let k=P.length-1;for(let j=0;j<P.length;j++){if(P[j]<=ph)k=j;else break;}
+      const d=r.dot[k];return M.val==='dp'?(er.dp?er.dp[d]/24:0):M.val==='dl'?(er.dl?er.dl[d]/2:0):(er.da&&er.da[d]!==undefined?er.da[d]:1);}
+    const note=M.sync==='note',ph=M.sync==='loop'?(this.loops+this.master)*M.rate:note?Math.min(0.99999,o.t/o.glen):this.n/this.sr*M.rate;
+    if(M.type==='draw'){const P=M.pts,x=frac(ph)*16,i=x|0;if(!M.smooth)return P[i];const j=note?(i<15?i+1:15):(i+1)&15;return P[i]+(P[j]-P[i])*(x-i);}
+    this.L.shape=M.shape;return lfoVal(this.L,ph);
   }
   /* band-limiting correction for the saw and square edges */
   pb(t,dt){if(t<dt){t/=dt;return t+t-t*t-1;}if(t>1-dt){t=(t-1)/dt;return t*t+t+t+1;}return 0;}
@@ -732,9 +780,17 @@ class Engine{
       for(let q=0;q<this.NV;q++){const o=this.vo[q];if(!o.on)continue;const I=o.I;
         if(o.stg<3&&o.t>=o.gate)o.stg=3;
         if(o.stg===0){o.env+=o.ka;if(o.env>=1){o.env=1;o.stg=1;}}
-        else if(o.stg===1)o.env+=(I.s-o.env)*o.kd;
+        else if(o.stg===1)o.env+=(o.es-o.env)*o.kd;
         else{o.env-=o.env*o.kr;if(o.env<0.0003){o.on=false;o.d=null;continue;}}
         o.inc+=(o.tinc-o.inc)*o.gl;
+        if((i&7)===0||o.fresh){                                             /* every 8 samples: the modulators and the filter setting */
+          let mP=0,mF=0,mW=0,mL=0;const Ms=I.mods;
+          if(Ms)for(let q2=0;q2<4;q2++){const M=Ms[q2];if(!M||!(M.depth>0))continue;const ds=M.dest;if(ds!=='pitch'&&ds!=='fc'&&ds!=='wp'&&ds!=='level')continue;
+            let val=this.modv(M,o,q2);
+            if(M.type==='wheel'&&M.glide>0){if(o.fresh)o.ms[q2]=val;else{o.ms[q2]+=(val-o.ms[q2])*(1-Math.exp(-8/(M.glide*sr)));val=o.ms[q2];}}
+            val*=M.depth;if(ds==='pitch')mP+=val*24;else if(ds==='fc')mF+=val*4;else if(ds==='wp')mW+=val;else mL+=val;}
+          o.pm=mP?Math.pow(2,mP/12):1;o.mW=mW;o.mL=mL<-1?0:1+mL;o.mF=mF;o.fresh=false;o.g=0;}
+        const inc2=o.inc*o.pm;
         let x;
         if(o.d){const d=o.d,n=d.length,m=I.mode;let p=o.pos;
           if(m==='loop'){if(p>=o.le)p=o.ls+(p-o.le)%(o.le-o.ls);}
@@ -742,19 +798,23 @@ class Engine{
           if(!(p>=0&&p<n-1)){o.on=false;o.d=null;continue;}                 /* ran off the end of the recording */
           const i0=p|0;x=d[i0]+(d[i0+1]-d[i0])*(p-i0);
           if(m!=='loop'&&m!=='ping'){const edge=o.dir>0?n-1-p:p,fz=o.inc*0.003*sr;if(edge<fz)x*=edge/fz;}   /* 3 ms soft end */
-          o.pos=p+o.dir*o.inc;
-        }else{const w=I.wave,dt=o.inc;let ph=o.ph;
+          o.pos=p+o.dir*inc2;
+        }else if(o.w){const Wt=o.w,nf=o.nf;let ph=o.ph,wp=I.wp+o.mW;wp=wp<0?0:wp>1?1:wp;   /* wavetable: two neighbouring frames, mixed by the position */
+          const fp=wp*(nf-1),f0=fp|0,f1=f0+1<nf?f0+1:f0,fx=fp-f0,ix=ph*2048,i0=ix|0,i1=(i0+1)&2047,fi=ix-i0,b0=f0*2048,b1=f1*2048;
+          const a=Wt[b0+i0]+(Wt[b0+i1]-Wt[b0+i0])*fi,bb=Wt[b1+i0]+(Wt[b1+i1]-Wt[b1+i0])*fi;x=a+(bb-a)*fx;
+          ph+=inc2;if(ph>=1)ph-=1;o.ph=ph;
+        }else{const w=I.wave,dt=inc2;let ph=o.ph;
           if(w==='noise'){o.seed=(Math.imul(o.seed,1664525)+1013904223)>>>0;x=o.seed/2147483648-1;}
           else if(w==='saw')x=2*ph-1-this.pb(ph,dt);
           else if(w==='square'){const p2=ph+0.5;x=(ph<0.5?1:-1)+this.pb(ph,dt)-this.pb(p2>=1?p2-1:p2,dt);}
           else x=Math.sin(2*Math.PI*ph);
           ph+=dt;if(ph>=1)ph-=1;o.ph=ph;}
         if(I.ft!=='off'){
-          if(o.fst===0){o.fen+=o.fka;if(o.fen>=1){o.fen=1;o.fst=1;}}else if(o.stg===3)o.fen-=o.fen*o.fkr;else o.fen+=(I.fs-o.fen)*o.fkd;
-          if((i&7)===0||o.g===0){o.g=Math.tan(Math.PI*clamp(I.fc*Math.pow(2,I.fe*o.fen+I.fk*o.st/12),20,0.45*sr)/sr);o.k=2-1.94*I.fq;}
+          if(o.fst===0){o.fen+=o.fka;if(o.fen>=1){o.fen=1;o.fst=1;}}else if(o.stg===3)o.fen-=o.fen*o.fkr;else o.fen+=(o.efs-o.fen)*o.fkd;
+          if(o.g===0){o.g=Math.tan(Math.PI*clamp(I.fc*Math.pow(2,I.fe*o.fen+I.fk*o.st/12+o.mF),20,0.45*sr)/sr);o.k=2-1.94*I.fq;}
           const g=o.g,k=o.k,a1=1/(1+g*(g+k)),a2=g*a1,v3=x-o.ic2,v1=a1*o.ic1+a2*v3,v2=o.ic2+a2*o.ic1+g*a2*v3;o.ic1=2*v1-o.ic1;o.ic2=2*v2-o.ic2;
           x=I.ft==='lp'?v2:I.ft==='bp'?v1:x-k*v1-v2;}
-        s3+=x*o.env*o.amp*I.level;o.t++;}
+        s3+=x*o.env*o.amp*I.level*o.mL;o.t++;}
       let v=(s*this.comp+s2+s3*0.6)*E.vol*0.5;const av=v<0?-v:v;
       if(av>0.8)v=(v<0?-1:1)*(0.8+0.2*Math.tanh((av-0.8)/0.2));   /* safety limiter: untouched below 0.8 */
       out[i]=v;
@@ -766,7 +826,7 @@ class Engine{
 }
 function applyMsg(e,d){if(d.smp)e.setSample(d.smp.i,d.smp.d,d.smp.sr);if(d.note&&e.ready)e.note(d.note.i,0,d.note.amp,d.note.st,d.note.gate*e.sr);if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();}
 
-const WORKLET_SRC=[frac,clamp,rnd,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotWheel,dotSliceA,dotSliceN,dotTurn,dotSeed,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
+const WORKLET_SRC=[frac,clamp,rnd,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotWheel,dotSliceA,dotSliceN,wtMake,dotTurn,dotSeed,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
  +'\n'+Engine.toString()+`
 class RTProcessor extends AudioWorkletProcessor{
   constructor(){super();this.e=new Engine(sampleRate);this.c=0;this.port.onmessage=m=>applyMsg(this.e,m.data);}
@@ -813,11 +873,17 @@ const DOT_KINDS=['click','wheel','sample','impulse','inst'];
    st/ls/le = start and loop points (0-1 of the recording), a d s r = envelope (seconds, s 0-1), vel = how much velocity sets the level,
    ft fc fq fe fk = filter type, cutoff Hz, resonance, envelope amount in octaves, how far the cutoff follows the note, fa fd fs fr = its envelope,
    vm vn glide level = voice mode, voice count, glide seconds, output level. */
+const INST_WT=['saw','pulse','formant','bell','smp'],MOD_TYPES=['lfo','draw','wheel','rand'],MOD_DESTS=['pitch','fc','wp','level','st','a','d','s','r','fa','fd','fs','fr'],MOD_SYNC=['hz','loop','note'];
+function newMod(type){return{type:type||'lfo',dest:'fc',depth:0.3,sync:'hz',rate:0.5,shape:'sine',pts:[0,0.5,0.9,1,0.8,0.4,0,-0.4,-0.8,-1,-0.9,-0.5,0,0.3,0.6,0.3],smooth:true,ring:0,val:'da',glide:0};}
+function sanMod(x){if(!x||typeof x!=='object'||!MOD_TYPES.includes(x.type))return null;const d=newMod(x.type),sync=MOD_SYNC.includes(x.sync)?x.sync:'hz';
+  return{type:x.type,dest:MOD_DESTS.includes(x.dest)?x.dest:'fc',depth:num(x.depth,0,1,0.3),sync,rate:sync==='loop'?Math.round(num(x.rate,1,32,1)):num(x.rate,0.02,40,0.5),shape:SHAPE_IDS.includes(x.shape)?x.shape:'sine',
+    pts:Array.from({length:16},(_,i)=>num(Array.isArray(x.pts)?x.pts[i]:undefined,-1,1,d.pts[i])),smooth:x.smooth!==false,ring:Math.round(num(x.ring,0,3,0)),val:['da','dp','dl'].includes(x.val)?x.val:'da',glide:num(x.glide,0,2,0)};}
 const INST_WAVES=['sine','saw','square','noise'],INST_MODES=['one','held','loop','ping','rev'],INST_FT=['off','lp','bp','hp'],INST_VM=['poly','mono','legato'];
 function newInst(name){return{name:name||'Instrument',src:'osc',wave:'saw',ss:0,note:48,fine:0,mode:'held',st:0,ls:0.25,le:0.75,a:0.01,d:0.2,s:0.6,r:0.4,vel:0.7,
-  ft:'lp',fc:1800,fq:0.3,fe:2,fk:0.5,fa:0.005,fd:0.5,fs:0.3,fr:0.3,vm:'poly',vn:8,glide:0,level:0.8};}
+  ft:'lp',fc:1800,fq:0.3,fe:2,fk:0.5,fa:0.005,fd:0.5,fs:0.3,fr:0.3,vm:'poly',vn:8,glide:0,level:0.8,wt:'saw',wp:0.3,mods:[null,null,null,null]};}
 function sanInst(x){if(!x||typeof x!=='object')return null;const pick=(v,l,d)=>l.includes(v)?v:d;
-  return{name:String(x.name||'Instrument').slice(0,40),src:x.src==='smp'?'smp':'osc',wave:pick(x.wave,INST_WAVES,'saw'),ss:Math.round(num(x.ss,0,7,0)),note:Math.round(num(x.note,12,96,48)),fine:num(x.fine,-100,100,0),
+  return{wt:pick(x.wt,INST_WT,'saw'),wp:num(x.wp,0,1,0.3),mods:Array.from({length:4},(_,i)=>sanMod(Array.isArray(x.mods)?x.mods[i]:null)),
+    name:String(x.name||'Instrument').slice(0,40),src:x.src==='smp'||x.src==='wt'?x.src:'osc',wave:pick(x.wave,INST_WAVES,'saw'),ss:Math.round(num(x.ss,0,7,0)),note:Math.round(num(x.note,12,96,48)),fine:num(x.fine,-100,100,0),
     mode:pick(x.mode,INST_MODES,'held'),st:num(x.st,0,1,0),ls:num(x.ls,0,1,0.25),le:num(x.le,0,1,0.75),a:num(x.a,0.001,5,0.01),d:num(x.d,0.005,10,0.2),s:num(x.s,0,1,0.6),r:num(x.r,0.005,10,0.4),vel:num(x.vel,0,1,0.7),
     ft:pick(x.ft,INST_FT,'lp'),fc:num(x.fc,20,16000,1800),fq:num(x.fq,0,1,0.3),fe:num(x.fe,-4,4,2),fk:num(x.fk,0,1,0.5),fa:num(x.fa,0.001,5,0.005),fd:num(x.fd,0.005,10,0.5),fs:num(x.fs,0,1,0.3),fr:num(x.fr,0.005,10,0.3),
     vm:pick(x.vm,INST_VM,'poly'),vn:Math.round(num(x.vn,1,8,8)),glide:num(x.glide,0,2,0),level:num(x.level,0,1,0.8)};}
@@ -1286,7 +1352,7 @@ function initInstrument(){
   function drawInsts(){const h=$('#insts');h.textContent='';
     for(let i=0;i<8;i++){const x=state.inst[i],d=document.createElement('div');d.className='instr';
       d.innerHTML=`<span class="n">${i+1}</span><span class="nm" data-empty="${!x}"></span><button type="button" data-e aria-label="${x?'Edit':'Make'} instrument ${i+1}">${x?'Edit ›':'New ›'}</button><button type="button" data-x aria-label="Clear instrument slot ${i+1}"${x?'':' disabled'}>Clear</button>`;
-      d.querySelector('.nm').textContent=x?x.name+' · '+(x.src==='smp'?'sample '+(x.ss+1):x.wave):'empty';
+      d.querySelector('.nm').textContent=x?x.name+' · '+(x.src==='smp'?'sample '+(x.ss+1):x.src==='wt'?'wavetable':x.wave):'empty';
       d.querySelector('[data-e]').onclick=()=>openInst(i);
       d.querySelector('[data-x]').onclick=()=>{state.inst[i]=null;drawInsts();syncDotUI(true);changed();postInst(null);};
       h.appendChild(d);}
@@ -1654,7 +1720,7 @@ function initInstrument(){
             setText('#dSsv',fmtSec(dotSliceA(er,sel.d,n)/x.sr));setText('#dSnv',fmtSec(sr.dsn[sel.d]*n/x.sr));}
           else{setText('#dLv','×'+Math.pow(2,ol).toFixed(2));setText('#dSsv',Math.round(sr.dss[sel.d]*100)+'%');setText('#dSnv',(sr.dsn[sel.d]*100).toFixed(1)+'%');}}
         else if(kd==='inst'){const I=state.inst[sr.di[sel.d]],gt=0.25*Math.pow(2,ol)*(vc?vc.span:1)/E.speed;
-          setText('#dPv',sg+(I?' · '+(I.src==='osc'?noteName(440*Math.pow(2,(I.note-69+st)/12),true):'×'+Math.pow(2,st/12).toFixed(2)):''));
+          setText('#dPv',sg+(I?' · '+(I.src!=='smp'?noteName(440*Math.pow(2,(I.note-69+st)/12),true):'×'+Math.pow(2,st/12).toFixed(2)):''));
           setText('#dLv','held '+fmtSec(gt));setText('#dWv','instrument '+(sr.di[sel.d]+1));setText('#dIlv',I?I.name:'empty slot');}
         else if(kd==='impulse'){setText('#dPv','no pitch');setText('#dLv','one spike');setText('#dWv','one impulse');}
         else{
@@ -1705,12 +1771,13 @@ function mountInstEditor(host,slot0){
   const sec=t=>t>=1?t.toFixed(2)+' s':Math.round(t*1000)+' ms',pct=v=>Math.round(v*100)+'%';
   const NN=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'],nn=m=>NN[m%12]+(Math.floor(m/12)-1);
   const smpT=(v,I)=>{const x=samples[I.ss];return x?sec(v*x.d.length/x.sr):pct(v);};
-  const C={note:{l:'Root note',m:lin(12,96),f:v=>nn(v),int:1},fine:{l:'Fine tune',m:lin(-100,100),f:v=>(v>0?'+':'')+Math.round(v)+' ¢',int:1},
+  const C={note:{l:'Root note',m:lin(12,96),f:v=>nn(v),int:1},wp:{l:'Position',m:lin(0,1),f:pct},fine:{l:'Fine tune',m:lin(-100,100),f:v=>(v>0?'+':'')+Math.round(v)+' ¢',int:1},
     st:{l:'Start',m:lin(0,1),f:smpT},ls:{l:'Loop start',m:lin(0,1),f:smpT},le:{l:'Loop end',m:lin(0,1),f:smpT},
     a:{l:'Attack',m:lg(0.001,5),f:sec},d:{l:'Decay',m:lg(0.005,10),f:sec},s:{l:'Sustain',m:lin(0,1),f:pct},r:{l:'Release',m:lg(0.005,10),f:sec},vel:{l:'Velocity to level',m:lin(0,1),f:pct},
     fc:{l:'Cutoff',m:lg(20,16000),f:v=>fmtHz(v)},fq:{l:'Resonance',m:lin(0,1),f:pct},fe:{l:'Envelope amount',m:lin(-4,4),f:v=>(v>0?'+':'')+v.toFixed(1)+' oct'},fk:{l:'Follow the note',m:lin(0,1),f:pct},
     fa:{l:'Attack',m:lg(0.001,5),f:sec},fd:{l:'Decay',m:lg(0.005,10),f:sec},fs:{l:'Sustain',m:lin(0,1),f:pct},fr:{l:'Release',m:lg(0.005,10),f:sec},
     vn:{l:'Voices',m:lin(1,8),f:v=>String(v),int:1},glide:{l:'Glide',m:lg(0.001,2),f:v=>v<=0.0011?'off':sec(v),zero:0.001},level:{l:'Level',m:lin(0,1),f:pct}};
+  const DEST={pitch:'Pitch',fc:'Filter cutoff',wp:'Wavetable position',level:'Level',st:'Sample start',a:'Attack',d:'Decay',s:'Sustain',r:'Release',fa:'Filter attack',fd:'Filter decay',fs:'Filter sustain',fr:'Filter release'};
   const ctl=k=>`<div class="ctl"><div class="top"><label for="i-${k}">${C[k].l}</label><output id="i-${k}v"></output></div><input type="range" id="i-${k}" data-k="${k}" min="0" max="1000" step="1"></div>`;
   const seg=(k,opts,label)=>`<div class="seg" role="group" aria-label="${label}" data-seg="${k}">${opts.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="false">${t}</button>`).join('')}</div>`;
   const pan=(n,t,body,id)=>`<section class="panel"${id?` id="${id}"`:''}><h2><b>${n}</b>${t}</h2>${body}</section>`;
@@ -1721,11 +1788,15 @@ function mountInstEditor(host,slot0){
       <span class="sub mono" id="i-stat">Looking for the main window…</span></header>
     <p class="sub mono" id="i-empty" hidden>This slot is empty. <button type="button" id="i-new">New instrument</button></p>
     <div class="cols" id="i-body">
-      <div class="col">${pan('01','Source',`${seg('src',[['osc','Oscillator'],['smp','Sample']],'Sound source')}
-          <div id="i-osc" class="col" style="gap:12px">${seg('wave',[['sine','Sine'],['saw','Saw'],['square','Square'],['noise','Noise']],'Oscillator shape')}<div class="ctls2">${ctl('note')}${ctl('fine')}</div></div>
+      <div class="col">${pan('01','Source',`${seg('src',[['osc','Oscillator'],['wt','Wavetable'],['smp','Sample']],'Sound source')}
+          <div id="i-osc" class="col" style="gap:12px">${seg('wave',[['sine','Sine'],['saw','Saw'],['square','Square'],['noise','Noise']],'Oscillator shape')}</div>
+          <div id="i-wt" class="col" style="gap:12px">${seg('wt',[['saw','Sine to saw'],['pulse','Pulse width'],['formant','Formant'],['bell','Bell'],['smp','From a sample']],'Wavetable')}
+            <div class="row" id="i-wts"><span class="lab">Sample slot</span>${seg('ss',[0,1,2,3,4,5,6,7].map(i=>[i,i+1]),'Sample slot for the wavetable')}<span class="sub mono" id="i-wtn"></span></div>
+            <canvas class="wtv" id="i-wtv" aria-label="The wave at the current position in the table"></canvas><div class="ctls2">${ctl('wp')}</div></div>
           <div id="i-smp" class="col" style="gap:12px"><div class="row"><span class="lab">Sample slot</span>${seg('ss',[0,1,2,3,4,5,6,7].map(i=>[i,i+1]),'Sample slot')}<span class="sub mono" id="i-ssn"></span></div>
-            <canvas class="swv" id="i-wave" aria-label="The sample, with the start point and the loop marked"></canvas><div class="ctls2">${ctl('fine')}</div></div>
-          <p class="hint">An oscillator plays the root note when the dot's pitch is 0. A sample plays at its recorded speed when the dot's pitch is 0.</p>`)}
+            <canvas class="swv" id="i-wave" aria-label="The sample, with the start point and the loop marked"></canvas></div>
+          <div class="ctls2">${ctl('note')}${ctl('fine')}</div>
+          <p class="hint">An oscillator or wavetable plays the root note when the dot's pitch is 0. A sample plays at its recorded speed when the dot's pitch is 0. A wavetable is a row of single waves: Position chooses where in the row, and a modulator can sweep it. From a sample cuts the recording into waves of 2048 samples.</p>`)}
         ${pan('02','Play mode',`${seg('mode',[['one','One-shot'],['held','Held'],['loop','Loop'],['ping','Ping-pong'],['rev','Reverse']],'How the sample plays')}
           <div class="ctls2">${ctl('st')}${ctl('ls')}${ctl('le')}</div>
           <p class="sub mono" id="i-modeNote"></p>`,'i-play')}</div>
@@ -1738,12 +1809,23 @@ function mountInstEditor(host,slot0){
       <div class="col">${pan('05','Voices',`${seg('vm',[['poly','Poly'],['mono','Mono'],['legato','Legato']],'Voice mode')}
           <div class="ctls2">${ctl('vn')}${ctl('glide')}${ctl('level')}</div>
           <p class="sub mono" id="i-vmNote"></p>`)}
-        ${pan('06','What the dot sends',`<div><div class="map"><span>Dot pitch</span><span>the note, in semitones from the root</span></div><div class="map"><span>Dot level</span><span>velocity</span></div>
+        ${pan('06','Modulation',`<div id="i-mods">${[0,1,2,3].map(n=>`<div class="mod" data-q="${n}">
+            <div class="row"><span class="lab">Mod ${n+1}</span><div class="seg" role="group" aria-label="Modulator ${n+1} type" data-mseg="type">${[['off','Off'],['lfo','LFO'],['draw','Drawn'],['wheel','Wheel'],['rand','Random']].map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="false">${t}</button>`).join('')}</div></div>
+            <div class="mbody col" style="gap:10px">
+              <div class="row"><label class="lab" for="m${n}-dest">To</label><select id="m${n}-dest" data-mk="dest">${Object.entries(DEST).map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select></div>
+              <div data-t="lfo"><div class="seg" role="group" aria-label="Shape" data-mseg="shape">${SHAPES.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="false">${t}</button>`).join('')}</div></div>
+              <div data-t="draw" class="col" style="gap:8px"><canvas class="mdraw" aria-label="Draw the shape here: 16 steps"></canvas>
+                <div class="row"><div class="seg" role="group" aria-label="Line" data-mseg="smooth"><button type="button" data-v="1" aria-pressed="false">Smooth</button><button type="button" data-v="0" aria-pressed="false">Steps</button></div><button type="button" data-act="flat">Clear</button><button type="button" data-act="rand">Randomise</button></div></div>
+              <div data-t="wheel" class="row"><span class="lab">Reads ring</span><div class="seg" role="group" aria-label="Which ring of the top wheel" data-mseg="ring">${[0,1,2,3].map(v=>`<button type="button" data-v="${v}" aria-pressed="false">${v+1}</button>`).join('')}</div>
+                <span class="lab">each dot's</span><div class="seg" role="group" aria-label="Which dot value" data-mseg="val"><button type="button" data-v="da" aria-pressed="false">Level</button><button type="button" data-v="dp" aria-pressed="false">Pitch</button><button type="button" data-v="dl" aria-pressed="false">Length</button></div></div>
+              <div class="row" data-speed><span class="lab">Speed</span><div class="seg" role="group" aria-label="Speed" data-mseg="sync"><button type="button" data-v="hz" aria-pressed="false">Free, in Hz</button><button type="button" data-v="loop" aria-pressed="false">Per loop</button><button type="button" data-v="note" aria-pressed="false">Per note</button></div></div>
+              <div class="ctls2">${['rate','glide','depth'].map(k=>`<div class="ctl" data-c="${k}"><div class="top"><label for="m${n}-${k}">${k==='rate'?'Rate':k==='glide'?'Glide':'Depth'}</label><output id="m${n}-${k}v"></output></div><input type="range" id="m${n}-${k}" data-mk="${k}" min="0" max="1000" step="1"></div>`).join('')}</div>
+            </div></div>`).join('')}</div>
+          <p class="hint">LFO is the standard kind. Drawn loops a shape you draw, or with Per note plays it once over the note. Wheel reads the dots of a ring in the main window as its playhead passes them. Random picks a new value for each note. Per loop locks a modulator to the rhythm. Modulators aimed at the envelope or the sample start are read once, as each note starts.</p>`)}
+        ${pan('07','What the dot sends',`<div><div class="map"><span>Dot pitch</span><span>the note, in semitones from the root</span></div><div class="map"><span>Dot level</span><span>velocity</span></div>
           <div class="map"><span>Dot length</span><span>how long the note is held: a quarter of the wheel's turn, times the dot's Length</span></div><div class="map"><span>Dot LFOs</span><span>move the note and its length, hit by hit</span></div></div>
           <p class="sub mono">Every dot that plays this slot changes when you edit it here.</p>`)}</div>
     </div>`;
-  /* the duplicate Fine tune (one per source) shares a key: give the second its own ids */
-  {const f=host.querySelectorAll('#i-fine');if(f[1]){f[1].id='i-fine2';const o=host.querySelectorAll('#i-finev');o[1].id='i-fine2v';host.querySelector('#i-smp label[for="i-fine"]').htmlFor='i-fine2';}}
   const q=sel=>host.querySelector(sel),qa=sel=>[...host.querySelectorAll(sel)];
   const I=()=>inst[cur];
   function commit(){bus.post({type:'inst-set',i:cur,v:inst[cur],origin:me});}
@@ -1754,14 +1836,63 @@ function mountInstEditor(host,slot0){
     q('#i-empty').hidden=!!x;q('#i-body').hidden=!x;q('#i-name').disabled=!x;qa('#i-aud,#i-copy,#i-clear').forEach(b=>b.disabled=!x);
     if(!x){if(document.activeElement!==q('#i-name'))q('#i-name').value='';return;}
     if(document.activeElement!==q('#i-name'))q('#i-name').value=x.name;
-    for(const k of['src','wave','ss','mode','ft','vm'])qa(`[data-seg="${k}"] button`).forEach(b=>b.setAttribute('aria-pressed',String(x[k])===b.dataset.v?'true':'false'));
+    for(const k of['src','wave','wt','ss','mode','ft','vm'])qa(`[data-seg="${k}"] button`).forEach(b=>b.setAttribute('aria-pressed',String(x[k])===b.dataset.v?'true':'false'));
     qa('input[type=range][data-k]').forEach(el=>{const k=el.dataset.k,c=C[k];if(document.activeElement!==el)el.value=Math.round(clamp(c.m.to(Math.max(x[k],c.zero||-Infinity)),0,1)*1000);
       host.querySelector('#'+el.id+'v').textContent=c.f(x[k],x);});
-    const smp=x.src==='smp';q('#i-osc').hidden=smp;q('#i-smp').hidden=!smp;q('#i-play').hidden=!smp;q('#i-filt').hidden=x.ft==='off';
+    const smp=x.src==='smp',wtb=x.src==='wt';q('#i-osc').hidden=x.src!=='osc';q('#i-wt').hidden=!wtb;q('#i-smp').hidden=!smp;q('#i-play').hidden=!smp;
+    q('#i-note').closest('.ctl').hidden=smp;q('#i-wts').hidden=x.wt!=='smp';q('#i-wtn').textContent=names[x.ss]||'empty slot';syncMods();q('#i-filt').hidden=x.ft==='off';
     q('#i-ssn').textContent=names[x.ss]||'empty slot';q('#i-modeNote').textContent=MODE[x.mode];q('#i-vmNote').textContent=VM[x.vm];
     q('#i-ls').closest('.ctl').hidden=q('#i-le').closest('.ctl').hidden=!(x.mode==='loop'||x.mode==='ping'||x.mode==='rev');
     q('#i-vn').closest('.ctl').hidden=x.vm!=='poly';q('#i-glide').closest('.ctl').hidden=x.vm==='poly'||smp;
     draw();}
+  const wtc={};
+  const rateMapM=lg(0.02,40);
+  const depthFmt=(ds,d)=>ds==='pitch'?'±'+(d*24).toFixed(1)+' st':ds==='fc'?'±'+(d*4).toFixed(1)+' oct':['a','d','r','fa','fd','fr'].includes(ds)?'÷'+Math.pow(2,3*d).toFixed(1)+' to ×'+Math.pow(2,3*d).toFixed(1):'±'+Math.round(d*100)+'%';
+  function syncMods(){const x=I();if(!x)return;
+    qa('.mod').forEach(el=>{const n=+el.dataset.q,M=x.mods[n],t=M?M.type:'off';
+      el.querySelectorAll('[data-mseg="type"] button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===t?'true':'false'));
+      el.querySelector('.mbody').hidden=!M;if(!M)return;
+      el.querySelectorAll('[data-t]').forEach(b=>b.hidden=b.dataset.t!==t);
+      for(const k of['shape','ring','val','sync'])el.querySelectorAll(`[data-mseg="${k}"] button`).forEach(b=>b.setAttribute('aria-pressed',String(M[k])===b.dataset.v?'true':'false'));
+      el.querySelectorAll('[data-mseg="smooth"] button').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.v==='1')===M.smooth?'true':'false'));
+      const sp=t==='lfo'||t==='draw';el.querySelector('[data-speed]').hidden=!sp;
+      el.querySelector('[data-c="rate"]').hidden=!sp||M.sync==='note';el.querySelector('[data-c="glide"]').hidden=t!=='wheel';
+      const ds=el.querySelector('select');if(document.activeElement!==ds)ds.value=M.dest;
+      const R=el.querySelector('[data-mk="rate"]'),D=el.querySelector('[data-mk="depth"]'),G=el.querySelector('[data-mk="glide"]');
+      if(document.activeElement!==R)R.value=Math.round((M.sync==='loop'?(M.rate-1)/31:rateMapM.to(clamp(M.rate,0.02,40)))*1000);
+      if(document.activeElement!==D)D.value=Math.round(M.depth*1000);if(document.activeElement!==G)G.value=Math.round(M.glide/2*1000);
+      el.querySelector(`#m${n}-ratev`).textContent=M.sync==='loop'?M.rate+' per loop':fmtRate(M.rate);
+      el.querySelector(`#m${n}-depthv`).textContent=depthFmt(M.dest,M.depth);el.querySelector(`#m${n}-glidev`).textContent=M.glide>0?sec(M.glide):'off';
+      if(t==='draw')drawPts(el.querySelector('canvas'),M);});}
+  function drawPts(cv,M){const {g,w,h}=fit(cv);g.clearRect(0,0,w,h);const cw=w/16,Y=v=>h/2-v*(h/2-6);
+    g.strokeStyle=T['--soft'];g.lineWidth=1;for(let i=1;i<16;i++){g.beginPath();g.moveTo(i*cw,0);g.lineTo(i*cw,h);g.stroke();}
+    g.strokeStyle=T['--line'];g.beginPath();g.moveTo(0,h/2);g.lineTo(w,h/2);g.stroke();
+    g.strokeStyle=T['--accent'];g.lineWidth=2;g.beginPath();
+    if(M.smooth){for(let i=0;i<=16;i++){const v=M.pts[i&15];i?g.lineTo(i*cw,Y(v)):g.moveTo(0,Y(v));}}
+    else for(let i=0;i<16;i++){const y=Y(M.pts[i]);i?g.lineTo(i*cw,y):g.moveTo(0,y);g.lineTo((i+1)*cw,y);}
+    g.stroke();g.fillStyle=T['--accent'];for(let i=0;i<16;i++){g.beginPath();g.arc(M.smooth?i*cw:(i+0.5)*cw,Y(M.pts[i]),3,0,Math.PI*2);g.fill();}}
+  qa('.mod').forEach(el=>{const n=+el.dataset.q,M=()=>I()&&I().mods[n];
+    el.querySelectorAll('[data-mseg] button').forEach(b=>b.onclick=()=>{const x=I();if(!x)return;const k=b.closest('[data-mseg]').dataset.mseg,v=b.dataset.v;
+      if(k==='type'){if(v==='off')x.mods[n]=null;else if(x.mods[n])x.mods[n].type=v;else x.mods[n]=newMod(v);}
+      else{const m=M();if(!m)return;if(k==='smooth')m.smooth=v==='1';else if(k==='ring')m.ring=+v;
+        else if(k==='sync'){m.sync=v;m.rate=v==='loop'?clamp(Math.round(m.rate),1,32):clamp(m.rate,0.02,40);}else m[k]=v;}
+      sync();commit();});
+    el.querySelector('select').onchange=e=>{const m=M();if(m){m.dest=e.target.value;sync();commit();}};
+    el.querySelectorAll('input[type=range]').forEach(r=>r.oninput=()=>{const m=M();if(!m)return;const k=r.dataset.mk,u=+r.value/1000;
+      if(k==='rate')m.rate=m.sync==='loop'?1+Math.round(u*31):rateMapM.from(u);else if(k==='glide')m.glide=u*2;else m.depth=u;sync();commit();});
+    el.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{const m=M();if(!m)return;m.pts=m.pts.map(()=>b.dataset.act==='rand'?Math.round((Math.random()*2-1)*100)/100:0);sync();commit();});
+    const cv=el.querySelector('canvas');let down=false;
+    const at=e=>{const m=M();if(!m)return;const b=cv.getBoundingClientRect(),i=clamp(Math.floor((m.smooth?(e.clientX-b.left)/b.width*16+0.5:(e.clientX-b.left)/b.width*16)),0,15);
+      m.pts[i]=Math.round(clamp(1-2*(e.clientY-b.top-6)/Math.max(1,b.height-12),-1,1)*100)/100;drawPts(cv,m);commit();};
+    cv.addEventListener('pointerdown',e=>{down=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}at(e);});
+    cv.addEventListener('pointermove',e=>{if(down)at(e);});cv.addEventListener('pointerup',()=>{down=false;});cv.addEventListener('pointercancel',()=>{down=false;});});
+  function drawWt(x){const {g,w,h}=fit(q('#i-wtv'));g.clearRect(0,0,w,h);let Wt=null,nf=16;
+    if(x.wt==='smp'){const sm=samples[x.ss];if(sm&&sm.d.length>=2048){Wt=sm.d;nf=Math.min(256,Math.floor(sm.d.length/2048));}}else Wt=wtc[x.wt]||(wtc[x.wt]=wtMake(x.wt));
+    g.strokeStyle=T['--line'];g.lineWidth=1;g.beginPath();g.moveTo(0,h/2);g.lineTo(w,h/2);g.stroke();
+    if(!Wt){g.fillStyle=T['--muted'];g.font=font(11);g.textAlign='center';g.fillText(`Sample slot ${x.ss+1} is empty or too short`,w/2,h/2-6);return;}
+    const fp=x.wp*(nf-1),f0=Math.floor(fp),f1=Math.min(nf-1,f0+1),fx=fp-f0;g.strokeStyle=T['--accent'];g.lineWidth=1.8;g.beginPath();
+    for(let i=0;i<=w;i++){const k=Math.min(2047,Math.floor(i/w*2048)),v=Wt[f0*2048+k]*(1-fx)+Wt[f1*2048+k]*fx,y=h/2-v*(h/2-6);i?g.lineTo(i,y):g.moveTo(i,y);}
+    g.stroke();g.fillStyle=T['--muted'];g.font=font(10);g.textAlign='right';g.fillText('wave '+(fp+1).toFixed(1)+' of '+nf,w-6,12);}
   function curve(cv,a,d,s,r,col){const {g,w,h}=fit(cv);g.clearRect(0,0,w,h);const pad=10,hold=Math.max(0.05,(a+d+r)*0.35),tot=a+d+hold+r,X=t=>pad+t/tot*(w-2*pad),Y=v=>h-pad-v*(h-2*pad);
     g.strokeStyle=T['--soft'];g.lineWidth=1;g.beginPath();g.moveTo(pad,Y(0));g.lineTo(w-pad,Y(0));g.stroke();
     g.fillStyle=T['--ink'];g.globalAlpha=0.7;g.fillRect(X(0),h-pad+2,X(a+d+hold)-X(0),3);g.globalAlpha=1;
@@ -1771,7 +1902,7 @@ function mountInstEditor(host,slot0){
     for(let i=1;i<=40;i++){const t=r*i/40;g.lineTo(X(a+d+hold+t),Y(s1*Math.exp(-4*t/r)));}
     g.strokeStyle=col;g.lineWidth=2;g.stroke();g.lineTo(X(tot),Y(0));g.closePath();g.globalAlpha=0.12;g.fillStyle=col;g.fill();g.globalAlpha=1;
     g.fillStyle=T['--muted'];g.font=font(10);g.textAlign='left';g.fillText('note held',X(0)+2,h-pad-4);g.textAlign='right';g.fillText(sec(tot),w-pad,pad+8);}
-  function draw(){const x=I();if(!x)return;curve(q('#i-env'),x.a,x.d,x.s,x.r,T['--accent']);if(x.ft!=='off')curve(q('#i-fenv'),x.fa,x.fd,x.fs,x.fr,T['--ink']);
+  function draw(){const x=I();if(!x)return;curve(q('#i-env'),x.a,x.d,x.s,x.r,T['--accent']);if(x.src==='wt')drawWt(x);if(x.ft!=='off')curve(q('#i-fenv'),x.fa,x.fd,x.fs,x.fr,T['--ink']);
     if(x.src==='smp'){const {g,w,h}=fit(q('#i-wave'));g.clearRect(0,0,w,h);const sm=samples[x.ss];
       if(!sm){g.fillStyle=T['--muted'];g.font=font(11);g.textAlign='center';g.fillText(`Sample slot ${x.ss+1} is empty: load a file in the main window`,w/2,h/2+4);return;}
       const lp=x.mode==='loop'||x.mode==='ping'||x.mode==='rev';
