@@ -67,7 +67,7 @@ input[type=checkbox]{accent-color:var(--accent);margin:0}
 @media (pointer:coarse){button{padding:7px 10px}}
 
 /* transport bar */
-.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;padding:12px 0 10px;background:var(--bg);border-bottom:1px solid var(--ink)}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 0 10px;background:var(--bg);border-bottom:1px solid var(--ink)}
 #start{font-weight:600;padding:7px 14px;background:var(--accent);color:var(--panel);border-color:var(--accent);min-width:124px}
 #start[data-on="true"]{background:transparent;color:var(--accent)}
 .now{display:flex;align-items:center;gap:10px;min-width:0}
@@ -92,7 +92,7 @@ input[type=checkbox]{accent-color:var(--accent);margin:0}
 @media (max-width:860px){
   .cols{grid-template-columns:minmax(0,1fr)}
   .col,.colC{display:contents}
-  #pLoop{order:1}#pSpeed{order:2}#pRings{order:3}#pSound{order:4}#pScope{order:5}#pCirc{order:6}#pSmp{order:7}#pInst{order:8}
+  #pLoop{order:1}#pDot{order:2}#pSpeed{order:3}#pRings{order:4}#pSounds{order:5}#pMap{order:6}#pCirc{order:7}
 }
 .panel{display:grid;gap:12px;min-width:0;padding-top:10px;border-top:1px solid var(--line)}
 canvas{display:block;width:100%}
@@ -167,7 +167,31 @@ canvas{display:block;width:100%}
 .iw .row{gap:8px 16px}
 .iw .lab{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .iw .btn-on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
-#scope{height:200px}
+#scope{width:120px;height:30px;background:var(--panel);box-shadow:0 0 0 1px var(--line);display:block}
+.tbscope{display:flex;align-items:center;gap:8px}
+.tbvol{position:relative;flex:0 1 150px;min-width:110px}
+.tbvol .lfo{position:absolute;top:calc(100% + 8px);left:0;width:min(320px,88vw);z-index:40;box-shadow:0 0 0 1px var(--line)}
+.menu{position:static}   /* the box hangs from the right end of the top bar, so it can never open off-screen */
+.menu summary{list-style:none;cursor:pointer;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:5px 9px;white-space:nowrap;user-select:none}
+.menu summary::-webkit-details-marker{display:none}
+.menu summary::after{content:" ▾";color:var(--muted)}
+.menu summary span{color:var(--muted);text-transform:none;letter-spacing:0}
+.menu[open] summary{background:var(--soft)}
+.mbox{position:absolute;right:0;top:100%;z-index:40;display:grid;gap:8px;min-width:230px;max-width:88vw;padding:12px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.mbox label{display:flex;align-items:center;gap:6px;font-size:12px}
+.mbox p{margin:0}
+.sndb{display:grid;gap:12px;min-width:0}
+.map{display:grid}
+.maprow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:baseline;text-align:left;border:0;border-bottom:1px solid var(--soft);border-radius:0;padding:7px 6px 7px calc(6px + var(--d,0)*18px);text-transform:none;letter-spacing:0;font:400 12px var(--mono);border-left:2px solid transparent}
+.maprow b{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.maprow span{color:var(--muted);white-space:nowrap}
+.maprow i{grid-column:1/-1;font-style:normal;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.maprow[data-cur="true"]{border-left-color:var(--accent);background:var(--panel)}
+/* LFO buttons are shown only where an LFO is running, while Alt is held, or when asked for in the LFOs menu; touch screens keep them */
+.lfob{visibility:hidden}
+.lfob[data-active="true"],.lfob[aria-expanded="true"],body.alt .lfob,body.lfobtns .lfob{visibility:visible}
+@media (hover:none){.lfob{visibility:visible}}
+@media (max-width:700px){.tbscope canvas{width:96px}.tbvol{flex:1 1 150px}}
 .dotin .seg{width:max-content;max-width:100%;flex-wrap:wrap}
 .dotin .seg button{padding:4px 8px;font-size:10px}
 .dotin .seg button[aria-pressed="true"]{background:var(--c,var(--accent));color:var(--bg)}
@@ -266,6 +290,23 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
 .keys{display:flex;flex-wrap:wrap;gap:6px 20px;padding-top:10px;border-top:1px solid var(--line);font:10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .keys kbd{font:inherit;color:var(--ink);border:1px solid var(--line);border-radius:3px;padding:0 4px;margin-right:5px}
 @media (hover:none){.keys{display:none}}
+/* rings as a compact table on a desktop window (kept last so it wins over the stacked layout above) */
+.ringhead{display:none}
+@media (min-width:701px){
+  .ringhead{display:grid;grid-template-columns:minmax(86px,0.7fr) repeat(3,94px) minmax(70px,1fr);gap:0 10px;padding:0 0 4px 12px;font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .ringhead span{text-align:center}.ringhead span:last-child{text-align:left}
+  .ring{grid-template-columns:minmax(86px,0.7fr) repeat(3,94px) minmax(70px,1fr);align-items:center;gap:4px 10px;padding:8px 0 8px 12px}
+  .ring:first-child{padding-top:8px}
+  .ring::before,.ring:first-child::before{top:8px;bottom:8px}
+  .ring .head{grid-column:auto;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
+  .ring .head label{white-space:nowrap}
+  .ring .head .pat{font-size:11px;max-width:100%;overflow:hidden;white-space:nowrap}
+  .ring>.ctl{justify-items:center}
+  .ring>.ctl .top{min-height:0;justify-content:center}
+  .ring>.ctl .top .lab,.ring>.ctl.lvl .top label{display:none}
+  .ring .lvl{grid-column:auto;justify-items:stretch}
+  .ring>.ctl.lvl .top{justify-content:flex-end}
+}
 </style>
 </head>
 <body>
@@ -275,29 +316,28 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
     <h1 class="brand">Rhythm Into Tone</h1>
     <button id="start" type="button">Start sound</button>
     <div class="now"><span class="zone" id="tbZone" data-z="Rhythm">Rhythm</span><span class="mono" id="tbVal">2.00 s loop</span></div>
+    <div class="tbscope"><canvas id="scope" aria-label="The signal going to the speaker"></canvas><span class="sub mono" id="stPeak">—</span><span id="stWin" hidden></span><span id="stF" hidden></span></div>
+    <div class="tbvol" id="tbVol"></div>
     <span class="grow"></span>
     <div class="seqctl">
       <span class="lbl">Sequencer</span>
       <button type="button" id="tbPlay" aria-pressed="false">Play</button>
       <span class="sub mono" id="tbStep"></span>
-      <button type="button" id="seqWin"><span class="lg">Open in new window</span><span class="sm">New window</span></button>
-      <button type="button" id="seqDock" aria-expanded="false">Show here</button>
+      <button type="button" id="seqWin"><span class="lg">Window</span><span class="sm">Window</span></button>
+      <button type="button" id="seqDock" aria-expanded="false">Dock</button>
     </div>
+    <details class="menu" id="mLfo"><summary>LFOs · <span id="lfoCount">none</span></summary><div class="mbox">
+      <p class="sub mono">Hold ⌥ (Alt) and click a control to give it an LFO. On a phone, the LFO buttons stay visible.</p>
+      <button type="button" id="scatter">Scatter 4 random LFOs</button><button type="button" id="clearLfo">Clear all</button>
+      <label><input type="checkbox" id="lfoBtns"> Always show LFO buttons</label></div></details>
+    <details class="menu" id="mPatch"><summary>Patch</summary><div class="mbox"><button type="button" id="reset">Reset patch</button></div></details>
+    <details class="menu" id="mView"><summary>View</summary><div class="mbox">
+      <label><input type="checkbox" id="notes"> Notes</label><label><input type="checkbox" id="calm"> Calm visuals</label><label><input type="checkbox" id="showCirc"> Circles panel</label>
+      <button type="button" id="theme" aria-label="Colour theme">Theme: Auto</button></div></details>
   </div>
   <p class="toast" id="toast" role="status" hidden></p>
 
-  <div class="bar" aria-label="LFO and patch tools">
-    <span class="lbl">LFOs</span>
-    <span class="sub mono" id="lfoCount">none active</span>
-    <button type="button" id="scatter">Scatter 4 random LFOs</button>
-    <button type="button" id="clearLfo">Clear all</button>
-    <span class="grow"></span>
-    <label><input type="checkbox" id="notes"> Notes</label>
-    <label><input type="checkbox" id="calm"> Calm visuals</label>
-    <button type="button" id="theme" aria-label="Colour theme">Theme: Auto</button>
-    <button type="button" id="reset">Reset patch</button>
-  </div>
-  <p class="hint">Build a loop as a rhythm, then speed it up until it fuses into one tone. The harmonic bars and circles are calculated from the same loop you hear. Every control has an LFO, and the sequencer can change any of them step by step.</p>
+  <p class="hint">Build a loop as a rhythm, then speed it up until it fuses into one tone. Each dot can play a click, a sample, an instrument, or a whole wheel of its own. Every control can have an LFO, and the sequencer can change any of them step by step.</p>
 
   <section class="panel" id="dock" hidden aria-label="Sequencer"></section>
 
@@ -309,6 +349,47 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
         </div>
         <nav class="path" id="path" aria-label="Which wheel is shown" hidden></nav>
         <canvas id="wheel" aria-label="Rhythm wheel showing each ring's hits and playhead. Click a dot to edit it."></canvas>
+        <dl class="stats">
+          <div><dt>Loop</dt><dd id="stLoop">2.00 s</dd></div>
+          <div><dt>Hits</dt><dd id="stHits">10</dd></div>
+          <div><dt>Hits / s</dt><dd id="stRate">5.0</dd></div>
+          <div><dt>Sounding</dt><dd id="stNote">rhythm</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel" id="pSpeed" aria-label="Speed">
+        <div class="row spread">
+          <h2><b>02</b>Speed and tuning</h2>
+          <div class="row"><span class="zone" id="zone" data-z="Rhythm">Rhythm</span><button type="button" class="lfob" data-key="speed" aria-expanded="false" aria-label="LFO for speed">LFO</button></div>
+        </div>
+        <div class="readout"><span class="big" id="rbig">2.00 s</span><span class="sub" id="rsub"></span></div>
+        <input type="range" id="speed" min="0" max="1000" step="1" aria-label="Loop speed">
+        <div class="ticks" aria-hidden="true"><span>¼/s</span><span>1/s</span><span>10/s</span><span>100 Hz</span><span>1 kHz</span></div>
+        <div id="speedLfo"></div>
+        <div class="row">
+          <button type="button" data-go="0.5">Rhythm · ½/s</button>
+          <button type="button" data-go="12">Blur · 12/s</button>
+          <button type="button" data-go="110">Tone · A2</button>
+          <button type="button" data-go="220">Tone · A3</button>
+          <button type="button" id="sweep" aria-pressed="false">Sweep ½/s → 220 Hz</button>
+          <label class="check"><input type="checkbox" id="snap"> Snap to notes</label>
+        </div>
+        <p class="hint">Below about 10 hits a second you hear separate hits. Above about 20 loops a second the whole loop fuses into one pitch at the loop rate, and the pattern becomes its timbre. Snap to notes rounds the speed to the nearest semitone once it is a pitch.</p>
+        <div class="ctls" id="tuneCtls"></div>
+      </section>
+    </div>
+
+    <div class="col colB">
+      <section class="panel" id="pRings" aria-label="Rings">
+        <h2><b>03</b>Rings</h2>
+        <p class="where" id="ringsWhere" hidden></p>
+        <p class="hint">Each ring spreads its hits as evenly as possible over its steps (a Euclidean rhythm). A ring with equal steps and hits is a plain pulse. An LFO on Rotate turns the ring smoothly, between steps.</p>
+        <div class="ringhead" aria-hidden="true"><span></span><span>Steps</span><span>Hits</span><span>Rotate</span><span>Level</span></div>
+        <div class="rings" id="rings"></div>
+      </section>
+
+      <section class="panel" id="pDot" aria-label="Dot">
+        <h2><b>04</b>Dot</h2>
         <div class="dotbox" id="dotBox">
           <p class="sub mono" id="dotNone">Click a dot to set its pitch, length and level, or to put a wheel or a sample inside it.</p>
           <div id="dotEd" hidden>
@@ -336,85 +417,43 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
             </div>
           </div>
         </div>
-        <dl class="stats">
-          <div><dt>Loop</dt><dd id="stLoop">2.00 s</dd></div>
-          <div><dt>Hits</dt><dd id="stHits">10</dd></div>
-          <div><dt>Hits / s</dt><dd id="stRate">5.0</dd></div>
-          <div><dt>Sounding</dt><dd id="stNote">rhythm</dd></div>
-        </dl>
-      </section>
-
-      <section class="panel" id="pSpeed" aria-label="Speed">
-        <div class="row spread">
-          <h2><b>02</b>Speed</h2>
-          <div class="row"><span class="zone" id="zone" data-z="Rhythm">Rhythm</span><button type="button" class="lfob" data-key="speed" aria-expanded="false" aria-label="LFO for speed">LFO</button></div>
-        </div>
-        <div class="readout"><span class="big" id="rbig">2.00 s</span><span class="sub" id="rsub"></span></div>
-        <input type="range" id="speed" min="0" max="1000" step="1" aria-label="Loop speed">
-        <div class="ticks" aria-hidden="true"><span>¼/s</span><span>1/s</span><span>10/s</span><span>100 Hz</span><span>1 kHz</span></div>
-        <div id="speedLfo"></div>
-        <div class="row">
-          <button type="button" data-go="0.5">Rhythm · ½/s</button>
-          <button type="button" data-go="12">Blur · 12/s</button>
-          <button type="button" data-go="110">Tone · A2</button>
-          <button type="button" data-go="220">Tone · A3</button>
-          <button type="button" id="sweep" aria-pressed="false">Sweep ½/s → 220 Hz</button>
-          <label class="check"><input type="checkbox" id="snap"> Snap to notes</label>
-        </div>
-        <p class="hint">Below about 10 hits a second you hear separate hits. Above about 20 loops a second the whole loop fuses into one pitch at the loop rate, and the pattern becomes its timbre. Snap to notes rounds the speed to the nearest semitone once it is a pitch.</p>
-      </section>
-    </div>
-
-    <div class="col colB">
-      <section class="panel" id="pScope" aria-label="Scope">
-        <h2><b>03</b>Scope</h2>
-        <canvas id="scope" class="plot" aria-label="The signal going to the speaker"></canvas>
-        <dl class="stats">
-          <div><dt>Showing</dt><dd id="stWin">—</dd></div>
-          <div><dt>Peak</dt><dd id="stPeak">—</dd></div>
-          <div><dt>Loop rate</dt><dd id="stF">0.50 /s</dd></div>
-        </dl>
-        <p class="hint">This is the signal on its way to the speaker, measured, not calculated. When the loop is fast enough to be a tone it shows two turns of the loop as a waveform. When it is a rhythm it shows the level over the last four seconds.</p>
-      </section>
-
-      <section class="panel" id="pCirc" aria-label="Circles">
-        <div class="row spread">
-          <h2><b>04</b>Circles</h2>
-          <div class="ctl" style="min-width:150px"><div class="top"><label for="nc">Circles</label><output id="ncv">16</output></div><input type="range" id="nc" min="1" max="48" value="16"></div>
-        </div>
-        <canvas id="circ" class="plot" aria-label="Fourier circles drawing the rhythm pattern"></canvas>
-        <p class="hint">Circle n spins n times per loop. Its size and starting angle come from the pattern's nth Fourier coefficient. Chained together, the circles draw the pattern: each spike is a hit. More circles give sharper hits.</p>
-      </section>
-
-      <section class="panel" id="pSmp" aria-label="Samples">
-        <h2><b>05</b>Samples</h2>
-        <div class="smps" id="smps"></div>
-        <p class="sub mono" id="smpNote">Load or drop an audio file on a slot. Then set a dot to Sample.</p>
-        <p class="hint">A sample dot plays a slice of the recording each time it fires. Pitch changes the playback speed, Start and Slice choose the part, and Length scales the slice. Short slices get soft edges, so at tone speeds a sample works as a grain. Samples are kept in this browser, not in the patch.</p>
-      </section>
-
-
-      <section class="panel" id="pInst" aria-label="Instruments">
-        <h2><b>06</b>Instruments</h2>
-        <div class="insts" id="insts"></div>
-        <p class="hint">An instrument is a full voice: a source, an envelope, a filter and a way of playing. It is edited in its own window and saved in a slot here. A dot set to Instrument plays it as a note: Pitch is the note, Level the velocity, Length how long it is held.</p>
       </section>
     </div>
 
     <div class="col colC">
-      <section class="panel" id="pRings" aria-label="Rings">
-        <h2><b>07</b>Rings</h2>
-        <p class="where" id="ringsWhere" hidden></p>
-        <p class="hint">Each ring spreads its hits as evenly as possible over its steps (a Euclidean rhythm). A ring with equal steps and hits is a plain pulse. An LFO on Rotate turns the ring smoothly, between steps.</p>
-        <div class="rings" id="rings"></div>
+      <section class="panel" id="pMap" aria-label="Map of the wheels">
+        <h2><b>05</b>Map</h2>
+        <div class="map" id="map"></div>
+        <p class="hint">Every wheel in the patch, with the wheels inside its dots listed under it. Click one to open it on the wheel.</p>
       </section>
 
-      <section class="panel" id="pSound" aria-label="Click and fusion">
-        <h2><b>08</b>Click and fusion</h2>
+      <section class="panel" id="pSounds" aria-label="Sounds">
+        <div class="row spread"><h2><b>06</b>Sounds</h2>
+          <div class="seg" id="sndTabs" role="group" aria-label="Which sounds"><button type="button" data-t="clk" aria-pressed="true">Clicks</button><button type="button" data-t="smp" aria-pressed="false">Samples</button><button type="button" data-t="inst" aria-pressed="false">Instruments</button></div></div>
+        <div class="sndb" id="sndClk">
         <div class="ctls" id="soundCtls"></div>
         <div class="row"><button type="button" id="resync">Re-align rings</button><span class="sub mono" id="engineNote"></span></div>
         <p class="warn" id="dropWarn" hidden>Too many overlapping sounds: some were dropped. Shorten the click or the sample slice, or slow down.</p>
         <p class="hint">Click pitch sets a formant. It stays fixed in Hz while the loop pitch moves, like a vowel. Each click keeps the pitch and length it had when it started, so LFOs on the click change it hit by hit. Detune gives each ring a slightly different speed, so the tone splits into separate beating voices. Shared vibrato wobbles every ring together, which helps the ear hear one sound.</p>
+      </div>
+        <div class="sndb" id="sndSmp" hidden>
+        <div class="smps" id="smps"></div>
+        <p class="sub mono" id="smpNote">Load or drop an audio file on a slot. Then set a dot to Sample.</p>
+        <p class="hint">A sample dot plays a slice of the recording each time it fires. Pitch changes the playback speed, Start and Slice choose the part, and Length scales the slice. Short slices get soft edges, so at tone speeds a sample works as a grain. Samples are kept in this browser, not in the patch.</p>
+      </div>
+        <div class="sndb" id="sndInst" hidden>
+        <div class="insts" id="insts"></div>
+        <p class="hint">An instrument is a full voice: a source, an envelope, a filter and a way of playing. It is edited in its own window and saved in a slot here. A dot set to Instrument plays it as a note: Pitch is the note, Level the velocity, Length how long it is held.</p>
+      </div>
+      </section>
+
+      <section class="panel" id="pCirc" hidden aria-label="Circles">
+        <div class="row spread">
+          <h2><b>08</b>Circles</h2>
+          <div class="ctl" style="min-width:150px"><div class="top"><label for="nc">Circles</label><output id="ncv">16</output></div><input type="range" id="nc" min="1" max="48" value="16"></div>
+        </div>
+        <canvas id="circ" class="plot" aria-label="Fourier circles drawing the rhythm pattern"></canvas>
+        <p class="hint">Circle n spins n times per loop. Its size and starting angle come from the pattern's nth Fourier coefficient. Chained together, the circles draw the pattern: each spike is a hit. More circles give sharper hits.</p>
       </section>
     </div>
   </div>
@@ -426,7 +465,7 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
     <span><kbd>←</kbd><kbd>→</kbd>Semitone</span>
     <span><kbd>⇧←</kbd><kbd>⇧→</kbd>Octave</span>
     <span><kbd>Esc</kbd>Close dot</span>
-    <span><kbd>N</kbd>Notes</span>
+    <span><kbd>N</kbd>Notes</span><span><kbd>⌥</kbd>click a control: LFO</span>
   </footer>
 </div>
 
@@ -1064,11 +1103,11 @@ function exampleSeq(name){
 
 /* window preferences (theme, notes). Kept apart from the patch state on purpose. */
 const UISTORE='rit-ui-v1';
-const uiPrefs={theme:'auto',notes:false};
+const uiPrefs={theme:'auto',notes:false,circ:false,lfoBtns:false};
 function loadPrefs(raw){let o=null;try{o=JSON.parse(raw||'null');}catch(e){}o=o&&typeof o==='object'?o:{};
-  uiPrefs.theme=o.theme==='light'||o.theme==='dark'?o.theme:'auto';uiPrefs.notes=o.notes===true;}
+  uiPrefs.theme=o.theme==='light'||o.theme==='dark'?o.theme:'auto';uiPrefs.notes=o.notes===true;uiPrefs.circ=o.circ===true;uiPrefs.lfoBtns=o.lfoBtns===true;}
 function applyPrefs(){const r=document.documentElement;if(uiPrefs.theme==='auto')r.removeAttribute('data-theme');else r.setAttribute('data-theme',uiPrefs.theme);
-  document.body.dataset.notes=uiPrefs.notes?'on':'off';}
+  document.body.dataset.notes=uiPrefs.notes?'on':'off';document.body.classList.toggle('lfobtns',uiPrefs.lfoBtns);}
 function savePrefs(){try{localStorage.setItem(UISTORE,JSON.stringify(uiPrefs));}catch(e){}applyPrefs();}
 let syncPrefsUI=()=>{};
 try{loadPrefs(localStorage.getItem(UISTORE));}catch(e){}
@@ -1112,7 +1151,7 @@ function mountSequencer(host,opts){
   let st={at:0,running:false,playing:false,step:-1};
   let tool='draw',dirty=false,queued=false,hover=null,drag=null;
   host.innerHTML=`
-    <div class="row spread"><h2><b>09</b>Sequencer</h2><span class="chip" data-r="conn">Looking for the instrument…</span></div>
+    <div class="row spread"><h2><b>07</b>Sequencer</h2><span class="chip" data-r="conn">Looking for the instrument…</span></div>
     <div class="seqbar">
       <button type="button" class="playbtn" data-r="play" aria-pressed="false">Play</button>
       <div class="fld"><span>Clock</span><div class="seg" role="group" aria-label="Clock" data-r="clock"><button type="button" data-v="tempo">Tempo</button><button type="button" data-v="loops">Loops</button></div></div>
@@ -1269,6 +1308,7 @@ function initInstrument(){
   function wheelAt(n){let rs=state.rings;for(let k=0;k<n;k++){const v=view[k],w=rs[v.ri]&&rs[v.ri].kids[v.d];if(!w)return null;rs=w.rings;}return rs;}
   const VR=()=>wheelAt(view.length)||state.rings;
   const eachRing=(rs,f)=>rs.forEach(r=>{f(r);r.kids.forEach(w=>{if(w)eachRing(w.rings,f);});});
+  let drawMap=()=>{};
   function sendState(jump){audio.send({S:JSON.parse(JSON.stringify(state)),jump:!!jump});}
   function changed(){sendState();saveSoon();}
   function sendSample(i){const x=samples[i];audio.send({smp:{i,d:x?x.d:null,sr:x?x.sr:0}});}
@@ -1299,7 +1339,7 @@ function initInstrument(){
   }
   function ensureLfo(key){if(!state.lfo[key])state.lfo[key]={shape:'sine',rate:0.2,depth:0,seed:hashKey(key)};return state.lfo[key];}
   function dotLfoCount(){let n=0;eachRing(state.rings,r=>{for(let d=0;d<16;d++){if(r.pld[d]>0)n++;if(r.lld[d]>0)n++;}});return n;}
-  function syncLfoCount(){const n=activeLfos().length+dotLfoCount();setText('#lfoCount',n?`${n} active`:'none active');}
+  function syncLfoCount(){const n=activeLfos().length+dotLfoCount();setText('#lfoCount',n?`${n} active`:'none');}
   function syncLfoUI(key){const L=state.lfo[key],p=$('#lfo-'+key);
     $$(`.lfob[data-key="${key}"]`).forEach(b=>{b.dataset.active=!!(L&&L.depth>0);b.setAttribute('aria-expanded',p&&!p.hidden?'true':'false');});
     syncLfoCount();
@@ -1491,8 +1531,38 @@ function initInstrument(){
   $('#resync').onclick=()=>{audio.send({resync:true});vis.rings=vis.rings.map(()=>vis.master);};
   $('#nc').oninput=e=>{ui.nc=+e.target.value;setText('#ncv',String(ui.nc));};
   $('#calm').onchange=e=>{ui.calm=e.target.checked;};
-  syncPrefsUI=()=>{$('#notes').checked=uiPrefs.notes;setText('#theme','Theme: '+uiPrefs.theme[0].toUpperCase()+uiPrefs.theme.slice(1));};
+  syncPrefsUI=()=>{$('#showCirc').checked=uiPrefs.circ;$('#lfoBtns').checked=uiPrefs.lfoBtns;$('#pCirc').hidden=!uiPrefs.circ;$('#notes').checked=uiPrefs.notes;setText('#theme','Theme: '+uiPrefs.theme[0].toUpperCase()+uiPrefs.theme.slice(1));};
   $('#notes').onchange=e=>{uiPrefs.notes=e.target.checked;savePrefs();};
+  $('#showCirc').onchange=e=>{uiPrefs.circ=e.target.checked;savePrefs();syncPrefsUI();};
+  $('#lfoBtns').onchange=e=>{uiPrefs.lfoBtns=e.target.checked;savePrefs();};
+  /* menus close when you click elsewhere */
+  document.addEventListener('click',e=>{$$('details.menu[open]').forEach(d=>{if(!d.contains(e.target))d.open=false;});});
+  /* Alt-click any control to open its LFO; holding Alt shows where the LFO buttons are */
+  addEventListener('keydown',e=>{if(e.key==='Alt')document.body.classList.add('alt');});
+  addEventListener('keyup',e=>{if(e.key==='Alt')document.body.classList.remove('alt');});
+  addEventListener('blur',()=>document.body.classList.remove('alt'));
+  document.addEventListener('click',e=>{if(!e.altKey)return;const host=e.target.closest('.ctl')||e.target.closest('#pSpeed'),b=host&&host.querySelector('.lfob');
+    if(b&&e.target!==b){e.preventDefault();e.stopPropagation();b.click();}},true);
+  /* the tuning controls sit with Speed, and Volume in the top bar */
+  for(const [id,key,host] of [['D','det','#tuneCtls'],['V','vib','#tuneCtls'],['O','vol','#tbVol']]){$(host).appendChild($('#'+id).closest('.ctl'));$(host).appendChild($('#lfo-'+key));}
+  /* Sounds: one panel, three lists */
+  const showSnd=t=>{$$('#sndTabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t?'true':'false'));$('#sndClk').hidden=t!=='clk';$('#sndSmp').hidden=t!=='smp';$('#sndInst').hidden=t!=='inst';};
+  $$('#sndTabs button').forEach(b=>b.onclick=()=>showSnd(b.dataset.t));
+  $$('#dK button').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k;if(sel&&(k==='sample'||k==='inst'||k==='click'))showSnd(k==='sample'?'smp':k==='inst'?'inst':'clk');}));
+  /* the map: every wheel in the patch, as a list you can jump from */
+  let mapSig='';const KN={click:['click','clicks'],wheel:['wheel','wheels'],sample:['sample','samples'],impulse:['impulse','impulses'],inst:['instrument','instruments']};
+  drawMap=()=>{const rows=[];
+    const walk=(rs,path,depth,label)=>{let hits=0;const kinds={},kids=[];
+      rs.forEach((r,ri)=>{if(!r.on)return;ringDots(r).forEach(d=>{hits++;const k=r.dk[d];kinds[k]=(kinds[k]||0)+1;if(k==='wheel'&&r.kids[d]&&depth<3)kids.push({ri,d,w:r.kids[d]});});});
+      rows.push({path,depth,label,hits,what:Object.keys(KN).filter(k=>kinds[k]).map(k=>kinds[k]+' '+KN[k][kinds[k]===1?0:1]).join(' · ')});
+      kids.forEach(k=>walk(k.w.rings,path.concat([{ri:k.ri,d:k.d}]),depth+1,`Ring ${k.ri+1} · dot ${k.d+1}`));};
+    walk(state.rings,[],0,'Top');
+    const sig=JSON.stringify(rows)+JSON.stringify(view);if(sig===mapSig)return;mapSig=sig;
+    const h=$('#map');h.textContent='';
+    rows.forEach(r=>{const b=document.createElement('button');b.type='button';b.className='maprow';b.style.setProperty('--d',r.depth);
+      b.dataset.cur=JSON.stringify(r.path)===JSON.stringify(view);
+      b.innerHTML='<b></b><span></span><i></i>';b.children[0].textContent=r.label;b.children[1].textContent=r.hits+(r.hits===1?' hit':' hits');b.children[2].textContent=r.what||'no hits';
+      b.onclick=()=>{view.length=0;r.path.forEach(x=>view.push({ri:x.ri,d:x.d}));selectDot(null);syncView();};h.appendChild(b);});};
   $('#theme').onclick=()=>{uiPrefs.theme={auto:'light',light:'dark',dark:'auto'}[uiPrefs.theme];savePrefs();syncPrefsUI();};
   syncPrefsUI();
   $('#clearLfo').onclick=()=>{Object.values(state.lfo).forEach(l=>l.depth=0);eachRing(state.rings,r=>{r.pld.fill(0);r.lld.fill(0);});syncDotUI();Object.keys(LFOSPEC).forEach(syncLfoUI);changed();};
@@ -1581,7 +1651,7 @@ function initInstrument(){
   });
   $('#tbPlay').onclick=()=>setPlay(!state.seq.playing,true);
   let docked=false;
-  function showDock(show){const d=$('#dock');d.hidden=!show;$('#seqDock').setAttribute('aria-expanded',show);setText('#seqDock',show?'Hide':'Show here');
+  function showDock(show){const d=$('#dock');d.hidden=!show;$('#seqDock').setAttribute('aria-expanded',show);setText('#seqDock',show?'Undock':'Dock');
     if(show&&!docked){docked=true;mountSequencer(d,{docked:true});}}
   $('#seqDock').onclick=()=>showDock($('#dock').hidden);
   $('#seqWin').onclick=()=>{
@@ -1682,7 +1752,7 @@ function initInstrument(){
   function drawScope(E){
     const {g,w,h}=fit($('#scope'));g.clearRect(0,0,w,h);const mid=h/2;
     g.strokeStyle=T['--line'];g.lineWidth=1;g.beginPath();g.moveTo(0,mid);g.lineTo(w,mid);g.stroke();
-    if(!audio.an||!audio.running){scope.pk=0;scope.win='—';g.fillStyle=T['--muted'];g.font=font(12);g.textAlign='center';g.fillText('Start sound to see the signal',w/2,mid-10);return;}
+    if(!audio.an||!audio.running){scope.pk=0;scope.win='—';return;}
     const B=audio.buf,N=B.length,now=performance.now();audio.an.getFloatTimeDomainData(B);
     const f=vis.f,per=audio.sr/f;
     if(f>=20&&per*3.3<N){
@@ -1690,7 +1760,7 @@ function initInstrument(){
       for(let i=i0;i<i1;i++)if(B[i]>bv){bv=B[i];bi=i;}
       const st=Math.max(0,bi-Math.floor(per*0.1)),n=Math.floor(per*2);
       for(let i=st;i<st+n;i++){const v=B[i]<0?-B[i]:B[i];if(v>pk)pk=v;}
-      const sc=(mid-8)/Math.max(pk,0.02);
+      const sc=(mid-3)/Math.max(pk,0.02);
       g.strokeStyle=T['--line'];g.setLineDash([3,4]);g.beginPath();g.moveTo(w/2,4);g.lineTo(w/2,h-4);g.stroke();g.setLineDash([]);
       g.strokeStyle=T['--accent'];g.lineWidth=1.4;g.beginPath();
       const step=Math.max(1,n/(w*2));for(let k=0;k<=n;k+=step){const x=k/n*w,y=mid-B[st+Math.floor(k)]*sc;k?g.lineTo(x,y):g.moveTo(x,y);}
@@ -1700,7 +1770,7 @@ function initInstrument(){
     if(cols>0||!scope.last){const m=Math.min(N,Math.ceil(Math.max(1,cols)/60*audio.sr));let v=0;for(let i=N-m;i<N;i++){const a=B[i]<0?-B[i]:B[i];if(a>v)v=a;}
       for(let c=0;c<Math.max(1,cols);c++){H[scope.hp]=v;scope.hp=(scope.hp+1)%H.length;}scope.last=scope.last?scope.last+cols/0.06:now;}
     let pk=0;for(let i=0;i<H.length;i++)if(H[i]>pk)pk=H[i];
-    const sc=(mid-8)/Math.max(pk,0.02),bw=w/H.length;g.fillStyle=T['--accent'];
+    const sc=(mid-3)/Math.max(pk,0.02),bw=w/H.length;g.fillStyle=T['--accent'];
     for(let i=0;i<H.length;i++){const v=H[(scope.hp+i)%H.length]*sc;if(v>0.3)g.fillRect(i*bw,mid-v,Math.max(1,bw-0.5),v*2);}
     scope.pk=pk;scope.win='last 4 s';
   }
@@ -1790,9 +1860,9 @@ function initInstrument(){
   let lastRO=0,lastSm=0;
   function frame(now){
     if(!document.hidden){const E=tick(now),C=coefs(E);
-      drawWheel(E);drawScope(E);drawCirc(E,C);drawDotSample(E);
+      drawWheel(E);drawScope(E);if(uiPrefs.circ)drawCirc(E,C);drawDotSample(E);
       if(now-lastSm>700){lastSm=now;for(let i=0;i<SMPN;i++)drawSmp(i);}
-      if(now-lastRO>80){lastRO=now;updateReadouts(E,C);}}
+      if(now-lastRO>80){lastRO=now;updateReadouts(E,C);drawMap();}}
     requestAnimationFrame(frame);}
 
   syncAllUI();drawInsts();

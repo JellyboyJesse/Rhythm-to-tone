@@ -109,6 +109,10 @@ Click a dot on the wheel to give that one hit its own pitch (in semitones from t
 
 The LFO buttons beside a dot's Pitch and Length give that dot its own LFO, with shape, rate and depth. Like the other click LFOs, it is read each time the dot fires, so it changes the dot hit by hit.
 
+## Finding your way around
+
+The top bar holds sound, the note readout, a small scope, Volume, the sequencer, and three menus (LFOs, Patch, View). To give a control an LFO, hold ⌥ (Alt) and click it; the LFO button then stays visible on that control. The Map lists every wheel in the patch, with the wheels inside its dots under it, and opens the one you click. Sounds has tabs for Clicks, Samples and Instruments. The Circles panel can be switched on from the View menu.
+
 ## Wheels inside dots
 
 In the dot editor, **Inside** chooses what the dot plays: one click, or a wheel of its own. **Open wheel** (or a double-click on the dot) shows that wheel in place of the main one, with the same four rings, presets and per-dot settings. Its dots can hold wheels too, down to three levels below the top. The path above the wheel shows where you are and leads back up.

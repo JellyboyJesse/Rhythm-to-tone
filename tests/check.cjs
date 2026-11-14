@@ -183,17 +183,17 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   /* 4. docked sequencer, LFOs, reset, saved state */
   await inst.click('#seqDock');await inst.waitForTimeout(900);
   check('docked sequencer connects',/Connected/.test(await inst.textContent('#dock [data-r=conn]')));
-  await inst.click('#pSound .lfob[data-key=F]');await inst.click('#scatter');await inst.waitForTimeout(300);
+  await inst.$eval('label[for=F]',el=>el.dispatchEvent(new MouseEvent('click',{altKey:true,bubbles:true,cancelable:true})));await inst.click('#mLfo summary');await inst.click('#scatter');await inst.click('#mLfo summary');await inst.waitForTimeout(300);
   check('LFOs can be added',/active/.test(await inst.textContent('#lfoCount'))&&!/none/.test(await inst.textContent('#lfoCount')));
   await inst.screenshot({path:path.join(OUT,'instrument-desktop.png'),fullPage:true});
-  await inst.click('#reset');await inst.click('#reset');await inst.waitForTimeout(200);
+  await inst.$eval('#reset',el=>{el.click();el.click();});await inst.waitForTimeout(200);
   check('Reset patch clears LFOs and restores speed',/none/.test(await inst.textContent('#lfoCount'))&&(await inst.evaluate(()=>state.base.speed))===0.5);
   await inst.click('[data-go="110"]');await inst.waitForTimeout(700);
   const p2=await ctx.newPage();await p2.goto(BASE);await p2.waitForTimeout(400);
   check('settings survive a reload',(await p2.evaluate(()=>state.base.speed))===110);await p2.close();
 
   /* 4b. clicking a dot on the wheel opens its editor */
-  await inst.click('#reset');await inst.click('#reset');await inst.waitForTimeout(300);
+  await inst.$eval('#reset',el=>{el.click();el.click();});await inst.waitForTimeout(300);
   await inst.evaluate(()=>document.querySelector('#wheel').scrollIntoView({block:'center'}));await inst.waitForTimeout(150);
   {const wb=await (await inst.$('#wheel')).boundingBox(),R=Math.min(wb.width,wb.height)/2-34,gap=(R-R*0.3)/4;
     await inst.mouse.click(wb.x+wb.width/2,wb.y+wb.height/2-(R-gap*0.15));await inst.waitForTimeout(250);
@@ -201,7 +201,7 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     await inst.$eval('#dP',el=>{el.value=7;el.dispatchEvent(new Event('input'));});
     await inst.$eval('#dA',el=>{el.value=40;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(200);
     check('dot pitch and level are stored',await inst.evaluate(()=>state.rings[0].dp[0]===7&&state.rings[0].da[0]===0.4));
-    await inst.click('#dlb-p');await inst.waitForTimeout(200);
+    await inst.$eval('label[for=dP]',el=>el.dispatchEvent(new MouseEvent('click',{altKey:true,bubbles:true,cancelable:true})));await inst.waitForTimeout(200);
     check('a dot LFO can be added',await inst.evaluate(()=>state.rings[0].pld[0]===2&&!document.querySelector('#dlfo-p').hidden)&&/1 active/.test(await inst.textContent('#lfoCount')));
     await inst.screenshot({path:path.join(OUT,'instrument-dot.png')});
     await inst.click('#dK [data-k="wheel"]');await inst.$eval('#dT',el=>{el.value=500;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(250);
@@ -235,7 +235,7 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       check('the scope shows the measured signal',/last 4 s/.test(await inst.textContent('#stWin'))&&parseFloat(await inst.textContent('#stPeak'))>0.01,await inst.textContent('#stWin')+' · peak '+await inst.textContent('#stPeak'));
       await inst.click('#dK [data-k="impulse"]');await inst.waitForTimeout(200);
       check('a dot can be set to an impulse',await inst.evaluate(()=>state.rings[0].dk[0]==='impulse'&&document.querySelector('#dSc').hidden)&&/impulse/.test(await inst.textContent('#dWv')));
-      await inst.click('#smps .smp:nth-child(2) [data-x]');await inst.waitForTimeout(200);
+      await inst.click('#sndTabs [data-t="smp"]');await inst.click('#smps .smp:nth-child(2) [data-x]');await inst.waitForTimeout(200);
       check('a sample slot can be cleared',await inst.evaluate(()=>samples[1]===null));}
     {await inst.click('#dK [data-k="inst"]');await inst.click('#dIl [data-s="2"]');await inst.waitForTimeout(200);
       check('a dot can be set to play an instrument',await inst.evaluate(()=>state.rings[0].dk[0]==='inst'&&state.rings[0].di[0]===2&&!!state.inst[2]&&!document.querySelector('#dIc').hidden)&&/Instrument 3/.test(await inst.textContent('#dIlv')),await inst.textContent('#dIlv')+' | '+await inst.textContent('#dPv')+' | '+await inst.textContent('#dLv'));
@@ -268,6 +268,18 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       check('instruments are saved with the patch',saved==='Glass bell');}
     await inst.click('#dotReset');await inst.keyboard.press('Escape');await inst.waitForTimeout(150);
     check('Reset dot and Esc clear the editor',await inst.evaluate(()=>state.rings[0].dp[0]===0&&state.rings[0].da[0]===1&&state.rings[0].pld[0]===0&&state.rings[0].dk[0]==='click'&&state.rings[0].kids[0]===null&&document.querySelector('#dotEd').hidden));}
+    {check('choosing Instrument for a dot shows the Instruments list',await inst.evaluate(()=>!document.querySelector('#sndInst').hidden&&document.querySelector('#sndClk').hidden));
+      await inst.evaluate(()=>{const r=state.rings[1];r.dk[0]='wheel';r.kids[0]=newWheel();r.kids[0].rings[0].dk[1]='wheel';r.kids[0].rings[0].kids[1]=newWheel();});await inst.waitForTimeout(300);
+      const rows=await inst.$$eval('#map .maprow',els=>els.map(e=>e.textContent));
+      check('the map lists every wheel',rows.length===3&&/^Top/.test(rows[0])&&/Ring 2 · dot 1/.test(rows[1])&&/Ring 1 · dot 2/.test(rows[2]),rows.join(' | '));
+      await inst.click('#map .maprow:nth-child(3)');await inst.waitForTimeout(250);
+      check('clicking the map opens that wheel',/Ring 2 · dot 1.*Ring 1 · dot 2/.test(await inst.textContent('#path'))&&await inst.$eval('#map .maprow:nth-child(3)',e=>e.dataset.cur==='true'),await inst.textContent('#path'));
+      await inst.click('#map .maprow:nth-child(1)');await inst.waitForTimeout(200);
+      await inst.click('#mView summary');await inst.click('#showCirc');await inst.waitForTimeout(150);
+      check('the Circles panel can be shown from the View menu',await inst.evaluate(()=>!document.querySelector('#pCirc').hidden));
+      await inst.click('#showCirc');await inst.click('#mView summary');
+      check('LFO buttons are hidden until needed, and Volume sits in the top bar',await inst.evaluate(()=>getComputedStyle(document.querySelector('.lfob[data-key=r1hits]')).visibility==='hidden'&&!!document.querySelector('#tbVol #O')&&!!document.querySelector('#tuneCtls #D')));
+      await inst.evaluate(()=>{state.rings[1].dk[0]='click';state.rings[1].kids[0]=null;});await inst.waitForTimeout(150);}
 
   /* 5. fallback engine when AudioWorklet is missing */
   const fb=await ctx.newPage();watch(fb,'fallback');
