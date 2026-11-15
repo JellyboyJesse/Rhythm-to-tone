@@ -170,6 +170,17 @@ canvas{display:block;width:100%}
 .pbhead h2{margin:0}
 #tl{display:block;width:100%;height:196px;touch-action:none;cursor:pointer}
 #secList{flex-wrap:wrap}#secName{font:400 13px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 8px;width:11em;min-width:0}
+.arr{display:grid;grid-template-columns:168px minmax(0,1fr);border:1px solid var(--line);background:var(--panel)}
+.arrL{padding-top:22px;border-right:1px solid var(--line);min-width:0}
+.arrL .ln{height:72px;box-sizing:border-box;padding:5px 8px;border-top:1px solid var(--soft);border-left:3px solid var(--c);display:grid;grid-template-columns:auto minmax(0,1fr);gap:1px 6px;align-items:center;font:500 10px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.arrL .ln .nm{grid-column:1/-1;display:flex;align-items:center;gap:4px;justify-content:space-between}
+.arrL .ln button{font:600 10px var(--mono);padding:1px 6px;min-width:0;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:3px;cursor:pointer}
+.arrL .ln button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.arrL .ln input[type=range]{width:100%;min-width:0;height:14px;margin:0}
+.arrL .ln span.k{color:var(--muted)}
+#a-cv{display:block;width:100%;height:310px;touch-action:none;cursor:crosshair}
+#a-scroll{width:100%;margin:6px 0 0}
+@media (max-width:620px){.arr{grid-template-columns:104px minmax(0,1fr)}.arrL .ln{padding:4px 5px}}
 .trk{display:flex;flex-wrap:wrap;gap:4px;min-width:0}
 .trk button{font:500 11px var(--mono);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:3px;padding:4px 8px;cursor:pointer}
 .trk button[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
@@ -493,19 +504,16 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
         <p class="hint">The top wheel unrolled: one lane per ring, left to right in time. A tick is a click, a bar is a sample or a note for as long as it sounds, and a bracket is a wheel inside a dot with its own sounds drawn small. The curves underneath are the LFOs over the same stretch of time. Pause (K) freezes it so you can read it. Click a sound to select its dot, and drag up or down to change its level.</p>
       </section>
 
-      <section class="panel" id="pTrack" aria-label="Sections and track">
-        <h2><b>08</b>Track</h2>
+      <section class="panel" id="pTrack" aria-label="Sections and the arranger">
+        <h2><b>08</b>Sections</h2>
         <div class="row"><span class="lab2">Sections</span><div class="seg" id="secList" role="group" aria-label="Sections"></div>
           <button type="button" id="secAdd">+ Save the wheel as a section</button><button type="button" id="secNew" hidden>+ Empty</button></div>
         <div class="row" id="secEd" hidden><input type="text" id="secName" maxlength="24" aria-label="Name of this section">
           <span class="pair"><span class="lab2">Trips</span><button type="button" id="secTm" aria-label="Fewer trips">−</button><output id="secT" class="mono">1</output><button type="button" id="secTp" aria-label="More trips">+</button></span>
-          <button type="button" id="secToTrack">Add to track</button><button type="button" id="secBounce">Bounce to a sample</button><button type="button" id="secDel">Delete</button></div>
-        <div class="row"><span class="lab2">Track</span><div class="trk" id="trk"></div></div>
-        <div class="row" id="trkEd" hidden><span class="pair"><span class="lab2">Repeats</span><button type="button" id="trkRm" aria-label="Fewer repeats">−</button><output id="trkR" class="mono">1</output><button type="button" id="trkRp" aria-label="More repeats">+</button></span>
-          <button type="button" id="trkL" aria-label="Move earlier">‹</button><button type="button" id="trkRt" aria-label="Move later">›</button><button type="button" id="trkX">Remove</button></div>
-        <div class="row"><button type="button" id="trkPlay" aria-pressed="false">Play track</button><label class="check"><input type="checkbox" id="trkLoop"> Loop</label><button type="button" id="trkWav">Export WAV</button></div>
+          <button type="button" id="secDel">Delete</button></div>
+        <div class="row"><button type="button" id="arrSend" class="btn-on">Send to the arranger</button><button type="button" id="arrOpen">Open the arranger</button><button type="button" id="secBounce">Bounce to a sample</button></div>
         <p class="sub mono" id="trkNote" role="status"></p>
-        <p class="hint">A section is the whole wheel saved under a name: its rings and the wheels inside them, speed, click settings, LFOs and sequencer steps. The wheel on screen is always the selected section, so editing the wheel edits that section. Trips is how many times round a section lasts. The track is sections in playing order; it moves to the next one exactly as the playhead crosses the top. All sections share one Library of samples, instruments and LFO shapes.</p>
+        <p class="hint">A section is the whole wheel saved under a name: its rings and the wheels inside them, speed, click settings, LFOs and sequencer steps. The wheel on screen is always the selected section, so editing the wheel edits that section. Trips is how many times round it lasts. Send to the arranger renders the section as audio, one clip per ring, and puts the clips at the end of the arrangement. They are arranged, cut and mixed in the arranger window. All sections share one Library of samples, instruments and LFO shapes.</p>
       </section>
 
       <section class="panel" id="pCirc" hidden aria-label="Circles">
@@ -533,6 +541,7 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
 
 <div class="wrap iw" id="instOnly" hidden><div id="instHost"></div></div>
 <div class="wrap iw" id="smpOnly" hidden><div id="smpHost"></div></div>
+<div class="wrap iw" id="arrOnly" hidden><div id="arrHost"></div></div>
 
 <div class="wrap" id="seqOnly" hidden>
   <header>
@@ -706,6 +715,7 @@ class Engine{
     this.SP0={src:'smp',wave:'saw',ss:0,note:60,fine:0,mode:'one',st:0,ls:0,le:1,a:0.003,d:0.2,s:1,r:0.005,vel:1,ft:'off',fc:1800,fq:0.3,fe:0,fk:0,fa:0.005,fd:0.5,fs:0.3,fr:0.3,
       vm:'poly',vn:8,glide:0,level:1,wt:'saw',wp:0,mods:null,uni:1,udet:0,o2l:0,o2w:'sine',o2s:0,o2f:0,fm:0,ring:0,sub:0,nz:0,drive:0,elin:false,eloop:false,cut:true,hold:0.25};
     /* P = the patch now playing: S itself, or one section of it while the track plays. tz is taken off the clock, so LFOs restart with each section and stand still in a pause. */
+    this.solo=-1;this.raw=false;   /* solo: only this top ring sounds; raw: no limiter. Both are for rendering each ring to its own clip. */
     this.P=null;this.secS=null;this.paused=false;this.tz=0;this.tOn=false;this.tI=0;this.tL=0;this.tLoop=true;this.done=false;
     /* impulses: each is written into this short ring as a band-limited spike (a windowed sinc, 8 samples late) */
     this.ib=new Float32Array(64);this.ip=0;
@@ -915,7 +925,7 @@ class Engine{
         if(!P.length){if(r.ph>=1)r.ph-=1;continue;}
         let tg=r.base+P[r.next];
         while(tg<=r.ph){
-          if(E.gate&&r.amp>0)this.fire(E.rings[ri],ri,r.dot[r.next],(r.ph-tg)/inc,r.amp,0,0,1/inc,0);
+          if(E.gate&&r.amp>0&&(this.solo<0||this.solo===ri))this.fire(E.rings[ri],ri,r.dot[r.next],(r.ph-tg)/inc,r.amp,0,0,1/inc,0);
           r.next++;if(r.next>=P.length){r.next=0;r.base+=1;}
           tg=r.base+P[r.next];
         }
@@ -988,7 +998,7 @@ class Engine{
         if(o.dg>1)x=Math.tanh(x*o.dg)*o.dn;                                   /* drive */
         s3+=x*o.env*o.amp*I.level*o.mL;o.t++;}
       let v=(s*this.comp+s2+s3*0.6)*E.vol*0.5;const av=v<0?-v:v;
-      if(av>0.8)v=(v<0?-1:1)*(0.8+0.2*Math.tanh((av-0.8)/0.2));   /* safety limiter: untouched below 0.8 */
+      if(av>0.8&&!this.raw)v=(v<0?-1:1)*(0.8+0.2*Math.tanh((av-0.8)/0.2));   /* safety limiter: untouched below 0.8 */
       out[i]=v;
     }
     if(this.ready){if(this.dirty){this.dirty=false;this.nl=this.leaves(this.E.rings,0);}const hits=this.nl;
@@ -1161,9 +1171,28 @@ function smpLoadOne(i){return smpDb().then(db=>new Promise(res=>{const q=db.tran
   q.onsuccess=()=>{const x=q.result;samples[i]=x&&x.d&&x.d.length>2?smpMake(x.name,x.d,x.sr,x.lp):null;res(samples[i]);};q.onerror=()=>res(null);})).catch(()=>null);}
 function smpLoadAll(){smpDb().then(db=>{const st=db.transaction('s','readonly').objectStore('s');
   for(let i=0;i<SMPN;i++){const q=st.get(i);q.onsuccess=()=>{const x=q.result;if(x&&x.d&&x.d.length>2&&!samples[i]){samples[i]=smpMake(x.name,x.d,x.sr,x.lp);smpChanged(i);}};}}).catch(()=>{});}
-function wavBlob(d,sr){const n=d.length,buf=new ArrayBuffer(44+n*2),v=new DataView(buf),W=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i));};
-  W(0,'RIFF');v.setUint32(4,36+n*2,true);W(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);W(36,'data');v.setUint32(40,n*2,true);
-  for(let i=0;i<n;i++){const x=d[i]<-1?-1:d[i]>1?1:d[i];v.setInt16(44+i*2,Math.round(x*32767),true);}return new Blob([buf],{type:'audio/wav'});}
+function wavBlob(d,sr,d2){const n=d.length,ch=d2?2:1,buf=new ArrayBuffer(44+n*2*ch),v=new DataView(buf),W=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i));};
+  W(0,'RIFF');v.setUint32(4,36+n*2*ch,true);W(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,ch,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2*ch,true);v.setUint16(32,2*ch,true);v.setUint16(34,16,true);W(36,'data');v.setUint32(40,n*2*ch,true);
+  const P=(x,o)=>v.setInt16(o,Math.round((x<-1?-1:x>1?1:x)*32767),true);
+  for(let i=0;i<n;i++){P(d[i],44+i*2*ch);if(d2)P(d2[i],46+i*4);}return new Blob([buf],{type:'audio/wav'});}
+/* The arrangement: audio clips on four lanes, edited in its own window (#arrange). The clips' audio is kept in IndexedDB (rit-arr-v1) under
+   a source id; the arrangement itself (which clip sits where) is small and lives in localStorage. A clip is {id, src, name, lane, t, off, len,
+   gain, fi, fo, body}: it plays len seconds of its source from off, starting at t; fi and fo are fades; body is how long the section itself
+   lasted, without the tail that rings on after it, so the next section can be placed where the playhead came round. */
+const ARRKEY='rit-arr-v1';
+function arrDb(){return new Promise((res,rej)=>{let q;try{q=indexedDB.open('rit-arr-v1',1);}catch(e){rej(e);return;}
+  q.onupgradeneeded=()=>q.result.createObjectStore('s');q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}
+function arrPut(id,rec){return arrDb().then(db=>new Promise(res=>{const tx=db.transaction('s','readwrite');tx.objectStore('s').put(rec,id);tx.oncomplete=()=>res(true);tx.onerror=tx.onabort=()=>res(false);})).catch(()=>false);}
+function arrGet(id){return arrDb().then(db=>new Promise(res=>{const q=db.transaction('s','readonly').objectStore('s').get(id);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null);})).catch(()=>null);}
+function arrWipe(){return arrDb().then(db=>new Promise(res=>{const tx=db.transaction('s','readwrite');tx.objectStore('s').clear();tx.oncomplete=tx.onerror=()=>res();})).catch(()=>{});}
+function arrNew(){return{lanes:Array.from({length:4},()=>({vol:0.8,pan:0,mute:false,solo:false})),clips:[]};}
+function arrSan(o){const A=arrNew();if(!o||typeof o!=='object')return A;
+  if(Array.isArray(o.lanes))A.lanes=A.lanes.map((d,i)=>{const x=o.lanes[i]||{};return{vol:num(x.vol,0,1,0.8),pan:num(x.pan,-1,1,0),mute:!!x.mute,solo:!!x.solo};});
+  if(Array.isArray(o.clips))A.clips=o.clips.filter(c=>c&&typeof c.src==='string'&&c.len>0).slice(0,400).map((c,i)=>({id:String(c.id||'c'+i),src:c.src,name:String(c.name||'clip').slice(0,40),lane:Math.round(num(c.lane,0,3,0)),
+    t:num(c.t,0,36000,0),off:num(c.off,0,36000,0),len:num(c.len,0.005,36000,1),gain:num(c.gain,0,2,1),fi:num(c.fi,0,600,0),fo:num(c.fo,0,600,0),body:num(c.body,0,36000,0)}));
+  return A;}
+function arrLoad(){let o=null;try{o=JSON.parse(localStorage.getItem(ARRKEY));}catch(e){}return arrSan(o);}
+function arrSave(A){try{localStorage.setItem(ARRKEY,JSON.stringify(A));return true;}catch(e){return false;}}
 function smpDecode(buf){const OC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
   return new Promise((res,rej)=>{if(!OC){rej(new Error('no decoder'));return;}const oc=new OC(1,2,44100),p=oc.decodeAudioData(buf,res,rej);if(p&&p.catch)p.catch(rej);})
     .then(ab=>{const n=Math.min(ab.length,Math.floor(SMPMAX*ab.sampleRate)),d=new Float32Array(n),C=ab.numberOfChannels;
@@ -2082,7 +2111,7 @@ function initInstrument(){
   let lastRO=0,lastSm=0;
   function frame(now){
     if(!document.hidden){const E=tick(now),C=coefs(E);
-      followTrack(now);drawWheel(E);drawScope(E);drawTimeline(E,now);if(uiPrefs.circ)drawCirc(E,C);drawDotSample(E);
+      drawWheel(E);drawScope(E);drawTimeline(E,now);if(uiPrefs.circ)drawCirc(E,C);drawDotSample(E);
       if(now-lastSm>700){lastSm=now;for(let i=0;i<SMPN;i++)drawSmp(i);}
       if(now-lastRO>80){lastRO=now;updateReadouts(E,C);drawMap();}}
     requestAnimationFrame(frame);}
@@ -2140,28 +2169,17 @@ function initInstrument(){
       state.rings[drag.ri].da[drag.d]=Math.round(clamp(drag.a+dy/80,0.02,1)*100)/100;syncDotUI(true);changed();});
     const up=()=>{drag=null;};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);}
 
-  /* --- sections and the track --- */
-  ui.track=false;ui.item=-1;ui.tnow=-1;ui.trackT=0;
+  /* --- sections, and sending them to the arranger as audio --- */
   const secCopy=()=>JSON.parse(JSON.stringify({base:state.base,rings:state.rings,lfo:state.lfo,seq:Object.assign({},state.seq,{playing:false})}));
   /* put section k on the wheel: from here on the wheel's rings, speed, LFOs and steps are that section's own */
   function showSection(k,quiet){const x=state.sections[k];if(!x)return;const playing=state.seq.playing;
     state.cur=k;state.base=x.base;state.rings=x.rings;state.lfo=x.lfo;state.seq=x.seq;state.seq.playing=playing;
     view.length=0;syncView();$$('.lfo').forEach(p=>p.hidden=true);selectDot(null);syncAllUI();postSync(null);syncTrack();
     if(quiet)saveSoon();else changed();}
-  function syncTrack(){const L=$('#secList'),S=state.sections,Tk=state.track;L.textContent='';
-    S.forEach((x,k)=>{const b=document.createElement('button');b.type='button';b.textContent=(k+1)+' '+x.name;b.setAttribute('aria-pressed',k===state.cur?'true':'false');
-      b.onclick=()=>{if(ui.track)trackStop();showSection(k);};L.appendChild(b);});
+  function syncTrack(){const L=$('#secList'),S=state.sections;L.textContent='';
+    S.forEach((x,k)=>{const b=document.createElement('button');b.type='button';b.textContent=(k+1)+' '+x.name;b.setAttribute('aria-pressed',k===state.cur?'true':'false');b.onclick=()=>showSection(k);L.appendChild(b);});
     const c=S[state.cur];$('#secEd').hidden=!c;$('#secAdd').textContent=S.length?'+ Copy as a new section':'+ Save the wheel as a section';$('#secNew').hidden=!S.length;
-    if(c){if(document.activeElement!==$('#secName'))$('#secName').value=c.name;setText('#secT',String(c.trips));}
-    const h=$('#trk');h.textContent='';if(ui.item>=Tk.items.length)ui.item=-1;
-    Tk.items.forEach((it,k)=>{const b=document.createElement('button');b.type='button';b.textContent=(S[it.s]?S[it.s].name:'?')+(it.rep>1?' ×'+it.rep:'');
-      b.setAttribute('aria-pressed',k===ui.item?'true':'false');b.dataset.now=ui.track&&k===ui.tnow;b.onclick=()=>{ui.item=ui.item===k?-1:k;syncTrack();};h.appendChild(b);});
-    if(!Tk.items.length){const e=document.createElement('span');e.className='sub mono';e.textContent=S.length?'empty: select a section and press Add to track':'empty: save a section first';h.appendChild(e);}
-    const it=Tk.items[ui.item];$('#trkEd').hidden=!it;if(it)setText('#trkR',String(it.rep));
-    const b=$('#trkPlay');b.setAttribute('aria-pressed',ui.track?'true':'false');b.textContent=ui.track?'Stop track':ui.item>=0?'Play from here':'Play track';b.disabled=!Tk.items.length;$('#trkWav').disabled=!Tk.items.length;
-    $('#trkLoop').checked=Tk.loop;
-    let trips=0;for(const q of Tk.items)if(S[q.s])trips+=q.rep*S[q.s].trips;
-    if(!ui.track&&!ui.busy)setText('#trkNote',Tk.items.length?`${Tk.items.length} part${Tk.items.length>1?'s':''} · ${trips} trip${trips>1?'s':''} round in all`:'');}
+    if(c){if(document.activeElement!==$('#secName'))$('#secName').value=c.name;setText('#secT',String(c.trips));}}
   function secMake(src,name){if(state.sections.length>=SECMAX){toast('That is the most sections a patch can hold ('+SECMAX+').');return;}
     secAlias(state);state.sections.push(Object.assign({name:name||'Section '+(state.sections.length+1),trips:state.sections[state.cur]&&src?state.sections[state.cur].trips:1},src||(()=>{const d=defaults();return{base:d.base,rings:d.rings,lfo:{},seq:defaultSeq()};})()));
     showSection(state.sections.length-1);}
@@ -2170,37 +2188,22 @@ function initInstrument(){
   $('#secName').oninput=e=>{const c=state.sections[state.cur];if(!c)return;c.name=e.target.value.slice(0,24)||'Section';syncTrack();saveSoon();};
   const secTrips=s=>{const c=state.sections[state.cur];if(!c)return;c.trips=clamp(c.trips+s,1,64);syncTrack();changed();};
   $('#secTm').onclick=()=>secTrips(-1);$('#secTp').onclick=()=>secTrips(1);
-  $('#secToTrack').onclick=()=>{if(state.cur<0)return;if(state.track.items.length>=64){toast('The track is full (64 parts).');return;}state.track.items.push({s:state.cur,rep:1});syncTrack();changed();};
   let delArm=0;
   $('#secDel').onclick=()=>{const b=$('#secDel'),k=state.cur;if(k<0)return;
     if(!delArm){b.textContent='Tap again to delete';delArm=setTimeout(()=>{delArm=0;b.textContent='Delete';},3000);return;}
-    clearTimeout(delArm);delArm=0;b.textContent='Delete';if(ui.track)trackStop();
+    clearTimeout(delArm);delArm=0;b.textContent='Delete';
     state.sections.splice(k,1);state.track.items=state.track.items.filter(q=>q.s!==k).map(q=>({s:q.s>k?q.s-1:q.s,rep:q.rep}));
     state.cur=-1;if(state.sections.length)showSection(Math.min(k,state.sections.length-1));else{syncTrack();changed();}};   /* with no sections left, the wheel stays as it is */
-  const trkItem=f=>{const it=state.track.items[ui.item];if(!it)return;f(it,state.track.items);syncTrack();changed();};
-  $('#trkRm').onclick=()=>trkItem(it=>{it.rep=clamp(it.rep-1,1,64);});$('#trkRp').onclick=()=>trkItem(it=>{it.rep=clamp(it.rep+1,1,64);});
-  $('#trkL').onclick=()=>trkItem((it,A)=>{const k=ui.item;if(k>0){A[k]=A[k-1];A[k-1]=it;ui.item=k-1;}});
-  $('#trkRt').onclick=()=>trkItem((it,A)=>{const k=ui.item;if(k<A.length-1){A[k]=A[k+1];A[k+1]=it;ui.item=k+1;}});
-  $('#trkX').onclick=()=>trkItem((it,A)=>{A.splice(ui.item,1);ui.item=-1;});
-  $('#trkLoop').onchange=e=>{state.track.loop=e.target.checked;changed();if(ui.track)audio.send({track:{play:true,from:Math.max(0,ui.tnow),loop:state.track.loop}});};
-  function trackStop(){ui.track=false;ui.tnow=-1;audio.send({track:{play:false}});sendState();syncTrack();}
-  async function trackPlay(){if(!state.track.items.length)return;
-    if(!audio.running)await toggleAudio();if(!audio.running)return;
-    const from=ui.item>=0?ui.item:0,it=state.track.items[from];
-    ui.track=true;ui.tnow=from;ui.trackT=performance.now();if(it&&it.s!==state.cur)showSection(it.s,true);
-    sendState();audio.send({track:{play:true,from,loop:state.track.loop}});if(ui.paused){ui.paused=false;const b=$('#pause');b.setAttribute('aria-pressed','false');b.textContent='Pause';}
-    setText('#trkNote','Playing the track.');syncTrack();}
-  $('#trkPlay').onclick=()=>{if(ui.track)trackStop();else trackPlay();};
-  /* the page follows the engine: when it moves to the next part, that section comes onto the wheel */
-  function followTrack(now){const rep=audio.rep;if(!ui.track||!rep||now-ui.trackT<300)return;
-    if(rep.done){ui.track=false;ui.tnow=-1;ui.paused=true;const b=$('#pause');b.setAttribute('aria-pressed','true');b.textContent='Paused';sendState();syncTrack();setText('#trkNote','The track finished. Paused at the end: press Paused to let the wheel run on.');return;}
-    if(rep.ti<0){if(now-ui.trackT>800){ui.track=false;ui.tnow=-1;syncTrack();}return;}
-    if(rep.ti!==ui.tnow||(state.track.items[rep.ti]&&state.track.items[rep.ti].s!==state.cur)){ui.tnow=rep.ti;const it=state.track.items[rep.ti];if(it&&it.s!==state.cur)showSection(it.s,true);else syncTrack();}
-    const it=state.track.items[rep.ti],sc=it&&state.sections[it.s];if(sc)setText('#trkNote',`Playing part ${rep.ti+1} of ${state.track.items.length} · trip ${Math.max(0,rep.tl)+1} of ${it.rep*sc.trips}`);}
-  /* Render parts of the track to audio without the speaker: the same Engine class, run here as fast as it will go. */
-  function renderParts(items,what,done){if(ui.busy){toast('Still rendering. Wait for it to finish.');return;}
+  /* The patch as the engine should render it: the selected section once through (or the wheel itself, for one trip, when there are no sections). */
+  function partS(){secAlias(state);const S=JSON.parse(JSON.stringify(state)),k=state.cur;
+    if(state.sections[k])S.track={items:[{s:k,rep:1}],loop:false};
+    else{S.sections=[{name:'Wheel',trips:1,base:S.base,rings:S.rings,lfo:S.lfo,seq:S.seq}];S.track={items:[{s:0,rep:1}],loop:false};}
+    return S;}
+  /* Render to audio without the speaker: the same Engine class, run here as fast as it will go. solo = one top ring alone (-1: all of them);
+     a ring alone is rendered without the limiter, so the rings add up to the whole. done gets the audio and how long the section itself lasted. */
+  function renderParts(S,solo,what,done){if(ui.busy){toast('Still rendering. Wait for it to finish.');return;}
     const sr=44100,e=new Engine(sr);for(let i=0;i<SMPN;i++)if(samples[i])e.setSample(i,samples[i].d,samples[i].sr);
-    secAlias(state);const S=JSON.parse(JSON.stringify(state));S.track={items,loop:false};applyMsg(e,{S,jump:true});applyMsg(e,{track:{play:true,from:0,loop:false}});
+    e.solo=solo;e.raw=solo>=0;applyMsg(e,{S,jump:true});applyMsg(e,{track:{play:true,from:0,loop:false}});
     if(!e.tOn){toast('There is nothing to render.');return;}
     const CH=16384,chunks=[],MAX=sr*600;let n=0,tail=0,over=false;ui.busy=true;
     (function step(){const t1=performance.now();let fin=false;
@@ -2209,14 +2212,33 @@ function initInstrument(){
         if(n>=MAX){fin=true;over=true;}}
       if(!fin){setText('#trkNote',`Rendering ${what}: ${(n/sr).toFixed(0)} s so far…`);setTimeout(step,0);return;}
       const d=new Float32Array(n);let o=0;for(const c of chunks){d.set(c,o);o+=CH;}
-      let end=n;while(end>sr/10&&Math.abs(d[end-1])<1e-4)end--;ui.busy=false;
-      done(d.subarray(0,Math.min(n,end+Math.floor(sr*0.05))),sr,over);})();}
-  $('#trkWav').onclick=()=>renderParts(state.track.items,'the track',(d,sr,over)=>{const u=URL.createObjectURL(wavBlob(d,sr)),a=document.createElement('a');a.href=u;a.download='rhythm-into-tone-track.wav';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
-    ui.lastRender={n:d.length,sr};setText('#trkNote',`Saved rhythm-into-tone-track.wav · ${fmtSec(d.length/sr)}`+(over?' · stopped at the 10 minute limit':''));});
-  $('#secBounce').onclick=()=>{const k=state.cur,c=state.sections[k];if(!c)return;let slot=-1;for(let i=0;i<SMPN;i++)if(!samples[i]){slot=i;break;}
+      let end=n;while(end>0&&Math.abs(d[end-1])<1e-4)end--;ui.busy=false;const body=Math.min(n,e.n)/sr;
+      done(d.subarray(0,Math.min(n,Math.max(end+Math.floor(sr*0.05),Math.round(body*sr)))),sr,over,body,end>0);})();}
+  $('#secBounce').onclick=()=>{const c=state.sections[state.cur],name=c?c.name:'Wheel';let slot=-1;for(let i=0;i<SMPN;i++)if(!samples[i]){slot=i;break;}
     if(slot<0){toast('All eight sample slots are full. Clear one in the Library first.');return;}
-    renderParts([{s:k,rep:1}],'“'+c.name+'”',(d,sr)=>{if(d.length>SMPMAX*sr)d=d.subarray(0,SMPMAX*sr);samples[slot]=smpMake(c.name,new Float32Array(d),sr);smpChanged(slot);smpPut(slot);
-      setText('#trkNote',`Bounced “${c.name}” to sample slot ${slot+1} · ${fmtSec(d.length/sr)}`);});};
+    renderParts(partS(),-1,'“'+name+'”',(d,sr)=>{if(d.length>SMPMAX*sr)d=d.subarray(0,SMPMAX*sr);samples[slot]=smpMake(name,new Float32Array(d),sr);smpChanged(slot);smpPut(slot);
+      setText('#trkNote',`Bounced “${name}” to sample slot ${slot+1} · ${fmtSec(d.length/sr)}`);});};
+  /* Send to the arranger: each ring that is on is rendered alone into a clip of its own, and the clips go at the end of the arrangement, one per lane. */
+  let arrWin=null;
+  function openArr(){const url=location.href.split('#')[0]+'#arrange';let w=null;try{w=window.open(url,'rit-arrange','popup=yes,width=1280,height=760');}catch(e){}
+    if(!w){toast('The browser did not open a new window. Open '+url+' in a new tab.');return;}arrWin=w;bus.addPeer(w);}
+  $('#arrOpen').onclick=openArr;
+  $('#arrSend').onclick=()=>{const c=state.sections[state.cur],name=c?c.name:'Wheel',rings=[0,1,2,3].filter(i=>state.rings[i].on&&state.rings[i].hits>0&&state.rings[i].level>0);
+    if(!rings.length){toast('No ring is on, so there is nothing to send.');return;}if(ui.busy){toast('Still rendering. Wait for it to finish.');return;}
+    const S=partS(),made=[],stamp=Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+    const next=k=>{
+      if(k>=rings.length){const A=arrLoad();let at=0;for(const q of A.clips)at=Math.max(at,q.t+(q.body||q.len));
+        if(!made.length){setText('#trkNote','Every ring rendered as silence, so nothing was sent.');return;}
+        for(const m of made){m.t=at;A.clips.push(m);}
+        if(!arrSave(A)){setText('#trkNote','The arrangement could not be saved in this browser.');return;}
+        bus.post({type:'arr-changed',origin:bus.id});
+        setText('#trkNote',`Sent “${name}” to the arranger: ${made.length} clip${made.length>1?'s':''} at ${fmtSec(at)} · ${fmtSec(made[0].body)} long`);return;}
+      const ri=rings[k];
+      renderParts(S,ri,`ring ${ri+1} of “${name}”`,(d,sr,over,body,heard)=>{if(!heard){next(k+1);return;}
+        const src='s'+stamp+'r'+ri;arrPut(src,{name:name+' · ring '+(ri+1),d:new Float32Array(d),sr}).then(ok=>{
+          if(!ok){setText('#trkNote','The audio could not be stored in this browser (out of space?).');return;}
+          made.push({id:'c'+stamp+'r'+ri,src,name:name+' · ring '+(ri+1),lane:ri,t:0,off:0,len:d.length/sr,gain:1,fi:0,fo:0,body});next(k+1);});});};
+    next(0);};
   syncTrack();
   syncAllUI();drawInsts();
   requestAnimationFrame(frame);
@@ -2618,8 +2640,162 @@ function mountSampleEditor(host,slot0){
 /* =====================================================================
    Route: the same file is the instrument (default) or the sequencer (#sequencer)
    ===================================================================== */
-const ROUTE_SEQ=location.hash==='#sequencer',ROUTE_INST=/^#instrument/.test(location.hash),ROUTE_SMP=/^#sample/.test(location.hash);
-if(ROUTE_SMP){
+
+/* =====================================================================
+   Arranger window (#arrange). Audio clips on four lanes: move, trim, split, copy, fade, crossfade, then mix to stereo.
+   What Play plays is the very buffer Export writes: one mix function (mix) makes both.
+   ===================================================================== */
+function mountArranger(host){
+  const me=bus.id,q=x=>host.querySelector(x),qa=x=>[...host.querySelectorAll(x)],SR=44100,LH=72,RUL=22,EDGE=0.003;
+  let A=arrLoad(),src={},sel=null,cur=0,pps=60,x0=0,undo=[],clip=null,actx=null,node=null,playing=false,pT0=0,pAt=0,pEnd=0,loop=false,snap=true,uid=0,want={};
+  const fmt=t=>{const m=Math.floor(t/60);return m+':'+(t-m*60).toFixed(2).padStart(5,'0');},pct=v=>Math.round(v*100)+'%';
+  const end=()=>{let e=0;for(const c of A.clips)e=Math.max(e,c.t+c.len);return e;},C=()=>A.clips.find(c=>c.id===sel)||null,nid=()=>'c'+Date.now().toString(36)+(uid++);
+  const stat=t=>{q('#a-stat').textContent=t;};
+  host.innerHTML=`<header class="iw-top"><h1>Rhythm Into Tone</h1><span class="tag">Arranger</span>
+      <div class="row"><button type="button" id="a-play" class="btn-on">Play</button><button type="button" id="a-home">To start</button><label class="check"><input type="checkbox" id="a-loop"> Loop</label>
+        <button type="button" id="a-undo">Undo</button><button type="button" id="a-wav">Export WAV</button><label class="filebtn">Add an audio file<input type="file" id="a-file" accept="audio/*"></label><button type="button" id="a-clear">Clear all</button><button type="button" id="a-close">Close window</button></div>
+      <span class="sub mono" id="a-stat" role="status"></span></header>
+    <section class="panel"><h2><b>01</b>Arrangement</h2>
+      <div class="row"><button type="button" id="a-split">Split at the cursor</button><button type="button" id="a-cut">Cut</button><button type="button" id="a-copy">Copy</button><button type="button" id="a-paste">Paste</button><button type="button" id="a-dup">Duplicate</button><button type="button" id="a-del">Delete</button><button type="button" id="a-xf">Crossfade the overlap</button>
+        <label class="check"><input type="checkbox" id="a-snap" checked> Snap</label><button type="button" id="a-zo" aria-label="Zoom out">−</button><button type="button" id="a-zi" aria-label="Zoom in">+</button><button type="button" id="a-fit">Fit</button></div>
+      <div class="arr"><div class="arrL" id="a-lanes"></div><div><canvas id="a-cv" aria-label="The arrangement: four lanes of audio clips. Click a clip to select it, drag it to move it, drag its ends to trim it. Click the ruler to place the cursor."></canvas></div></div>
+      <input type="range" id="a-scroll" min="0" max="1000" value="0" aria-label="Scroll along the arrangement">
+      <dl class="stats"><div><dt>Length</dt><dd id="a-len">0:00.00</dd></div><div><dt>Cursor</dt><dd id="a-cur">0:00.00</dd></div><div><dt>Clips</dt><dd id="a-n">0</dd></div><div><dt>Selected</dt><dd id="a-sel">none</dd></div></dl></section>
+    <section class="panel" id="a-clip"><h2><b>02</b>Clip</h2>
+      <div class="ctls2">${[['gain','Gain'],['fi','Fade in'],['fo','Fade out']].map(([k,l])=>`<div class="ctl"><div class="top"><label for="a-${k}">${l}</label><output id="a-${k}v"></output></div><input type="range" id="a-${k}" min="0" max="1000" step="1"></div>`).join('')}</div>
+      <p class="sub mono" id="a-note">Select a clip to set its gain and fades.</p>
+      <p class="hint">Clips that overlap on a lane both sound. Crossfade the overlap sets the earlier clip's fade out and the later clip's fade in to the length of the overlap. Every clip edge gets a 3 ms fade so a cut never clicks. Keys: Space play, S split, Delete, ⌘/Ctrl with Z, X, C, V, D.</p></section>`;
+  /* lanes */
+  q('#a-lanes').innerHTML=[0,1,2,3].map(i=>`<div class="ln" style="--c:var(${RC[i]})"><div class="nm"><span>Ring ${i+1}</span><span><button type="button" data-m="${i}" aria-pressed="false" aria-label="Mute lane ${i+1}">M</button> <button type="button" data-s="${i}" aria-pressed="false" aria-label="Solo lane ${i+1}">S</button></span></div>
+    <span class="k">Vol</span><input type="range" data-vol="${i}" min="0" max="100" aria-label="Volume of lane ${i+1}"><span class="k">Pan</span><input type="range" data-pan="${i}" min="-100" max="100" aria-label="Pan of lane ${i+1}"></div>`).join('');
+  function syncLanes(){A.lanes.forEach((L,i)=>{q(`[data-m="${i}"]`).setAttribute('aria-pressed',L.mute?'true':'false');q(`[data-s="${i}"]`).setAttribute('aria-pressed',L.solo?'true':'false');
+    const v=q(`[data-vol="${i}"]`),p=q(`[data-pan="${i}"]`);if(document.activeElement!==v)v.value=Math.round(L.vol*100);if(document.activeElement!==p)p.value=Math.round(L.pan*100);p.title=L.pan===0?'centre':(L.pan<0?'left ':'right ')+Math.abs(Math.round(L.pan*100));});}
+  /* storage and undo */
+  function save(keep){arrSave(A);bus.post({type:'arr-changed',origin:me});if(playing&&!keep)play(pos());refresh();}
+  const push=()=>{undo.push(JSON.stringify(A));if(undo.length>40)undo.shift();};
+  function peaks(d){const N=Math.min(6000,Math.max(64,Math.floor(d.length/32))),pk=new Float32Array(N),st=d.length/N;for(let i=0;i<N;i++){let m=0;const a=Math.floor(i*st),b=Math.min(d.length,Math.floor((i+1)*st)+1);for(let j=a;j<b;j+=2){const v=d[j]<0?-d[j]:d[j];if(v>m)m=v;}pk[i]=m;}return pk;}
+  function loadSrc(){for(const c of A.clips){if(src[c.src]||want[c.src])continue;want[c.src]=true;
+    arrGet(c.src).then(x=>{want[c.src]=false;if(x&&x.d&&x.d.length){src[c.src]={d:x.d,sr:x.sr||SR,pk:peaks(x.d)};draw();}});}}
+  /* the mix: every clip, with its fades, lane volume and pan (equal power), summed to left and right; a soft limiter only above 0.8 */
+  function mix(){const n=Math.max(1,Math.ceil(end()*SR)),L=new Float32Array(n),R=new Float32Array(n),anySolo=A.lanes.some(l=>l.solo),H=Math.PI/2;
+    for(const c of A.clips){const ln=A.lanes[c.lane],S=src[c.src];if(!S||ln.mute||(anySolo&&!ln.solo))continue;
+      const th=(ln.pan+1)*Math.PI/4,gl=Math.cos(th)*ln.vol*c.gain,gr=Math.sin(th)*ln.vol*c.gain,n0=Math.round(c.t*SR),m=Math.min(Math.round(c.len*SR),n-n0),d=S.d,k=S.sr/SR,o0=c.off*S.sr,fi=Math.max(EDGE,c.fi)*SR,fo=Math.max(EDGE,c.fo)*SR;
+      for(let i=0;i<m;i++){const p=o0+i*k,i0=p|0;if(i0+1>=d.length)break;let x=d[i0]+(d[i0+1]-d[i0])*(p-i0);
+        if(i<fi)x*=Math.sin(H*i/fi);const r=m-i;if(r<fo)x*=Math.sin(H*r/fo);L[n0+i]+=x*gl;R[n0+i]+=x*gr;}}
+    for(const B of[L,R])for(let i=0;i<n;i++){const v=B[i],a=v<0?-v:v;if(a>0.8)B[i]=(v<0?-1:1)*(0.8+0.2*Math.tanh((a-0.8)/0.2));}
+    return{L,R,n};}
+  /* playing */
+  const pos=()=>{if(!playing)return cur;let t=pAt+(actx.currentTime-pT0);if(loop&&pEnd>0)t=t%pEnd;return Math.min(t,pEnd);};
+  function stop(){if(node){node.onended=null;try{node.stop();}catch(e){}node=null;}if(playing){cur=Math.min(pos(),end());playing=false;}q('#a-play').textContent='Play';draw();}
+  function play(from){const e=end();if(!(e>0)){stat('There is nothing to play yet. Send a section from the main window.');return;}
+    if(node){node.onended=null;try{node.stop();}catch(_){}node=null;}
+    if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state!=='running')actx.resume();
+    const M=mix(),buf=actx.createBuffer(2,M.n,SR);buf.getChannelData(0).set(M.L);buf.getChannelData(1).set(M.R);
+    node=actx.createBufferSource();node.buffer=buf;node.loop=loop;node.connect(actx.destination);
+    pAt=from>=e-0.01?0:Math.max(0,from);pEnd=e;pT0=actx.currentTime;node.start(0,pAt);playing=true;q('#a-play').textContent='Stop';
+    node.onended=()=>{node=null;playing=false;cur=0;q('#a-play').textContent='Play';draw();};tick();}
+  function tick(){if(!playing)return;const p=pos(),w=q('#a-cv').getBoundingClientRect().width;if((p-x0)*pps>w-30||p<x0)x0=Math.max(0,p-30/pps);draw();requestAnimationFrame(tick);}
+  /* drawing */
+  function draw(){const cv=q('#a-cv'),{g,w,h}=fit(cv),e=end();g.clearRect(0,0,w,h);
+    const X=t=>(t-x0)*pps,steps=[0.05,0.1,0.25,0.5,1,2,5,10,30,60,120,300],st=steps.find(s=>s*pps>=64)||600;
+    g.font=font(9);g.textAlign='left';
+    for(let i=0;i<4;i++){const y=RUL+i*LH;g.fillStyle=T[RC[i]];g.globalAlpha=0.05;g.fillRect(0,y,w,LH);g.globalAlpha=1;g.strokeStyle=T['--soft'];g.lineWidth=1;g.beginPath();g.moveTo(0,y+0.5);g.lineTo(w,y+0.5);g.stroke();}
+    for(let t=Math.floor(x0/st)*st;X(t)<w;t+=st){const x=Math.round(X(t))+0.5;if(x<0)continue;g.strokeStyle=T['--soft'];g.beginPath();g.moveTo(x,RUL-6);g.lineTo(x,h);g.stroke();g.fillStyle=T['--muted'];g.fillText(st<1?t.toFixed(2)+' s':fmt(t).replace(/\.00$/,''),x+3,11);}
+    g.strokeStyle=T['--line'];g.beginPath();g.moveTo(0,RUL-0.5);g.lineTo(w,RUL-0.5);g.stroke();
+    for(const c of A.clips){const x=X(c.t),cw=c.len*pps,y=RUL+c.lane*LH+3,ch=LH-6,col=T[RC[c.lane]],S=src[c.src];if(x>w||x+cw<0)continue;
+      g.fillStyle=col;g.globalAlpha=0.18;g.fillRect(x,y,cw,ch);g.globalAlpha=0.85;
+      if(S){const pk=S.pk,per=S.d.length/S.sr/pk.length,a=Math.max(0,Math.floor(-x)),b=Math.min(cw,w-x),mid=y+ch/2;
+        for(let px=a;px<b;px++){const t0=c.off+px/pps,k0=Math.floor(t0/per),k1=Math.max(k0+1,Math.floor((t0+1/pps)/per));let m=0;for(let k=k0;k<k1&&k<pk.length;k++)if(pk[k]>m)m=pk[k];const bh=Math.max(1,m*c.gain*(ch-4));g.fillRect(x+px,mid-bh/2,1,Math.min(ch-2,bh));}}
+      g.globalAlpha=1;g.strokeStyle=col;g.lineWidth=1;g.strokeRect(x+0.5,y+0.5,Math.max(1,cw-1),ch-1);
+      g.strokeStyle=T['--ink'];g.lineWidth=1;if(c.fi>0){g.beginPath();g.moveTo(x,y+ch);g.lineTo(x+c.fi*pps,y);g.stroke();}if(c.fo>0){g.beginPath();g.moveTo(x+cw-c.fo*pps,y);g.lineTo(x+cw,y+ch);g.stroke();}
+      if(c.body>0&&c.off===0&&c.body<c.len-0.01){g.strokeStyle=col;g.setLineDash([3,3]);g.beginPath();g.moveTo(x+c.body*pps,y);g.lineTo(x+c.body*pps,y+ch);g.stroke();g.setLineDash([]);}
+      if(cw>40){g.save();g.beginPath();g.rect(Math.max(0,x),y,Math.max(0,cw-4),ch);g.clip();g.fillStyle=T['--ink'];g.fillText(c.name,Math.max(0,x)+4,y+11);g.restore();}
+      if(c.id===sel){g.strokeStyle=T['--ink'];g.lineWidth=2;g.strokeRect(x+1,y+1,Math.max(2,cw-2),ch-2);}}
+    const p=playing?pos():cur,px=X(p);g.fillStyle=T['--accent'];g.fillRect(px-0.75,0,1.5,h);g.beginPath();g.moveTo(px-5,0);g.lineTo(px+5,0);g.lineTo(px,7);g.closePath();g.fill();
+    if(!A.clips.length){g.fillStyle=T['--muted'];g.font=font(11);g.textAlign='center';g.fillText('Empty. In the main window, press Send to the arranger.',w/2,RUL+2*LH);}
+    q('#a-cur').textContent=fmt(p);q('#a-len').textContent=fmt(e);}
+  function refresh(){const c=C();q('#a-n').textContent=String(A.clips.length);q('#a-sel').textContent=c?c.name+' · '+c.len.toFixed(2)+' s':'none';
+    qa('#a-split,#a-cut,#a-copy,#a-dup,#a-del,#a-xf').forEach(b=>b.disabled=!c&&b.id!=='a-split');q('#a-paste').disabled=!clip;q('#a-undo').disabled=!undo.length;
+    qa('#a-clip input').forEach(el=>el.disabled=!c);q('#a-note').hidden=!!c;
+    if(c){const G=q('#a-gain'),I=q('#a-fi'),O=q('#a-fo'),mx=Math.max(0.01,c.len);if(document.activeElement!==G)G.value=Math.round(c.gain*500);if(document.activeElement!==I)I.value=Math.round(c.fi/mx*1000);if(document.activeElement!==O)O.value=Math.round(c.fo/mx*1000);
+      q('#a-gainv').textContent=c.gain>0?(20*Math.log10(c.gain)).toFixed(1)+' dB':'−∞ dB';q('#a-fiv').textContent=c.fi.toFixed(2)+' s';q('#a-fov').textContent=c.fo.toFixed(2)+' s';}
+    else for(const k of['gain','fi','fo'])q('#a-'+k+'v').textContent='';
+    const e=end(),w=q('#a-cv').getBoundingClientRect().width||600,span=Math.max(0,e+2-w/pps);q('#a-scroll').disabled=span<=0;if(document.activeElement!==q('#a-scroll'))q('#a-scroll').value=span>0?Math.round(Math.min(1,x0/span)*1000):0;
+    syncLanes();loadSrc();draw();}
+  /* editing with the pointer */
+  const snapT=(t,self,len)=>{if(!snap)return t;let best=t,bd=8/pps;const tryv=(v,o)=>{const d=Math.abs(v-(t+o));if(d<bd){bd=d;best=v-o;}};
+    const pts=[0,cur];for(const c of A.clips)if(c!==self){pts.push(c.t,c.t+c.len);if(c.body>0&&c.off===0)pts.push(c.t+c.body);}
+    for(const v of pts){tryv(v,0);if(len)tryv(v,len);}return best;};
+  {const cv=q('#a-cv');let drag=null;
+    const at=e=>{const b=cv.getBoundingClientRect();return{x:e.clientX-b.left,y:e.clientY-b.top,t:x0+(e.clientX-b.left)/pps};};
+    cv.addEventListener('pointerdown',e=>{const m=at(e);try{cv.setPointerCapture(e.pointerId);}catch(_){}
+      if(m.y<RUL){drag={k:'cur'};cur=Math.max(0,snapT(m.t,null,0));if(playing)play(cur);draw();return;}
+      const lane=clamp(Math.floor((m.y-RUL)/LH),0,3);let hit=null;for(const c of A.clips)if(c.lane===lane&&m.t>=c.t&&m.t<=c.t+c.len)hit=c;
+      if(!hit){sel=null;cur=Math.max(0,snapT(m.t,null,0));drag={k:'cur'};if(playing)play(cur);refresh();return;}
+      sel=hit.id;const ex=(m.t-hit.t)*pps,wx=hit.len*pps,k=wx>24&&ex<7?'l':wx>24&&wx-ex<7?'r':'move';
+      drag={k,c:hit,x:m.x,y:m.y,t:hit.t,off:hit.off,len:hit.len,lane:hit.lane,moved:false};refresh();});
+    cv.addEventListener('pointermove',e=>{if(!drag)return;const m=at(e);
+      if(drag.k==='cur'){cur=Math.max(0,snapT(m.t,null,0));draw();return;}
+      const c=drag.c,dt=(m.x-drag.x)/pps;if(!drag.moved){if(Math.abs(m.x-drag.x)<3&&Math.abs(m.y-drag.y)<8)return;drag.moved=true;push();}
+      const S=src[c.src],max=S?S.d.length/S.sr:drag.off+drag.len;
+      if(drag.k==='move'){c.t=Math.max(0,snapT(drag.t+dt,c,c.len));c.lane=clamp(drag.lane+Math.round((m.y-drag.y)/LH),0,3);}
+      else if(drag.k==='l'){let nt=snapT(drag.t+dt,c,0);nt=clamp(nt,Math.max(0,drag.t-drag.off),drag.t+drag.len-0.02);const d=nt-drag.t;c.t=nt;c.off=drag.off+d;c.len=drag.len-d;}
+      else{const ne=snapT(drag.t+drag.len+dt,c,0);c.len=clamp(ne-drag.t,0.02,max-drag.off);}
+      c.fi=Math.min(c.fi,c.len);c.fo=Math.min(c.fo,c.len);refresh();});
+    const up=()=>{if(drag&&drag.moved)save();drag=null;};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+    cv.addEventListener('wheel',e=>{e.preventDefault();if(e.ctrlKey||e.metaKey){zoom(e.deltaY<0?1.2:1/1.2);return;}x0=Math.max(0,x0+(Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY)/pps);refresh();},{passive:false});}
+  function zoom(f){const w=q('#a-cv').getBoundingClientRect().width,mid=x0+w/2/pps;pps=clamp(pps*f,2,2000);x0=Math.max(0,mid-w/2/pps);refresh();}
+  /* tools */
+  const edit=f=>{push();f();save();};
+  function split(){const hit=C()?[C()]:A.clips.slice(),done=[];
+    for(const c of hit){if(!(cur>c.t+0.01&&cur<c.t+c.len-0.01))continue;done.push(c);}
+    if(!done.length){stat('Put the cursor inside a clip first (click the ruler).');return;}
+    edit(()=>{for(const c of done){const a=cur-c.t,b=Object.assign({},c,{id:nid(),t:cur,off:c.off+a,len:c.len-a,fi:0,body:0});c.len=a;c.fo=0;c.body=0;A.clips.push(b);if(sel===c.id)sel=b.id;}});stat('Split '+done.length+' clip'+(done.length>1?'s':'')+' at '+fmt(cur)+'.');}
+  q('#a-split').onclick=split;
+  q('#a-copy').onclick=()=>{const c=C();if(c){clip=Object.assign({},c);stat('Copied.');refresh();}};
+  q('#a-cut').onclick=()=>{const c=C();if(!c)return;clip=Object.assign({},c);edit(()=>{A.clips=A.clips.filter(x=>x!==c);sel=null;});};
+  q('#a-del').onclick=()=>{const c=C();if(!c)return;edit(()=>{A.clips=A.clips.filter(x=>x!==c);sel=null;});};
+  q('#a-paste').onclick=()=>{if(!clip)return;edit(()=>{const c=Object.assign({},clip,{id:nid(),t:cur,lane:C()?C().lane:clip.lane});A.clips.push(c);sel=c.id;});};
+  q('#a-dup').onclick=()=>{const c=C();if(!c)return;edit(()=>{const b=Object.assign({},c,{id:nid(),t:c.t+(c.body>0&&c.off===0?c.body:c.len)});A.clips.push(b);sel=b.id;});};
+  q('#a-xf').onclick=()=>{const c=C();if(!c)return;let n=0;
+    push();for(const o of A.clips){if(o===c||o.lane!==c.lane)continue;const a=o.t<c.t?o:c,b=a===o?c:o,ov=a.t+a.len-b.t;if(ov>0.005&&b.t>a.t){a.fo=Math.min(a.len,ov);b.fi=Math.min(b.len,ov);n++;}}
+    if(!n){undo.pop();stat('Overlap two clips on the same lane first, then select one of them.');return;}save();stat('Crossfaded '+n+' overlap'+(n>1?'s':'')+'.');};
+  q('#a-undo').onclick=()=>{const u=undo.pop();if(!u)return;A=arrSan(JSON.parse(u));if(!C())sel=null;save();stat('Undone.');};
+  q('#a-zi').onclick=()=>zoom(1.5);q('#a-zo').onclick=()=>zoom(1/1.5);
+  q('#a-fit').onclick=()=>{const w=q('#a-cv').getBoundingClientRect().width;pps=clamp((w-24)/Math.max(2,end()),2,2000);x0=0;refresh();};
+  q('#a-scroll').oninput=e=>{const w=q('#a-cv').getBoundingClientRect().width,span=Math.max(0,end()+2-w/pps);x0=span*(+e.target.value/1000);draw();};
+  q('#a-snap').onchange=e=>{snap=e.target.checked;};q('#a-loop').onchange=e=>{loop=e.target.checked;if(playing)play(pos());};
+  q('#a-play').onclick=()=>{if(playing)stop();else play(cur);};q('#a-home').onclick=()=>{cur=0;x0=0;if(playing)play(0);refresh();};
+  let gArm=false;const clipCtl=(id,f)=>{const el=q(id);el.oninput=()=>{const c=C();if(!c)return;if(!gArm){gArm=true;push();}f(c,+el.value/1000);arrSave(A);refresh();};el.onchange=()=>{gArm=false;save();};};
+  clipCtl('#a-gain',(c,u)=>{c.gain=u*2;});clipCtl('#a-fi',(c,u)=>{c.fi=u*c.len;});clipCtl('#a-fo',(c,u)=>{c.fo=u*c.len;});
+  qa('[data-m]').forEach(b=>b.onclick=()=>edit(()=>{const L=A.lanes[+b.dataset.m];L.mute=!L.mute;}));qa('[data-s]').forEach(b=>b.onclick=()=>edit(()=>{const L=A.lanes[+b.dataset.s];L.solo=!L.solo;}));
+  let lArm=false;const laneCtl=(sel2,k,div)=>qa(sel2).forEach(el=>{el.oninput=()=>{if(!lArm){lArm=true;push();}let v=+el.value/div;if(k==='pan'&&Math.abs(v)<0.06)v=0;A.lanes[+el.dataset[k]][k]=v;arrSave(A);syncLanes();};el.onchange=()=>{lArm=false;save();};});
+  laneCtl('[data-vol]','vol',100);laneCtl('[data-pan]','pan',100);
+  q('#a-wav').onclick=()=>{if(!(end()>0)){stat('There is nothing to export yet.');return;}const M=mix(),u=URL.createObjectURL(wavBlob(M.L,SR,M.R)),a=document.createElement('a');a.href=u;a.download='rhythm-into-tone-arrangement.wav';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
+    stat('Saved rhythm-into-tone-arrangement.wav · '+fmt(M.n/SR)+' · stereo, 16 bit');};
+  q('#a-file').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;stat('Reading '+f.name+'…');
+    f.arrayBuffer().then(smpDecode).then(x=>{const id='f'+Date.now().toString(36);return arrPut(id,{name:f.name,d:x.d,sr:x.sr}).then(ok=>{if(!ok){stat('That file could not be stored in this browser.');return;}
+      src[id]={d:x.d,sr:x.sr,pk:peaks(x.d)};edit(()=>{const c={id:nid(),src:id,name:f.name.slice(0,40),lane:C()?C().lane:0,t:cur,off:0,len:x.d.length/x.sr,gain:1,fi:0,fo:0,body:0};A.clips.push(c);sel=c.id;});stat('Added '+f.name+'.');});}).catch(()=>stat('That file could not be read as audio.'));};
+  let clrArm=0;q('#a-clear').onclick=()=>{const b=q('#a-clear');if(!clrArm){b.textContent='Tap again to clear';clrArm=setTimeout(()=>{clrArm=0;b.textContent='Clear all';},3000);return;}
+    clearTimeout(clrArm);clrArm=0;b.textContent='Clear all';stop();A=arrNew();undo=[];sel=null;cur=0;x0=0;src={};arrWipe().then(()=>{save();stat('Cleared the arrangement and its audio.');});};
+  q('#a-close').onclick=()=>window.close();
+  addEventListener('keydown',e=>{const tg=e.target&&e.target.tagName;if(tg==='INPUT'&&e.target.type!=='range'&&e.target.type!=='checkbox')return;const mod=e.metaKey||e.ctrlKey,k=e.key.toLowerCase();
+    if(k===' '&&!mod){if(tg==='BUTTON')return;e.preventDefault();q('#a-play').click();}
+    else if((k==='delete'||k==='backspace')&&!mod){e.preventDefault();q('#a-del').click();}
+    else if(k==='s'&&!mod)split();
+    else if(mod&&'zxcvd'.includes(k)&&k.length===1){e.preventDefault();q({z:'#a-undo',x:'#a-cut',c:'#a-copy',v:'#a-paste',d:'#a-dup'}[k]).click();}});
+  bus.on(m=>{if(m.type==='arr-changed'&&m.origin!==me){A=arrLoad();if(!C())sel=null;stat('New clips arrived from the main window.');const w=q('#a-cv').getBoundingClientRect().width;if(end()*pps>w)pps=clamp((w-24)/Math.max(2,end()),2,2000);refresh();}});
+  addEventListener('resize',draw);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>setTimeout(draw,50));
+  window.__arr={get A(){return A;},mix,get cur(){return cur;},set cur(v){cur=v;draw();},select(id){sel=id;refresh();}};
+  refresh();{const w=q('#a-cv').getBoundingClientRect().width;if(end()>0)pps=clamp((w-24)/Math.max(2,end()),2,2000);refresh();}
+}
+
+const ROUTE_SEQ=location.hash==='#sequencer',ROUTE_INST=/^#instrument/.test(location.hash),ROUTE_SMP=/^#sample/.test(location.hash),ROUTE_ARR=/^#arrange/.test(location.hash);
+if(ROUTE_ARR){
+  $('#app').hidden=true;$('#arrOnly').hidden=false;document.title='Arranger · Rhythm Into Tone';
+  try{if(window.opener)bus.addPeer(window.opener);}catch(e){}
+  mountArranger($('#arrHost'));
+}else if(ROUTE_SMP){
   $('#app').hidden=true;$('#smpOnly').hidden=false;document.title='Sample · Rhythm Into Tone';
   try{if(window.opener)bus.addPeer(window.opener);}catch(e){}
   mountSampleEditor($('#smpHost'),(parseInt(location.hash.split('-')[1],10)||1)-1);

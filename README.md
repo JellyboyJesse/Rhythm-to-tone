@@ -135,7 +135,15 @@ By default a new hit on a sample slot cuts the one before it, with a short fade,
 
 **Pause** (K) freezes the playhead and the LFOs. The **Timeline** shows the top wheel unrolled: one lane per ring, ticks for clicks, bars for samples and notes for as long as they sound, brackets for wheels inside dots, and the LFO curves underneath. Click a sound to select its dot, and drag up or down to set its level.
 
-A **section** is the whole wheel saved under a name. The wheel on screen is always the selected section, so editing the wheel edits that section. Trips sets how many times round a section lasts. The **track** is sections in playing order, each with a number of repeats; it changes section exactly as the playhead crosses the top. **Export WAV** renders the track to a file, and **Bounce to a sample** renders one section into an empty sample slot. All sections share one Library.
+A **section** is the whole wheel saved under a name. The wheel on screen is always the selected section, so editing the wheel edits that section. Trips sets how many times round a section lasts. **Bounce to a sample** renders a section into an empty sample slot. All sections share one Library.
+
+## The arranger
+
+**Send to the arranger** renders the selected section as audio, one clip for each ring that is on, and puts the clips at the end of the arrangement. **Open the arranger** shows them in their own window, on four lanes.
+
+There you can drag clips along a lane or to another lane, drag their ends to trim them, split at the cursor, cut, copy, paste, duplicate and delete. Each clip has a gain and a fade in and out. Clips that overlap on a lane both sound; **Crossfade the overlap** turns the overlap into a crossfade. Each lane has volume, pan, mute and solo. **Export WAV** writes the stereo mix, which is exactly what Play plays. You can also add any audio file as a clip.
+
+The arrangement and its audio are kept in this browser. Clips are fixed audio: changing the wheel afterwards does not change them.
 
 ## The sample window
 

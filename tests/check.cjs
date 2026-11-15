@@ -13,7 +13,7 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
 (async()=>{
   const browser=await chromium.launch({args:['--autoplay-policy=no-user-gesture-required']});
   const errs=[];
-  const watch=(p,tag)=>{p.on('pageerror',e=>errs.push(tag+': '+e.message));p.on('console',m=>{if(m.type()==='error'&&!ignorable(m.text()))errs.push(tag+': '+m.text());});};
+  const watch=(p,tag)=>{p.on('pageerror',e=>{errs.push(tag+': '+e.message);if(process.env.DEBUG)console.log('PAGE ERROR',tag,e.stack||e.message);});p.on('console',m=>{if(m.type()==='error'&&!ignorable(m.text()))errs.push(tag+': '+m.text());});};
   const ctx=await browser.newContext({viewport:{width:1280,height:900}});
   const inst=await ctx.newPage();watch(inst,'instrument');
   await inst.goto(BASE);await inst.waitForTimeout(500);
@@ -218,6 +218,7 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       await inst.screenshot({path:path.join(OUT,'instrument-inner-wheel.png')});}
     await inst.click('#path button');await inst.waitForTimeout(250);
     check('the path leads back to the top wheel',await inst.evaluate(()=>document.querySelector('#path').hidden&&document.querySelector('#pRings').dataset.inner==='false')&&(await inst.textContent('#r0stepsv'))==='1');
+    await inst.evaluate(()=>document.querySelector('#wheel').scrollIntoView({block:'center'}));await inst.waitForTimeout(150);   /* the sticky top bar must not sit over the dot */
     {const wb3=await (await inst.$('#wheel')).boundingBox(),R3=Math.min(wb3.width,wb3.height)/2-34,gap3=(R3-R3*0.3)/4;
       await inst.mouse.click(wb3.x+wb3.width/2,wb3.y+wb3.height/2-(R3-gap3*0.15));await inst.waitForTimeout(200);}
     {const sr2=22050,n=sr2/2,buf=Buffer.alloc(44+n*2);buf.write('RIFF',0);buf.writeUInt32LE(36+n*2,4);buf.write('WAVEfmt ',8);buf.writeUInt32LE(16,16);buf.writeUInt16LE(1,20);buf.writeUInt16LE(1,22);
@@ -427,27 +428,59 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     check('the wheel can be saved as sections, and editing the wheel edits the selected one',s1.n===2&&s1.cur===1&&s1.sp[0]===4&&Math.abs(s1.sp[1]-8)<0.2&&s1.same&&s1.trips===2&&s1.names==='Intro,Fast',JSON.stringify(s1));
     await p.click('#secList button:nth-child(1)');await p.waitForTimeout(100);
     check('choosing a section puts it back on the wheel',await p.evaluate(()=>state.cur===0&&state.base.speed===4&&state.rings===state.sections[0].rings));
-    await p.click('#secToTrack');await p.click('#secList button:nth-child(2)');await p.click('#secToTrack');await p.click('#secTm');await p.waitForTimeout(100);
-    await p.click('#trk button:nth-child(1)');await p.click('#trkRp');await p.click('#trk button:nth-child(1)');await p.waitForTimeout(100);
-    check('sections can be placed on the track with repeats',await p.evaluate(()=>JSON.stringify(state.track.items)==='[{"s":0,"rep":2},{"s":1,"rep":1}]'),await p.textContent('#trkNote'));
     await p.waitForTimeout(600);
     const kept=await ctx.newPage();await kept.goto(BASE);await kept.waitForTimeout(400);
-    check('sections and the track are saved with the patch',await kept.evaluate(()=>state.sections.length===2&&state.cur===1&&state.track.items.length===2&&state.rings===state.sections[1].rings&&state.sections[0].name==='Intro'));await kept.close();
-    /* export: 2 × 0.25 s + 0.125 s = 0.625 s of track, plus the last click's tail */
-    const dl=p.waitForEvent('download',{timeout:15000}).catch(()=>null);await p.click('#trkWav');const file=await dl;await p.waitForTimeout(200);
-    let wavSec=0;if(file){const fp=await file.path();const b=fs.readFileSync(fp);wavSec=(b.length-44)/2/b.readUInt32LE(24);}
-    check('the track exports as a WAV file of the right length',!!file&&wavSec>0.5&&wavSec<0.8,wavSec.toFixed(3)+' s · '+await p.textContent('#trkNote'));
-    await p.click('#secBounce');await p.waitForTimeout(1200);
+    check('sections are saved with the patch',await kept.evaluate(()=>state.sections.length===2&&state.cur===0&&state.rings===state.sections[0].rings&&state.sections[0].name==='Intro'));await kept.close();
+    await p.click('#secList button:nth-child(2)');await p.click('#secBounce');await p.waitForTimeout(1500);
     check('a section can be bounced to a sample slot',await p.evaluate(()=>!!samples[0]&&samples[0].name==='Fast'&&samples[0].d.length>1000),await p.textContent('#trkNote'));
-    /* live: the track plays, the wheel follows it from section to section, and Stop gives the wheel back */
-    await p.check('#trkLoop');await p.click('#trkPlay');const curs=new Set();for(let i=0;i<24;i++){await p.waitForTimeout(60);curs.add(await p.evaluate(()=>state.cur));}
-    check('while the track plays, the wheel follows it',curs.has(0)&&curs.has(1)&&(await p.getAttribute('#trkPlay','aria-pressed'))==='true',[...curs].join(',')+' · '+await p.textContent('#trkNote'));
-    await p.screenshot({path:path.join(OUT,'instrument-track.png'),fullPage:true});
-    await p.click('#trkPlay');await p.waitForTimeout(200);
-    check('Stop track gives the wheel back',(await p.getAttribute('#trkPlay','aria-pressed'))==='false');
-    await p.click('#secDel');await p.click('#secDel');await p.waitForTimeout(100);
-    check('deleting a section takes it off the track too',await p.evaluate(()=>state.sections.length===1&&state.track.items.every(q=>q.s===0)&&state.cur===0&&state.rings===state.sections[0].rings));
     await p.evaluate(()=>{samples[0]=null;return smpStore(0);});
+    /* each ring alone, added up, is the whole section before the limiter */
+    const stems=await p.evaluate(()=>{const sr=44100,mk=solo=>{const S=JSON.parse(JSON.stringify(state));S.track={items:[{s:0,rep:1}],loop:false};const e=new Engine(sr);e.solo=solo;e.raw=true;applyMsg(e,{S,jump:true});applyMsg(e,{track:{play:true,from:0,loop:false}});
+        const o=new Float32Array(sr);for(let i=0;i+128<=sr;i+=128)e.render(o.subarray(i,i+128),128,i/sr);return{o,body:e.n/sr};};
+      const all=mk(-1),parts=[0,1,2,3].map(mk);let err=0,pk=0;for(let i=0;i<sr;i++){const v=parts[0].o[i]+parts[1].o[i]+parts[2].o[i]+parts[3].o[i];err=Math.max(err,Math.abs(v-all.o[i]));pk=Math.max(pk,Math.abs(all.o[i]));}return{err,pk,body:all.body};});
+    check('the four rings rendered alone add up to the whole section',stems.err<1e-6&&stems.pk>0.05&&Math.abs(stems.body-0.25)<0.001,`largest difference ${stems.err.toExponential(1)}, peak ${stems.pk.toFixed(2)}, section ${stems.body.toFixed(4)} s`);
+    /* send both sections to the arranger: Intro is 0.25 s (4 loops/s, 1 trip), Fast is 0.25 s (8 loops/s, 2 trips) */
+    await p.evaluate(()=>{try{localStorage.removeItem('rit-arr-v1');}catch(e){}return arrWipe();});
+    await p.click('#secList button:nth-child(1)');await p.click('#arrSend');await p.waitForFunction(()=>/Sent/.test(document.querySelector('#trkNote').textContent),null,{timeout:20000});
+    await p.click('#secList button:nth-child(2)');await p.click('#arrSend');await p.waitForFunction(()=>/Sent “Fast”/.test(document.querySelector('#trkNote').textContent),null,{timeout:20000});
+    const sent=await p.evaluate(()=>{const A=arrLoad();return{n:A.clips.length,lanes:A.clips.map(c=>c.lane).join(''),t:A.clips.map(c=>c.t.toFixed(3)).join(' '),body:A.clips.map(c=>c.body.toFixed(3)).join(' ')};});
+    check('Send to the arranger makes one clip per ring, and the next section follows the last',sent.n===8&&sent.lanes==='01230123'&&sent.t==='0.000 0.000 0.000 0.000 0.250 0.250 0.250 0.250'&&/^(0\.250 ?){8}$/.test(sent.body),JSON.stringify(sent));
+    await p.click('#secDel');await p.click('#secDel');await p.waitForTimeout(100);
+    check('a section can be deleted',await p.evaluate(()=>state.sections.length===1&&state.cur===0&&state.rings===state.sections[0].rings));
+    /* the arranger window */
+    const aw=await ctx.newPage();watch(aw,'arranger');await aw.goto(BASE+'#arrange');await aw.waitForTimeout(900);
+    check('the arranger shows the clips that were sent',(await aw.textContent('#a-n'))==='8'&&await aw.evaluate(()=>{const c=document.querySelector('#a-cv'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i]>60)n++;return n>2000;}),(await aw.textContent('#a-n'))+' clips · '+await aw.textContent('#a-len'));
+    const mix0=await aw.evaluate(()=>{const M=__arr.mix();let l=0,r=0;for(let i=0;i<M.n;i++){l+=M.L[i]*M.L[i];r+=M.R[i]*M.R[i];}return{n:M.n,l,r};});
+    await aw.evaluate(()=>{const s=document.querySelector('[data-pan="0"]');s.value='-100';s.dispatchEvent(new Event('input',{bubbles:true}));s.dispatchEvent(new Event('change',{bubbles:true}));
+      const m=document.querySelector('[data-m="1"]');m.click();document.querySelector('[data-m="2"]').click();document.querySelector('[data-m="3"]').click();});
+    const mix1=await aw.evaluate(()=>{const M=__arr.mix();let l=0,r=0;for(let i=0;i<M.n;i++){l+=M.L[i]*M.L[i];r+=M.R[i]*M.R[i];}return{l,r};});
+    check('lanes mix to stereo: centre is equal in both ears, panned left is left only',Math.abs(mix0.l-mix0.r)<mix0.l*1e-6&&mix0.l>0.01&&mix1.l>1e-4&&mix1.r<mix1.l*1e-9,`centre L ${mix0.l.toFixed(3)} R ${mix0.r.toFixed(3)}; panned L ${mix1.l.toExponential(1)} R ${mix1.r.toExponential(1)}`);
+    await aw.evaluate(()=>{for(const k of[1,2,3])document.querySelector(`[data-m="${k}"]`).click();});
+    /* select the first clip, split it in the middle, delete the second half, undo */
+    await aw.evaluate(()=>{__arr.select(__arr.A.clips[0].id);__arr.cur=0.1;});await aw.click('#a-split');
+    const sp=await aw.evaluate(()=>{const A=__arr.A,a=A.clips[0],b=A.clips[A.clips.length-1];return{n:A.clips.length,a:a.len,bt:b.t,boff:b.off,sum:a.len+b.len};});
+    check('Split cuts a clip at the cursor',sp.n===9&&Math.abs(sp.a-0.1)<1e-6&&Math.abs(sp.bt-0.1)<1e-6&&Math.abs(sp.boff-0.1)<1e-6,JSON.stringify(sp));
+    await aw.click('#a-del');const afterDel=await aw.evaluate(()=>__arr.A.clips.length);await aw.click('#a-undo');await aw.click('#a-undo');
+    check('Delete and Undo work',afterDel===8&&await aw.evaluate(()=>__arr.A.clips.length===8&&Math.abs(__arr.A.clips[0].len-arrLoad().clips[0].len)<1e-9&&__arr.A.clips[0].len>0.2));
+    /* drag a clip later by 100 px, copy and paste, crossfade */
+    const cb=await aw.locator('#a-cv').boundingBox();const t0=await aw.evaluate(()=>__arr.A.clips[4].t);
+    await aw.uncheck('#a-snap');const px=await aw.evaluate(()=>{const A=__arr.A,c=A.clips[4],w=document.querySelector('#a-cv').getBoundingClientRect().width,e=Math.max(...A.clips.map(q=>q.t+q.len)),pps=Math.min(2000,Math.max(2,(w-24)/Math.max(2,e)));return{x:(c.t+c.len/2)*pps,pps};});
+    await aw.mouse.move(cb.x+px.x,cb.y+22+36);await aw.mouse.down();await aw.mouse.move(cb.x+px.x+50,cb.y+22+36,{steps:4});await aw.mouse.move(cb.x+px.x+100,cb.y+22+36,{steps:4});await aw.mouse.up();
+    const moved=await aw.evaluate(()=>__arr.A.clips[4].t);
+    check('a clip can be dragged along its lane',Math.abs((moved-t0)-100/px.pps)<0.02&&moved>t0,`${t0.toFixed(3)} s → ${moved.toFixed(3)} s`);
+    await aw.evaluate(()=>{__arr.select(__arr.A.clips[0].id);__arr.cur=0.15;});await aw.click('#a-copy');await aw.click('#a-paste');await aw.click('#a-xf');
+    const xf=await aw.evaluate(()=>{const A=__arr.A,a=A.clips[0],b=A.clips[A.clips.length-1];return{n:A.clips.length,fo:a.fo,fi:b.fi,ov:a.t+a.len-b.t};});
+    check('Copy, Paste and Crossfade the overlap',xf.n===9&&xf.ov>0.05&&Math.abs(xf.fo-xf.ov)<1e-6&&Math.abs(xf.fi-xf.ov)<1e-6,JSON.stringify(xf));
+    const adl=aw.waitForEvent('download',{timeout:15000}).catch(()=>null);await aw.click('#a-wav');const af=await adl;let ainfo=null;
+    if(af){const bf=fs.readFileSync(await af.path());ainfo={ch:bf.readUInt16LE(22),sr:bf.readUInt32LE(24),sec:(bf.length-44)/4/bf.readUInt32LE(24)};}
+    const alen=await aw.evaluate(()=>Math.max(...__arr.A.clips.map(q=>q.t+q.len)));
+    check('the arrangement exports as a stereo WAV of its own length',!!ainfo&&ainfo.ch===2&&ainfo.sr===44100&&Math.abs(ainfo.sec-alen)<0.01,ainfo?`${ainfo.ch} channels · ${ainfo.sec.toFixed(3)} s`:'no file');
+    await aw.click('#a-play');await aw.waitForTimeout(250);const pl=await aw.textContent('#a-play');await aw.click('#a-play');
+    check('the arranger plays and stops',pl==='Stop'&&(await aw.textContent('#a-play'))==='Play');
+    await aw.screenshot({path:path.join(OUT,'arranger.png'),fullPage:true});
+    await aw.setViewportSize({width:390,height:844});await aw.waitForTimeout(200);
+    check('the arranger at 390 px has no sideways scroll',await aw.evaluate(()=>document.documentElement.scrollWidth)<=390);
+    await aw.evaluate(()=>{try{localStorage.removeItem('rit-arr-v1');}catch(e){}return arrWipe();});await aw.close();
     /* sample window: the playback settings */
     const sw=await ctx.newPage();watch(sw,'sample playback');await sw.goto(BASE+'#sample-3');await sw.waitForTimeout(900);
     await sw.click('#s-pb [data-seg="mode"] [data-v="loop"]');await sw.click('#s-pb [data-seg="cut"] [data-v="false"]');
