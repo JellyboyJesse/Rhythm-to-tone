@@ -29,7 +29,8 @@ A web instrument where a looped rhythm, sped up, becomes a tone whose timbre is 
 5. **`mountSequencer(host, opts)`.** The sequencer view, used in its own window (`#sequencer`) or docked in the instrument.
 6. **`initInstrument()`.** The instrument view, audio start, visual mirror, drawing and readouts.
 7. **`mountInstEditor(host, slot)`.** The instrument window (`#instrument-N`). It holds no patch of its own: it asks the main window for the instruments and sends back each change over the bus.
-8. **Route.** `#sequencer` shows only the sequencer, `#instrument-N` only the instrument window. Anything else shows the main page.
+8. **`mountSampleEditor(host, slot)`.** The sample window (`#sample-N`). It edits the recordings themselves: it loads the slots from IndexedDB, writes each change back (`smpStore`, which resolves once the write is committed), and then posts `smp-changed` so the main window and any instrument window re-read that slot (`smpLoadOne`). It has its own plain player for auditioning, an undo stack of five (in memory, across slots), selection on the waveform with snapping to zero crossings, the edits in `OPS` (trim, delete, silence, normalise, reverse, fades, DC, gain, pitch shift by resampling, half and double speed, tune to the nearest note from the autocorrelation pitch detector, loop from selection, loop crossfade), send and split to other slots, WAV export, and recording from the microphone (in the window) or from the app's output (asked of the main window with `smp-rec`; it taps the limiter with a ScriptProcessor). A sample record is `{name, d, sr, pk, lp}`; `lp` is an optional loop as two fractions of the recording, which an instrument can adopt ("Use the sample's own loop").
+9. **Route.** `#sequencer` shows only the sequencer, `#instrument-N` only the instrument window, `#sample-N` only the sample window. Anything else shows the main page.
 
 Bus messages (keep them small and JSON-serialisable):
 
@@ -43,6 +44,11 @@ Bus messages (keep them small and JSON-serialisable):
 | `inst-sync` | main → instrument windows | `inst` (all eight slots), `smp` (sample names), and the `origin` that caused it |
 | `inst-set` | instrument window → main | `i`, `v` (the whole instrument, or null to clear), `origin` |
 | `inst-note` | instrument window → main | audition: `i`, `st`, `gate` in seconds |
+| `smp-hello` | sample window → main | ask who uses each slot |
+| `smp-info` | main → sample windows | `users`: for each slot, the dots and instruments that play it |
+| `smp-changed` | any window → the others | `i`: that slot was rewritten in IndexedDB; re-read it. `origin` |
+| `smp-rec` | sample window → main | `i`, `on`: start or stop recording the app's output into that slot |
+| `smp-rec-state` | main → sample windows | `on`, `t` seconds so far, or `err` |
 | `status` | instrument → sequencers | `running`, `playing`, `step` (about every 40 ms, and every 700 ms as a heartbeat) |
 
 ## Look and desktop use
@@ -79,9 +85,9 @@ Bus messages (keep them small and JSON-serialisable):
 ## Ideas discussed but not built
 
 - Wheels all the way down as the basis of a DAW (a top wheel whose dots are sections, then patterns, notes and clicks). Wheels inside dots are built, three levels below the top. Not built: a Solo button for the open wheel, and ring LFOs and sequencer lanes for inner wheels.
-- The agreed design for the instrument and sample windows is on a canvas (claude.ai artifact "Rhythm Into Tone: Instrument and Sample windows"). Still to build from it: the Sample window (recording from the microphone or the app's output, trim, normalise, reverse, fades, default points, "used by"), the Follow modulator (the others are built; envelope stages are reached through a modulator's destination, not separate LFO buttons), Click and Wheel as sources, dragging the envelope points, and Impulse folded into Click. No keyboard playing for now; the sequencer is due an overhaul later. Mac app: Electron 37 built by GitHub Actions was recommended, not started.
+- The agreed design for the instrument and sample windows is on a canvas (claude.ai artifact "Rhythm Into Tone: Instrument and Sample windows"). The Sample window is built. Still to build from it: the Follow modulator (the others are built; envelope stages are reached through a modulator's destination, not separate LFO buttons), Click and Wheel as sources, dragging the envelope points, and Impulse folded into Click. No keyboard playing for now; the sequencer is due an overhaul later. Mac app: Electron 37 built by GitHub Actions was recommended, not started.
 - Still owed from the main-window mockup: a Solo button for the open wheel, Copy dot and Paste, and the pattern presets as a menu.
-- Agreed with Jesse as next steps: copy and paste of a wheel between dots (and linked copies), patch slots with an export file and undo, recording the output to WAV, a map of the whole wheel tree, a Fit button for Turn. For samples: a Start LFO, recording from the microphone, stereo.
+- Agreed with Jesse as next steps: copy and paste of a wheel between dots (and linked copies), patch slots with an export file and undo, recording the output to WAV, a map of the whole wheel tree, a Fit button for Turn. For samples: a Start LFO and stereo. Sample-window ideas not built: finding hits to slice at, time-stretch without changing pitch, drawing on the waveform, a spectrogram view.
 - Morphing between two saved rhythms.
 - Tapping hits directly on the wheel.
 - Becoming a module in Jesse's Patchwork rack (repo `JellyboyJesse/Solf-ge`, see its `MODULES.md`). He chose to keep it as its own repo for now.

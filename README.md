@@ -127,6 +127,18 @@ A dot can also play a Sample. The Samples panel has eight slots: load an audio f
 
 The Scope shows the signal going to the speaker: two turns of the loop when it is a tone, the level over the last four seconds when it is a rhythm.
 
+## The sample window
+
+Edit on a sample slot (in the Library panel, or Edit sample on a dot) opens the sample window. Drag across the waveform to select a part; edits act on the selection, or on the whole recording when nothing is selected, and the last five can be undone.
+
+- **Get a sound:** load or drop a file, record from the microphone, or record what the app itself is playing.
+- **Edit:** trim, delete, silence, normalise, reverse, fade in and out, remove DC offset, gain.
+- **Pitch and loop:** detect the pitch, tune to the nearest note, shift by semitones and cents, half and double speed, set a loop from the selection, crossfade the loop so it repeats without a click.
+- **Send and split:** copy the selection to another slot, split it into equal parts in empty slots, save it as a WAV file.
+- **Used by:** the dots and instruments that play the slot.
+
+Changes are heard in the main window straight away. Recording the app's output needs sound running in the main window.
+
 ## Instruments
 
 **Inside** can also be Instrument. The Instruments panel has eight slots, saved with the patch. Edit (or New) opens the instrument window, where an instrument is built from a source (a sine, saw, square or noise oscillator, or a sample), a play mode for samples (one-shot, held, loop, ping-pong, reverse), an ADSR envelope, a filter with its own envelope, and a voice mode (poly, mono, legato with glide). The source can also be a wavetable: a row of single waves (sine to saw, pulse width, formant, bell, or a sample cut into waves) with a Position control. The Modulation section gives each instrument up to four modulators: an LFO, a shape you draw, a wheel (it reads the dots of a ring in the main window), or a random value per note. Each can run free in Hz, a set number of times per loop, or once over the note, and can be aimed at pitch, filter cutoff, wavetable position, level, sample start or any envelope stage. The Mix section adds unison, a second oscillator (heard, or used for FM or ring modulation), a sub oscillator and noise. There are seven filter types, a drive control, straight or curved envelope segments, an envelope that loops while the note is held, and presets to start from (Bass, Pluck, Pad, Bell, Kick, Hat, Sweep, Organ). Audition plays one note. A dot set to Instrument plays the slot as a note: Pitch is the note in semitones from the root, Level the velocity, and Length how long the note is held, starting from a quarter of the wheel's turn. On the wheel an instrument dot is a diamond. Keep the main window open while the instrument window is in use: it holds the patch and makes the sound.

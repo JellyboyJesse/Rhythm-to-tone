@@ -281,6 +281,45 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
           const rb=r.getBoundingClientRect();it.forEach(a=>{if(a.right>rb.right+1||a.left<rb.left-1)bad.push('out'+ri);});});return bad.length;});};
       const ov=[];for(const w of[1024,1180,1240,1280,1366,1440,1680])ov.push(w+':'+await fits(w));await inst.setViewportSize({width:1280,height:900});await inst.waitForTimeout(200);
       check('nothing in the rings panel overlaps at common window widths',ov.every(x=>/:0$/.test(x)),ov.join(' '));}
+    {const sw=await ctx.newPage();watch(sw,'sample window');await sw.goto(BASE+'#sample-5');await sw.waitForTimeout(600);
+      const sr2=22050,n=sr2,buf=Buffer.alloc(44+n*2);buf.write('RIFF',0);buf.writeUInt32LE(36+n*2,4);buf.write('WAVEfmt ',8);buf.writeUInt32LE(16,16);buf.writeUInt16LE(1,20);buf.writeUInt16LE(1,22);
+      buf.writeUInt32LE(sr2,24);buf.writeUInt32LE(sr2*2,28);buf.writeUInt16LE(2,32);buf.writeUInt16LE(16,34);buf.write('data',36);buf.writeUInt32LE(n*2,40);
+      for(let i=0;i<n;i++)buf.writeInt16LE(Math.round(13000*Math.sin(2*Math.PI*330*i/sr2)*(i<n/2?1:0.5)),44+i*2);
+      await sw.setInputFiles('#s-file',{name:'tone.wav',mimeType:'audio/wav',buffer:buf});await sw.waitForTimeout(900);
+      const mainHas=()=>inst.evaluate(()=>samples[4]?{name:samples[4].name,sec:samples[4].d.length/samples[4].sr,pk:samples[4].d.reduce((m,v)=>Math.max(m,Math.abs(v)),0),first:Math.abs(samples[4].d[2000]),last:Math.abs(samples[4].d[samples[4].d.length-2000]),lp:samples[4].lp}:null);
+      let mh=await mainHas();
+      check('a file loaded in the sample window reaches the main window',!!mh&&mh.name==='tone.wav'&&Math.abs(mh.sec-1)<0.02,mh?mh.name+' · '+mh.sec.toFixed(2)+' s':'missing');
+      await sw.click('#s-detect');await sw.waitForTimeout(200);
+      check('the pitch of a recording is detected',/E4/.test(await sw.textContent('#s-pitch')),await sw.textContent('#s-pitch'));
+      const wb=await (await sw.$('#s-wave')).boundingBox();
+      await sw.mouse.move(wb.x+wb.width*0.25,wb.y+40);await sw.mouse.down();await sw.mouse.move(wb.x+wb.width*0.75,wb.y+60,{steps:5});await sw.mouse.up();await sw.waitForTimeout(200);
+      check('dragging on the waveform selects a part',/\(5\d\d\.\d ms\)/.test(await sw.textContent('#s-sel')),await sw.textContent('#s-sel'));
+      await sw.click('[data-op="loop"]');await sw.waitForTimeout(400);mh=await mainHas();
+      check('a loop set from the selection is stored with the sample',!!mh.lp&&Math.abs(mh.lp[0]-0.25)<0.02&&Math.abs(mh.lp[1]-0.75)<0.02,mh.lp?mh.lp.map(v=>v.toFixed(3)).join(' – '):'none');
+      await sw.click('[data-op="trim"]');await sw.waitForTimeout(400);mh=await mainHas();
+      check('Trim keeps only the selection',Math.abs(mh.sec-0.5)<0.02,mh.sec.toFixed(3)+' s');
+      await sw.click('[data-op="norm"]');await sw.waitForTimeout(400);mh=await mainHas();
+      check('Normalise brings the peak to full level',mh.pk>0.96&&mh.pk<=1,'peak '+mh.pk.toFixed(3));
+      await sw.click('[data-op="rev"]');await sw.waitForTimeout(400);mh=await mainHas();
+      check('Reverse swaps the quiet and loud halves',mh.first<mh.last*0.7,'start '+mh.first.toFixed(2)+', end '+mh.last.toFixed(2));
+      await sw.click('[data-op="dbl"]');await sw.waitForTimeout(400);mh=await mainHas();
+      check('Double speed halves the length',Math.abs(mh.sec-0.25)<0.02,mh.sec.toFixed(3)+' s');
+      await sw.click('#s-undo');await sw.click('#s-undo');await sw.waitForTimeout(500);mh=await mainHas();
+      check('Undo steps back through the edits',Math.abs(mh.sec-0.5)<0.02&&mh.first>mh.last,mh.sec.toFixed(3)+' s');
+      await sw.click('#s-send [data-s="6"]');await sw.waitForTimeout(400);
+      check('Send copies the recording to another slot',await inst.evaluate(()=>!!samples[6]&&Math.abs(samples[6].d.length/samples[6].sr-0.5)<0.02&&/copy/.test(samples[6].name)));
+      await sw.click('[data-split="2"]');await sw.waitForTimeout(500);
+      check('Split fills empty slots with equal parts',await inst.evaluate(()=>[0,1,2,3,5,7].filter(k=>samples[k]&&/\d\/2$/.test(samples[k].name)&&Math.abs(samples[k].d.length/samples[k].sr-0.25)<0.02).length===2),await sw.textContent('#s-stat'));
+      await inst.evaluate(()=>{state.rings[0].dk[0]='sample';state.rings[0].ds[0]=4;bus.post({type:'smp-hello'});});await sw.waitForTimeout(300);
+      check('the window lists what plays the slot',/Top · Ring 1 · dot 1/.test(await sw.textContent('#s-users')),await sw.textContent('#s-users'));
+      await sw.click('#s-slots [data-s="5"]');await sw.click('#s-src [data-v="out"]');await sw.click('#s-rec');await sw.waitForTimeout(900);await sw.click('#s-recstop');await sw.waitForTimeout(700);
+      const ro=await inst.evaluate(()=>samples[5]?{sec:samples[5].d.length/samples[5].sr,e:samples[5].d.reduce((m,v)=>m+v*v,0),name:samples[5].name}:null);
+      check('the app\'s output can be recorded into a slot',!!ro&&ro.sec>0.4&&ro.sec<1.6&&ro.e>0.001&&/Recorded/.test(await sw.textContent('#s-stat')),ro?ro.name+' · '+ro.sec.toFixed(2)+' s · energy '+ro.e.toFixed(3):await sw.textContent('#s-stat'));
+      await sw.screenshot({path:path.join(OUT,'sample-window.png'),fullPage:true});
+      await sw.setViewportSize({width:390,height:800});await sw.waitForTimeout(200);
+      check('the sample window at 390 px has no sideways scroll',await sw.evaluate(()=>document.documentElement.scrollWidth)<=390);
+      await sw.close();
+      await inst.evaluate(()=>{state.rings[0].dk[0]='click';for(const k of[0,2,3,4,5,6,7]){samples[k]=null;smpStore(k);}});await inst.waitForTimeout(300);}
     await inst.click('#dotReset');await inst.keyboard.press('Escape');await inst.waitForTimeout(150);
     check('Reset dot and Esc clear the editor',await inst.evaluate(()=>state.rings[0].dp[0]===0&&state.rings[0].da[0]===1&&state.rings[0].pld[0]===0&&state.rings[0].dk[0]==='click'&&state.rings[0].kids[0]===null&&document.querySelector('#dotEd').hidden));}
     {

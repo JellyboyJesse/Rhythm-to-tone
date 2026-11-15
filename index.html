@@ -118,7 +118,7 @@ canvas{display:block;width:100%}
 .where{font:500 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0}
 /* samples */
 .smps{display:grid;gap:6px}
-.smp{display:grid;grid-template-columns:22px minmax(0,1fr) auto auto;gap:8px;align-items:center}
+.smp{display:grid;grid-template-columns:22px minmax(0,1fr) auto auto auto;gap:6px;align-items:center}
 .smp .n{font:600 11px var(--mono);color:var(--muted);text-align:center}
 .smp .w{position:relative;height:34px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
 .smp .w canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -166,6 +166,18 @@ canvas{display:block;width:100%}
 .iw .pair{display:inline-flex;align-items:center;gap:8px;flex-wrap:nowrap}
 .iw .row{gap:8px 16px}
 .iw .lab{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.scols{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:26px 36px;align-items:start}
+@media (max-width:900px){.scols{grid-template-columns:minmax(0,1fr)}}
+.swrap{position:relative;height:200px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.swrap canvas{position:absolute;inset:0;width:100%;height:100%}
+#s-wave{touch-action:none;cursor:text}#s-over{pointer-events:none}
+.sruler{display:flex;justify-content:space-between;font:400 11px var(--mono);color:var(--muted)}
+.meter{height:10px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}.meter div{height:100%;width:0;background:var(--accent)}
+.iw .ulist div{padding:6px 0;border-bottom:1px solid var(--soft);font:400 12px var(--mono)}
+.iw label.filebtn{border:1px solid var(--line);border-radius:4px;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:6px 10px;cursor:pointer}
+.iw label.filebtn input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.iw .rec-on{border-color:var(--warn);color:var(--warn)}
+.iw input[type=number]{font:400 13px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 6px;width:5.5em}
 .iw .btn-on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
 #scope{width:120px;height:30px;background:var(--panel);box-shadow:0 0 0 1px var(--line);display:block}
 .tbscope{display:flex;align-items:center;gap:8px}
@@ -413,6 +425,7 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
                 <div class="ctl"><div class="top"><label for="dSs">Start</label><output id="dSsv"></output></div><input type="range" id="dSs" min="0" max="1000" step="1"></div>
                 <div class="ctl"><div class="top"><label for="dSn">Slice</label><output id="dSnv"></output></div><input type="range" id="dSn" min="0" max="1000" step="1"></div>
               </div>
+              <div class="row" id="dSeRow" hidden style="grid-column:1/-1;order:-2"><button type="button" id="dSe">Edit sample ›</button></div>
               <div id="dIc" hidden>
                 <div class="ctl full"><div class="top"><span class="lab">Instrument slot</span><output id="dIlv"></output></div>
                   <div class="seg" id="dIl" role="group" aria-label="Which instrument this dot plays"></div></div>
@@ -483,6 +496,7 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
 </div>
 
 <div class="wrap iw" id="instOnly" hidden><div id="instHost"></div></div>
+<div class="wrap iw" id="smpOnly" hidden><div id="smpHost"></div></div>
 
 <div class="wrap" id="seqOnly" hidden>
   <header>
@@ -1043,10 +1057,14 @@ let smpChanged=()=>{};
 function smpPeaks(d){const N=400,pk=new Float32Array(N),st=d.length/N;for(let i=0;i<N;i++){let m=0;const a=Math.floor(i*st),b=Math.min(d.length,Math.floor((i+1)*st)+1);for(let j=a;j<b;j++){const v=d[j]<0?-d[j]:d[j];if(v>m)m=v;}pk[i]=m;}return pk;}
 function smpDb(){return new Promise((res,rej)=>{let q;try{q=indexedDB.open('rit-samples-v1',1);}catch(e){rej(e);return;}
   q.onupgradeneeded=()=>q.result.createObjectStore('s');q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}
-function smpStore(i){smpDb().then(db=>{const st=db.transaction('s','readwrite').objectStore('s'),x=samples[i];
-  if(x)st.put({name:x.name,d:x.d,sr:x.sr},i);else st.delete(i);}).catch(()=>{});}
+function smpMake(name,d,sr,lp){return{name:String(name||'sample'),d,sr:sr||44100,pk:smpPeaks(d),lp:Array.isArray(lp)&&lp.length===2&&lp[1]>lp[0]?[+lp[0],+lp[1]]:null};}
+/* smpStore resolves when the write is safely in the database, so another window can be told to read it */
+function smpStore(i){return smpDb().then(db=>new Promise(res=>{const tx=db.transaction('s','readwrite'),st=tx.objectStore('s'),x=samples[i];
+  if(x)st.put({name:x.name,d:x.d,sr:x.sr,lp:x.lp||null},i);else st.delete(i);tx.oncomplete=()=>res();tx.onerror=tx.onabort=()=>res();})).catch(()=>{});}
+function smpLoadOne(i){return smpDb().then(db=>new Promise(res=>{const q=db.transaction('s','readonly').objectStore('s').get(i);
+  q.onsuccess=()=>{const x=q.result;samples[i]=x&&x.d&&x.d.length>2?smpMake(x.name,x.d,x.sr,x.lp):null;res(samples[i]);};q.onerror=()=>res(null);})).catch(()=>null);}
 function smpLoadAll(){smpDb().then(db=>{const st=db.transaction('s','readonly').objectStore('s');
-  for(let i=0;i<SMPN;i++){const q=st.get(i);q.onsuccess=()=>{const x=q.result;if(x&&x.d&&x.d.length>2&&!samples[i]){samples[i]={name:String(x.name||'sample'),d:x.d,sr:x.sr||44100,pk:smpPeaks(x.d)};smpChanged(i);}};}}).catch(()=>{});}
+  for(let i=0;i<SMPN;i++){const q=st.get(i);q.onsuccess=()=>{const x=q.result;if(x&&x.d&&x.d.length>2&&!samples[i]){samples[i]=smpMake(x.name,x.d,x.sr,x.lp);smpChanged(i);}};}}).catch(()=>{});}
 function smpDecode(buf){const OC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
   return new Promise((res,rej)=>{if(!OC){rej(new Error('no decoder'));return;}const oc=new OC(1,2,44100),p=oc.decodeAudioData(buf,res,rej);if(p&&p.catch)p.catch(rej);})
     .then(ab=>{const n=Math.min(ab.length,Math.floor(SMPMAX*ab.sampleRate)),d=new Float32Array(n),C=ab.numberOfChannels;
@@ -1405,7 +1423,7 @@ function initInstrument(){
     {const kd=r.dk[sel.d];   /* Pitch and Length mean different things for each kind of dot */
       $('label[for=dP]').textContent=kd==='inst'?'Note':kd==='sample'?'Speed':'Pitch';$('label[for=dL]').textContent=kd==='inst'?'Held for':kd==='sample'?'Slice length':kd==='wheel'?'Length (all inside)':'Length';
       $('#dP').closest('.ctl').hidden=$('#dL').closest('.ctl').hidden=kd==='impulse';}
-    const isS=r.dk[sel.d]==='sample',isI=r.dk[sel.d]==='inst';$('#dSc').hidden=!isS;$('#dIc').hidden=!isI;
+    const isS=r.dk[sel.d]==='sample',isI=r.dk[sel.d]==='inst';$('#dSc').hidden=!isS;$('#dSeRow').hidden=!isS;$('#dIc').hidden=!isI;
     $$('#dIl button').forEach(b=>{b.setAttribute('aria-pressed',+b.dataset.s===r.di[sel.d]?'true':'false');b.dataset.empty=!state.inst[+b.dataset.s];});
     $$('#dSl button').forEach(b=>{b.setAttribute('aria-pressed',+b.dataset.s===r.ds[sel.d]?'true':'false');b.dataset.empty=!samples[+b.dataset.s];});
     $('#dSs').value=Math.round(r.dss[sel.d]*1000);$('#dSn').value=Math.round(1000*(1+Math.log10(r.dsn[sel.d])/3));
@@ -1446,7 +1464,7 @@ function initInstrument(){
     syncDotUI(true);changed();});
   /* --- instruments: eight slots in the patch, edited in their own window --- */
   function needInst(i){if(!state.inst[i]){state.inst[i]=newInst('Instrument '+(i+1));drawInsts();postInst(null);}}
-  function postInst(origin){bus.post({type:'inst-sync',inst:state.inst,smp:samples.map(x=>x?x.name:null),shp:state.shapes.map(x=>x?x.name:null),origin});}
+  function postInst(origin){bus.post({type:'inst-sync',inst:state.inst,smp:samples.map(x=>x?x.name:null),shp:state.shapes.map(x=>x?x.name:null),origin});postSmpInfo();}
   let instWin=null;
   function openInst(i){needInst(i);changed();
     const url=location.href.split('#')[0]+'#instrument-'+(i+1);
@@ -1464,6 +1482,7 @@ function initInstrument(){
   $('#dIl').innerHTML=Array.from({length:8},(_,i)=>`<button type="button" data-s="${i}" aria-pressed="false">${i+1}</button>`).join('');
   $$('#dIl button').forEach(b=>b.onclick=()=>{if(sel){VR()[sel.ri].di[sel.d]=+b.dataset.s;needInst(+b.dataset.s);syncDotUI(true);changed();}});
   $('#dIe').onclick=()=>{if(sel)openInst(VR()[sel.ri].di[sel.d]);};
+  $('#dSe').onclick=()=>{if(sel)openSmp(VR()[sel.ri].ds[sel.d]);};
   drawInsts();
   bus.on((m,local)=>{
     if(m.type==='inst-hello')postInst(null);
@@ -1496,16 +1515,50 @@ function initInstrument(){
   const smpEls=[];
   function drawSmp(i){const el=smpEls[i];if(!el)return;const x=samples[i],{g,w,h}=fit(el.cv);g.clearRect(0,0,w,h);
     setTextEl(el.name,x?x.name:'empty');el.cv.closest('.smp').dataset.empty=!x;el.clr.disabled=!x;if(x){g.globalAlpha=0.8;drawWave(g,w,h,x,T['--ink']);g.globalAlpha=1;}}
+  /* --- the sample window: it edits the recordings in the shared database and tells us which slot changed --- */
+  const smpPut=i=>smpStore(i).then(()=>bus.post({type:'smp-changed',i,origin:bus.id}));
+  let smpWin=null;
+  function openSmp(i){const url=location.href.split('#')[0]+'#sample-'+(i+1);
+    try{if(smpWin&&!smpWin.closed){smpWin.location.href=url;smpWin.location.reload();smpWin.focus();return;}}catch(e){}
+    let w=null;try{w=window.open(url,'rit-sample','popup=yes,width=1180,height=820');}catch(e){}
+    if(!w){toast('The browser did not open a new window. Allow pop-ups for this page, then press Edit again.');return;}
+    smpWin=w;bus.addPeer(w);}
+  function postSmpInfo(){const U=Array.from({length:8},()=>[]);
+    const walk=(rs,label,depth)=>rs.forEach((r,ri)=>{if(r.hits<=0)return;ringDots(Object.assign({},r,{on:true})).forEach(d=>{
+      if(r.dk[d]==='sample')U[r.ds[d]].push(`${label} · Ring ${ri+1} · dot ${d+1}`);
+      else if(r.dk[d]==='wheel'&&r.kids[d]&&depth<3)walk(r.kids[d].rings,`${label} › ring ${ri+1} dot ${d+1}`,depth+1);});});
+    walk(state.rings,'Top',0);
+    state.inst.forEach((I,k)=>{if(I&&(I.src==='smp'||(I.src==='wt'&&I.wt==='smp')))U[I.ss].push(`Instrument ${k+1} · ${I.name}`);});
+    bus.post({type:'smp-info',users:U});}
+  /* recording what the app is playing into a sample slot */
+  let rec=null;
+  function recStop(){if(!rec)return;const r=rec;rec=null;clearInterval(r.id);try{audio.comp.disconnect(r.sp);r.sp.disconnect();}catch(e){}
+    const n=Math.min(r.n,r.max),d=new Float32Array(n);let o=0;for(const c of r.chunks){if(o>=n)break;d.set(c.subarray(0,Math.min(c.length,n-o)),o);o+=c.length;}
+    if(n>64){samples[r.i]=smpMake('Recorded output',d,audio.sr);smpStore(r.i).then(()=>{smpChanged(r.i);bus.post({type:'smp-changed',i:r.i,origin:bus.id});bus.post({type:'smp-rec-state',on:false,i:r.i,t:n/audio.sr});});}
+    else bus.post({type:'smp-rec-state',on:false,i:r.i,t:0});}
+  function recStart(i){if(rec)recStop();
+    if(!audio.running||!audio.ctx||!audio.comp){bus.post({type:'smp-rec-state',on:false,i,err:'Start sound in the main window first.'});return;}
+    const ctx=audio.ctx,sp=ctx.createScriptProcessor(4096,1,1),z=ctx.createGain();z.gain.value=0;
+    rec={i,sp,chunks:[],n:0,max:Math.floor(SMPMAX*audio.sr),id:0};
+    sp.onaudioprocess=e=>{if(!rec)return;const c=new Float32Array(e.inputBuffer.getChannelData(0));rec.chunks.push(c);rec.n+=c.length;if(rec.n>=rec.max)recStop();};
+    audio.comp.connect(sp);sp.connect(z);z.connect(ctx.destination);
+    rec.id=setInterval(()=>{if(rec)bus.post({type:'smp-rec-state',on:true,i,t:rec.n/audio.sr});},250);}
+  bus.on((m,local)=>{
+    if(m.type==='smp-hello')postSmpInfo();
+    else if(m.type==='smp-changed'&&!local&&m.i>=0&&m.i<8)smpLoadOne(m.i).then(()=>smpChanged(m.i));
+    else if(m.type==='smp-rec'&&!local){if(m.on)recStart(m.i|0);else recStop();}
+  });
   function loadSample(i,file){if(!file)return;setText('#smpNote',`Reading ${file.name}…`);
-    file.arrayBuffer().then(smpDecode).then(o=>{samples[i]={name:file.name,d:o.d,sr:o.sr,pk:smpPeaks(o.d)};smpStore(i);smpChanged(i);
+    file.arrayBuffer().then(smpDecode).then(o=>{samples[i]=smpMake(file.name,o.d,o.sr);smpPut(i);smpChanged(i);
       setText('#smpNote',`Slot ${i+1}: ${file.name} · ${fmtSec(o.d.length/o.sr)}`+(o.cut?` (only the first ${SMPMAX} s are kept)`:''));})
       .catch(()=>{setText('#smpNote','That file could not be read as audio.');toast('That file could not be read as audio.');});}
   for(let i=0;i<SMPN;i++){const d=document.createElement('div');d.className='smp';
-    d.innerHTML=`<span class="n">${i+1}</span><div class="w"><canvas aria-label="Waveform of sample ${i+1}"></canvas><span>empty</span></div><label class="btn">Load<input type="file" accept="audio/*" aria-label="Load a file into sample slot ${i+1}"></label><button type="button" data-x aria-label="Clear sample slot ${i+1}">Clear</button>`;
+    d.innerHTML=`<span class="n">${i+1}</span><div class="w"><canvas aria-label="Waveform of sample ${i+1}"></canvas><span>empty</span></div><label class="btn">Load<input type="file" accept="audio/*" aria-label="Load a file into sample slot ${i+1}"></label><button type="button" data-e aria-label="Edit sample ${i+1} in its own window">Edit ›</button><button type="button" data-x aria-label="Clear sample slot ${i+1}">Clear</button>`;
     $('#smps').appendChild(d);const inp=d.querySelector('input'),clr=d.querySelector('[data-x]');
     smpEls.push({cv:d.querySelector('canvas'),name:d.querySelector('.w span'),clr});
     inp.onchange=()=>{loadSample(i,inp.files[0]);inp.value='';};
-    clr.onclick=()=>{samples[i]=null;smpStore(i);smpChanged(i);setText('#smpNote',`Slot ${i+1} cleared.`);};
+    clr.onclick=()=>{samples[i]=null;smpPut(i);smpChanged(i);setText('#smpNote',`Slot ${i+1} cleared.`);};
+    d.querySelector('[data-e]').onclick=()=>openSmp(i);
     d.addEventListener('dragover',e=>{e.preventDefault();d.dataset.over='true';});
     d.addEventListener('dragleave',()=>{d.dataset.over='false';});
     d.addEventListener('drop',e=>{e.preventDefault();d.dataset.over='false';loadSample(i,e.dataTransfer&&e.dataTransfer.files[0]);});}
@@ -1654,7 +1707,7 @@ function initInstrument(){
     const resumed=ctx.resume();   /* must happen inside the tap for iOS */
     audio.ctx=ctx;
     const comp=ctx.createDynamicsCompressor();comp.threshold.value=-8;comp.knee.value=6;comp.ratio.value=12;comp.attack.value=0.002;comp.release.value=0.15;
-    comp.connect(ctx.destination);
+    comp.connect(ctx.destination);audio.comp=comp;
     try{const an=ctx.createAnalyser();an.fftSize=8192;comp.connect(an);audio.an=an;audio.buf=new Float32Array(an.fftSize);}catch(e){}
     try{
       if(!ctx.audioWorklet)throw new Error('no worklet');
@@ -1977,6 +2030,7 @@ function mountInstEditor(host,slot0){
           <p class="hint">The second oscillator can be heard (Level), can push the first one's phase (FM, for bells and metal), or can multiply it (Ring). Sub is a sine an octave below the note.</p>`)}
         ${pan('03','Play mode',`${seg('mode',[['one','One-shot'],['held','Held'],['loop','Loop'],['ping','Ping-pong'],['rev','Reverse']],'How the sample plays')}
           <div class="ctls2">${ctl('st')}${ctl('ls')}${ctl('le')}</div>
+          <div class="row"><button type="button" id="i-uselp">Use the sample's own loop</button></div>
           <p class="sub mono" id="i-modeNote"></p>`,'i-play')}</div>
       <div class="col">${pan('04','Envelope',`<canvas class="env" id="i-env" aria-label="Envelope curve: attack, decay, sustain while the note is held, release"></canvas>
           <div class="row"><span class="pair"><span class="lab">Segments</span>${seg('elin',[['false','Curved'],['true','Straight']],'Envelope segments')}</span><span class="pair"><span class="lab">While held</span>${seg('eloop',[['false','Sustain'],['true','Loop']],'While the note is held')}</span></div>
@@ -2095,6 +2149,8 @@ function mountInstEditor(host,slot0){
   qa('input[type=range][data-k]').forEach(el=>el.oninput=()=>{const x=I();if(!x)return;const c=C[el.dataset.k];let v=c.m.from(+el.value/1000);if(c.int)v=Math.round(v);if(c.zero&&+el.value===0)v=0;x[el.dataset.k]=v;sync();commit();});
   q('#i-name').oninput=e=>{const x=I();if(!x)return;x.name=e.target.value.slice(0,40)||'Instrument';commit();};
   q('#i-preset').onchange=e=>{const k=e.target.value;e.target.value='';if(k==='')return;const [n,o]=INST_PRESETS[+k];inst[cur]=sanInst(Object.assign(newInst(n),JSON.parse(JSON.stringify(o))));sync();commit();q('#i-stat').textContent='Loaded the '+n+' preset into slot '+(cur+1)+'.';};
+  q('#i-uselp').onclick=()=>{const x=I(),sm=x&&samples[x.ss];if(!sm||!sm.lp){q('#i-stat').textContent='That sample has no loop set. Set one in the sample window.';return;}x.ls=sm.lp[0];x.le=sm.lp[1];if(x.mode==='one'||x.mode==='held')x.mode='loop';sync();commit();};
+  bus.on(m=>{if(m.type==='smp-changed'&&m.i>=0&&m.i<8)smpLoadOne(m.i).then(()=>sync());});
   q('#i-new').onclick=()=>{inst[cur]=newInst('Instrument '+(cur+1));sync();commit();};
   q('#i-clear').onclick=()=>{inst[cur]=null;sync();commit();};
   q('#i-copy').onclick=()=>{try{localStorage.setItem('rit-inst-clip',JSON.stringify(I()));q('#i-stat').textContent='Copied.';}catch(e){}};
@@ -2111,10 +2167,202 @@ function mountInstEditor(host,slot0){
 }
 
 /* =====================================================================
+   Sample window (#sample-N). It edits the recordings themselves, in the database shared with the main window, and posts smp-changed
+   for each slot it writes. Playback here is the window's own (a plain buffer player), so it works without the main window.
+   Recording the app's output is done by the main window, on request (smp-rec).
+   ===================================================================== */
+function mountSampleEditor(host,slot0){
+  const me=bus.id,q=x=>host.querySelector(x),qa=x=>[...host.querySelectorAll(x)];
+  let cur=clamp(slot0|0,0,7),sel=null,v0=0,v1=1,undo=[],clip=null,users=Array.from({length:8},()=>[]),actx=null,node=null,play=null,mic=null,recOut=false,pitch=0,nameT=0;
+  const S=()=>samples[cur],sec=t=>t>=1?t.toFixed(2)+' s':(t*1000).toFixed(t<0.01?2:1)+' ms',db=v=>v>0?(20*Math.log10(v)).toFixed(1)+' dB':'−∞ dB';
+  const slotBtns=id=>`<div class="seg" id="${id}" role="group">${[0,1,2,3,4,5,6,7].map(i=>`<button type="button" data-s="${i}" aria-pressed="false">${i+1}</button>`).join('')}</div>`;
+  const pan=(n,t,body)=>`<section class="panel"><h2><b>${n}</b>${t}</h2>${body}</section>`;
+  const op=(k,t,need)=>`<button type="button" data-op="${k}" data-need="${need||'smp'}">${t}</button>`;
+  host.innerHTML=`<header class="iw-top"><h1>Rhythm Into Tone</h1><span class="tag">Sample</span>
+      <div class="fld"><span class="lab">Slot</span>${slotBtns('s-slots')}</div>
+      <div class="fld grow"><label class="lab" for="s-name">Name</label><input type="text" id="s-name" maxlength="40"></div>
+      <div class="row"><button type="button" id="s-play" class="btn-on" data-need="smp">Play</button><button type="button" id="s-stop">Stop</button><button type="button" id="s-undo">Undo</button>
+        <button type="button" id="s-copy" data-need="smp">Copy</button><button type="button" id="s-paste">Paste</button><button type="button" id="s-clear" data-need="smp">Clear</button><button type="button" id="s-close">Close window</button></div>
+      <span class="sub mono" id="s-stat" role="status"></span></header>
+    <div class="scols">
+      <div class="col">
+        ${pan('01','Recording',`<div class="swrap"><canvas id="s-wave" aria-label="The recording. Drag across it to select a part."></canvas><canvas id="s-over" aria-hidden="true"></canvas></div>
+          <div class="sruler" id="s-ruler"></div>
+          <div class="row"><button type="button" id="s-zin" data-need="sel">Zoom to selection</button><button type="button" id="s-zall">Show all</button><button type="button" id="s-all" data-need="smp">Select all</button><button type="button" id="s-none" data-need="sel">Select none</button>
+            <label class="check"><input type="checkbox" id="s-snap" checked> Snap to zero crossings</label></div>
+          <dl class="stats"><div><dt>Length</dt><dd id="s-len">—</dd></div><div><dt>Selection</dt><dd id="s-sel">none</dd></div><div><dt>Rate</dt><dd id="s-rate">—</dd></div><div><dt>Peak</dt><dd id="s-peak">—</dd></div><div><dt>Loudness</dt><dd id="s-rms">—</dd></div></dl>`)}
+        ${pan('03','Edit',`<div class="row">${op('trim','Trim to selection','sel')}${op('cut','Delete selection','sel')}${op('silence','Silence','sel')}${op('norm','Normalise')}${op('rev','Reverse')}${op('fin','Fade in')}${op('fout','Fade out')}${op('dc','Remove DC offset')}</div>
+          <div class="row"><label class="lab" for="s-gain">Gain</label><input type="range" id="s-gain" min="-24" max="24" step="0.5" value="0" style="flex:1 1 160px;max-width:260px"><output id="s-gainv" class="mono">0.0 dB</output>${op('gain','Apply gain')}</div>
+          <p class="sub mono">An edit acts on the selection, or on the whole recording when nothing is selected. Every edit can be undone (the last five).</p>`)}
+        ${pan('04','Pitch and loop',`<div class="row"><button type="button" id="s-detect" data-need="smp">Detect pitch</button><span class="mono" id="s-pitch">—</span>${op('tune','Tune to the nearest note')}</div>
+          <div class="row"><label class="lab" for="s-semi">Shift</label><input type="number" id="s-semi" min="-24" max="24" step="1" value="0" aria-label="Semitones"><span class="sub mono">semitones</span><input type="number" id="s-cents" min="-100" max="100" step="1" value="0" aria-label="Cents"><span class="sub mono">cents</span>${op('shift','Apply shift')}${op('half','Half speed')}${op('dbl','Double speed')}</div>
+          <div class="row">${op('loop','Set loop from selection','sel')}${op('xf','Crossfade the loop')}${op('noloop','Clear loop')}<span class="mono" id="s-loop">no loop set</span></div>
+          <p class="sub mono">Shifting pitch here changes the recording itself and its length. The loop travels with the sample: an instrument can take it with "Use the sample's own loop". Crossfade blends the end of the loop into what comes before its start, so the repeat has no click.</p>`)}
+      </div>
+      <div class="col">
+        ${pan('02','Get a sound',`<div class="row"><label class="filebtn">Load a file<input type="file" id="s-file" accept="audio/*"></label><span class="sub mono">or drop one anywhere on this window</span></div>
+          <div class="row"><span class="lab">Record from</span><div class="seg" id="s-src" role="group" aria-label="Record from"><button type="button" data-v="mic" aria-pressed="true">Microphone</button><button type="button" data-v="out" aria-pressed="false">This app's output</button></div></div>
+          <div class="row" id="s-devrow"><label class="lab" for="s-dev">Input</label><select id="s-dev"><option value="">Default microphone</option></select></div>
+          <div class="meter" aria-label="Input level"><div id="s-meter"></div></div>
+          <div class="row"><button type="button" id="s-rec">● Record</button><button type="button" id="s-recstop">Stop</button><span class="mono" id="s-rect">0:00.0</span></div>
+          <p class="sub mono" id="s-recnote">Recording replaces what is in this slot (Undo brings it back). Up to ${SMPMAX} seconds, mono.</p>`)}
+        ${pan('05','Send and split',`<div class="row"><span class="lab">Send the selection to slot</span>${slotBtns('s-send')}</div>
+          <div class="row"><span class="lab">Split into empty slots</span><button type="button" data-split="2" data-need="smp">2 parts</button><button type="button" data-split="3" data-need="smp">3</button><button type="button" data-split="4" data-need="smp">4</button></div>
+          <div class="row"><button type="button" id="s-wav" data-need="smp">Save as a WAV file</button></div>`)}
+        ${pan('06','Used by',`<div class="ulist" id="s-users"></div>`)}
+      </div>
+    </div>`;
+  const stat=t=>{q('#s-stat').textContent=t;};
+  const range=()=>{const x=S();return!x?[0,0]:sel?sel:[0,x.d.length];};
+  const persist=i=>smpStore(i).then(()=>bus.post({type:'smp-changed',i,origin:me}));
+  function put(d,msg,lp,name){const x=S();undo.push({i:cur,x:x||null});if(undo.length>5)undo.shift();
+    samples[cur]=d?smpMake(name||(x?x.name:'Sample '+(cur+1)),d,x&&!name?x.sr:put.sr||44100,lp||null):null;put.sr=0;
+    if(sel&&d){sel=[clamp(sel[0],0,d.length),clamp(sel[1],0,d.length)];if(sel[1]-sel[0]<2)sel=null;}else sel=null;
+    pitch=0;persist(cur);refresh();stat(msg);}
+  /* ---- drawing */
+  const X=(i,w,n)=>((i/n)-v0)/(v1-v0)*w,I=(px,w,n)=>clamp(Math.round((v0+px/w*(v1-v0))*n),0,n);
+  function draw(){const {g,w,h}=fit(q('#s-wave'));g.clearRect(0,0,w,h);const x=S(),m=h/2;
+    if(!x){g.fillStyle=T['--muted'];g.font=font(12);g.textAlign='center';g.fillText('This slot is empty. Load a file, drop one here, or record.',w/2,m);q('#s-ruler').textContent='';return;}
+    const d=x.d,n=d.length,a=Math.floor(v0*n),b=Math.ceil(v1*n),per=(b-a)/w;
+    if(sel){g.fillStyle=T['--accent'];g.globalAlpha=0.16;g.fillRect(X(sel[0],w,n),0,Math.max(1,X(sel[1],w,n)-X(sel[0],w,n)),h);g.globalAlpha=1;}
+    g.strokeStyle=T['--line'];g.lineWidth=1;g.beginPath();g.moveTo(0,m);g.lineTo(w,m);g.stroke();
+    g.fillStyle=T['--ink'];g.globalAlpha=0.82;
+    for(let px=0;px<w;px++){let lo=1,hi=-1;const i0=Math.floor(a+px*per),i1=Math.min(n,Math.max(i0+1,Math.floor(a+(px+1)*per))),st=Math.max(1,Math.floor((i1-i0)/400));
+      for(let i=i0;i<i1;i+=st){const v=d[i];if(v<lo)lo=v;if(v>hi)hi=v;}
+      if(hi<lo)continue;g.fillRect(px,m-hi*(m-4),1,Math.max(1,(hi-lo)*(m-4)));}
+    g.globalAlpha=1;
+    if(x.lp){g.fillStyle=T['--lfo'];for(const f of x.lp){const px=X(f*n,w,n);if(px>=0&&px<=w)g.fillRect(px-1,0,2,h);}g.font=font(10);g.textAlign='left';const px=X(x.lp[0]*n,w,n);if(px>=0&&px<w-30)g.fillText('loop',px+4,11);}
+    if(sel){g.fillStyle=T['--accent'];g.fillRect(X(sel[0],w,n)-1,0,2,h);g.fillRect(X(sel[1],w,n)-1,0,2,h);}
+    q('#s-ruler').innerHTML=[0,0.25,0.5,0.75,1].map(f=>`<span>${sec((v0+f*(v1-v0))*n/x.sr)}</span>`).join('');}
+  function over(){const {g,w,h}=fit(q('#s-over'));g.clearRect(0,0,w,h);const x=S();if(!play||!x||!actx){return;}
+    const t=(actx.currentTime-play.t0)*x.sr+play.a;if(t>play.b){play=null;return;}
+    g.fillStyle=T['--warn'];g.fillRect(X(t,w,x.d.length),0,1.5,h);requestAnimationFrame(over);}
+  function refresh(){const x=S();
+    qa('#s-slots button').forEach(b=>{b.setAttribute('aria-pressed',+b.dataset.s===cur?'true':'false');b.title=samples[+b.dataset.s]?samples[+b.dataset.s].name:'empty';b.style.color=samples[+b.dataset.s]||+b.dataset.s===cur?'':'var(--muted)';});
+    qa('#s-send button').forEach(b=>{b.disabled=!x||+b.dataset.s===cur;b.title=samples[+b.dataset.s]?'Replaces '+samples[+b.dataset.s].name:'empty';});
+    if(document.activeElement!==q('#s-name'))q('#s-name').value=x?x.name:'';q('#s-name').disabled=!x;
+    qa('[data-need]').forEach(b=>b.disabled=!x||(b.dataset.need==='sel'&&!sel));q('#s-undo').disabled=!undo.length;q('#s-paste').disabled=!clip;
+    if(x){const [a,b]=range();let pk=0,sq=0;const st=Math.max(1,Math.floor((b-a)/200000));let c=0;for(let i=a;i<b;i+=st){const v=x.d[i]<0?-x.d[i]:x.d[i];if(v>pk)pk=v;sq+=v*v;c++;}
+      q('#s-len').textContent=sec(x.d.length/x.sr);q('#s-sel').textContent=sel?sec(sel[0]/x.sr)+' – '+sec(sel[1]/x.sr)+' ('+sec((sel[1]-sel[0])/x.sr)+')':'none';
+      q('#s-rate').textContent=(x.sr/1000).toFixed(1)+' kHz · mono';q('#s-peak').textContent=db(pk);q('#s-rms').textContent=db(Math.sqrt(sq/Math.max(1,c)));
+      q('#s-loop').textContent=x.lp?'loop '+sec(x.lp[0]*x.d.length/x.sr)+' – '+sec(x.lp[1]*x.d.length/x.sr):'no loop set';}
+    else for(const id of['#s-len','#s-rate','#s-peak','#s-rms'])q(id).textContent='—';
+    q('#s-pitch').textContent=pitch?noteName(pitch)+' · '+fmtHz(pitch):'—';
+    const u=users[cur]||[];q('#s-users').innerHTML=u.length?u.map(()=>'<div></div>').join(''):'<div class="sub">Nothing in the patch plays this slot.</div>';if(u.length)qa('#s-users div').forEach((el,k)=>el.textContent=u[k]);
+    draw();}
+  /* ---- selecting */
+  {const cv=q('#s-wave');let down=false,a0=0;
+    const pos=e=>{const b=cv.getBoundingClientRect(),x=S();return x?I(e.clientX-b.left,b.width,x.d.length):0;};
+    const zc=i=>{const x=S();if(!x||!q('#s-snap').checked)return i;const d=x.d,n=d.length;for(let k=0;k<400;k++){for(const j of[i+k,i-k]){if(j>0&&j<n&&(d[j-1]<=0)!==(d[j]<=0))return j;}}return i;};
+    cv.addEventListener('pointerdown',e=>{if(!S())return;down=true;a0=pos(e);sel=null;try{cv.setPointerCapture(e.pointerId);}catch(_){}});
+    cv.addEventListener('pointermove',e=>{if(!down)return;const b=pos(e);sel=Math.abs(b-a0)>1?[Math.min(a0,b),Math.max(a0,b)]:null;draw();});
+    const up=()=>{if(!down)return;down=false;const x=S();if(sel&&x){sel=[sel[0]<=2?0:zc(sel[0]),sel[1]>=x.d.length-2?x.d.length:zc(sel[1])];if(sel[1]-sel[0]<8)sel=null;}refresh();};
+    cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);}
+  q('#s-zin').onclick=()=>{const x=S();if(!x||!sel)return;const n=x.d.length,pad=(sel[1]-sel[0])*0.05;v0=clamp((sel[0]-pad)/n,0,1);v1=clamp((sel[1]+pad)/n,0,1);if(v1-v0<1e-6){v0=0;v1=1;}draw();};
+  q('#s-zall').onclick=()=>{v0=0;v1=1;draw();};
+  q('#s-all').onclick=()=>{const x=S();if(x){sel=[0,x.d.length];refresh();}};q('#s-none').onclick=()=>{sel=null;refresh();};
+  /* ---- playing */
+  function stop(){if(node){try{node.onended=null;node.stop();}catch(e){}node=null;}play=null;over();}
+  q('#s-stop').onclick=stop;
+  q('#s-play').onclick=()=>{const x=S();if(!x)return;stop();try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume();}catch(e){stat('This browser could not start audio here.');return;}
+    const [a,b]=range(),buf=actx.createBuffer(1,Math.max(1,b-a),x.sr);buf.getChannelData(0).set(x.d.subarray(a,b));
+    node=actx.createBufferSource();node.buffer=buf;node.connect(actx.destination);node.onended=()=>{node=null;play=null;};node.start();play={t0:actx.currentTime,a,b};requestAnimationFrame(over);};
+  /* ---- edits */
+  const resample=(d,ratio)=>{const n=Math.max(2,Math.floor(d.length/ratio)),o=new Float32Array(n);for(let i=0;i<n;i++){const p=i*ratio,i0=p|0,i1=i0+1<d.length?i0+1:i0;o[i]=d[i0]+(d[i1]-d[i0])*(p-i0);}return o;};
+  function detect(){const x=S();if(!x)return 0;const [a,b]=range(),d=x.d,N=Math.min(8192,b-a);if(N<512)return 0;
+    let st=a,best=-1;for(let k=a;k+N<=b;k+=Math.max(1,Math.floor((b-a-N)/16)||1)){let e=0;for(let i=k;i<k+N;i+=8)e+=d[i]*d[i];if(e>best){best=e;st=k;}if(b-a-N<1)break;}
+    const lo=Math.max(2,Math.floor(x.sr/2000)),hi=Math.min(Math.floor(x.sr/40),N>>1),M=N-hi,r=new Float32Array(hi+2);let r0=0;for(let i=0;i<M;i++)r0+=d[st+i]*d[st+i];if(r0<1e-9)return 0;
+    for(let L=lo;L<=hi;L++){let v=0;for(let i=0;i<M;i++)v+=d[st+i]*d[st+i+L];r[L]=v/r0;}
+    let L=lo;while(L<hi&&r[L]>0.5)L++;let mx=0;for(let k=L;k<=hi;k++)if(r[k]>mx)mx=r[k];if(mx<0.3)return 0;
+    for(let k=Math.max(L,lo+1);k<hi;k++)if(r[k]>0.9*mx&&r[k]>=r[k-1]&&r[k]>=r[k+1]){const y0=r[k-1],y1=r[k],y2=r[k+1],dn=y0-2*y1+y2,off=dn?0.5*(y0-y2)/dn:0;return x.sr/(k+off);}
+    return 0;}
+  q('#s-detect').onclick=()=>{pitch=detect();refresh();stat(pitch?'Detected '+noteName(pitch)+'.':'No clear pitch found. Select a steadier part and try again.');};
+  q('#s-gain').oninput=e=>{q('#s-gainv').textContent=(+e.target.value).toFixed(1)+' dB';};
+  const OPS={
+    trim(x,a,b){sel=null;return[x.d.slice(a,b),'Trimmed to the selection.'];},
+    cut(x,a,b){const o=new Float32Array(x.d.length-(b-a));o.set(x.d.subarray(0,a));o.set(x.d.subarray(b),a);sel=null;return o.length>2?[o,'Deleted the selection.']:null;},
+    silence(x,a,b){const o=x.d.slice();o.fill(0,a,b);return[o,'Silenced the selection.',x.lp];},
+    norm(x,a,b){let pk=0;for(let i=a;i<b;i++){const v=x.d[i]<0?-x.d[i]:x.d[i];if(v>pk)pk=v;}if(pk<1e-6)return null;const o=x.d.slice(),g=0.98/pk;for(let i=a;i<b;i++)o[i]*=g;return[o,'Normalised: gain '+db(g)+'.',x.lp];},
+    rev(x,a,b){const o=x.d.slice();o.subarray(a,b).reverse();return[o,'Reversed.'];},
+    fin(x,a,b){const o=x.d.slice(),n=b-a;for(let i=0;i<n;i++)o[a+i]*=0.5-0.5*Math.cos(Math.PI*i/n);return[o,'Faded in.',x.lp];},
+    fout(x,a,b){const o=x.d.slice(),n=b-a;for(let i=0;i<n;i++)o[a+i]*=0.5+0.5*Math.cos(Math.PI*i/n);return[o,'Faded out.',x.lp];},
+    dc(x,a,b){let m=0;for(let i=a;i<b;i++)m+=x.d[i];m/=Math.max(1,b-a);const o=x.d.slice();for(let i=a;i<b;i++)o[i]-=m;return[o,'Removed a DC offset of '+m.toFixed(4)+'.',x.lp];},
+    gain(x,a,b){const g=Math.pow(10,+q('#s-gain').value/20),o=x.d.slice();for(let i=a;i<b;i++)o[i]=clamp(o[i]*g,-1,1);return[o,'Applied '+(+q('#s-gain').value).toFixed(1)+' dB.',x.lp];},
+    shift(x){const st=clamp(+q('#s-semi').value||0,-24,24)+clamp(+q('#s-cents').value||0,-100,100)/100;if(!st)return null;sel=null;return[resample(x.d,Math.pow(2,st/12)),'Shifted by '+st.toFixed(2)+' semitones.',x.lp];},
+    half(x){sel=null;return[resample(x.d,0.5),'Half speed: an octave down, twice as long.',x.lp];},
+    dbl(x){sel=null;return[resample(x.d,2),'Double speed: an octave up, half as long.',x.lp];},
+    tune(x){const f=pitch||detect();if(!f){stat('No clear pitch found to tune from.');return null;}const m=69+12*Math.log2(f/440),c=m-Math.round(m);if(Math.abs(c)<0.005){stat('Already in tune.');return null;}sel=null;return[resample(x.d,Math.pow(2,-c/12)),'Tuned by '+(-c*100).toFixed(0)+' cents to '+noteName(440*Math.pow(2,(Math.round(m)-69)/12),true)+'.',x.lp];},
+    loop(x,a,b){x.lp=[a/x.d.length,b/x.d.length];persist(cur);refresh();stat('Loop set from the selection.');return null;},
+    noloop(x){x.lp=null;persist(cur);refresh();stat('Loop cleared.');return null;},
+    xf(x){if(!x.lp){stat('Set a loop first.');return null;}const n=x.d.length,a=Math.round(x.lp[0]*n),b=Math.round(x.lp[1]*n),L=Math.min(Math.floor(0.05*x.sr),Math.floor((b-a)/2),a);if(L<8){stat('There is too little audio before the loop start to crossfade with.');return null;}
+      const o=x.d.slice();for(let k=0;k<L;k++){const t=k/L;o[b-L+k]=o[b-L+k]*(1-t)+x.d[a-L+k]*t;}return[o,'Crossfaded '+sec(L/x.sr)+' at the loop end.',x.lp];}};
+  qa('[data-op]').forEach(b=>b.onclick=()=>{const x=S();if(!x)return;const [a,e]=range(),r=OPS[b.dataset.op](x,a,e);if(r)put(r[0],r[1],r[2]);});
+  /* ---- slots, clipboard, files */
+  qa('#s-slots button').forEach(b=>b.onclick=()=>{stop();cur=+b.dataset.s;sel=null;v0=0;v1=1;pitch=0;try{history.replaceState(null,'','#sample-'+(cur+1));}catch(e){}refresh();stat('');});
+  qa('#s-send button').forEach(b=>b.onclick=()=>{const x=S(),k=+b.dataset.s;if(!x||k===cur)return;const [a,e]=range();undo.push({i:k,x:samples[k]||null});if(undo.length>5)undo.shift();
+    samples[k]=smpMake(x.name.replace(/\.[a-z0-9]+$/i,'')+(sel?' part':' copy'),x.d.slice(a,e),x.sr);persist(k);refresh();stat('Sent '+sec((e-a)/x.sr)+' to slot '+(k+1)+'.');});
+  qa('[data-split]').forEach(b=>b.onclick=()=>{const x=S(),N=+b.dataset.split;if(!x)return;const free=[0,1,2,3,4,5,6,7].filter(k=>k!==cur&&!samples[k]);
+    if(free.length<N){stat('That needs '+N+' empty slots and only '+free.length+' are empty.');return;}const [a,e]=range(),len=Math.floor((e-a)/N);if(len<8)return;
+    for(let k=0;k<N;k++){samples[free[k]]=smpMake(x.name.replace(/\.[a-z0-9]+$/i,'')+' '+(k+1)+'/'+N,x.d.slice(a+k*len,a+(k+1)*len),x.sr);persist(free[k]);}
+    refresh();stat('Split into slots '+free.slice(0,N).map(k=>k+1).join(', ')+'.');});
+  q('#s-undo').onclick=()=>{const u=undo.pop();if(!u)return;samples[u.i]=u.x;sel=null;pitch=0;persist(u.i);refresh();stat('Undone'+(u.i!==cur?' in slot '+(u.i+1):'')+'.');};
+  q('#s-copy').onclick=()=>{const x=S();if(x){clip={name:x.name,d:x.d.slice(),sr:x.sr,lp:x.lp};refresh();stat('Copied.');}};
+  q('#s-paste').onclick=()=>{if(!clip)return;put.sr=clip.sr;sel=null;put(clip.d.slice(),'Pasted into slot '+(cur+1)+'.',clip.lp,clip.name);};
+  q('#s-clear').onclick=()=>{stop();put(null,'Slot cleared. Undo brings it back.');};
+  q('#s-close').onclick=()=>window.close();
+  q('#s-name').oninput=e=>{const x=S();if(!x)return;x.name=e.target.value.slice(0,40)||'sample';clearTimeout(nameT);nameT=setTimeout(()=>persist(cur),500);};
+  function loadFile(f){if(!f)return;stat('Reading '+f.name+'…');f.arrayBuffer().then(smpDecode).then(o=>{put.sr=o.sr;sel=null;v0=0;v1=1;put(o.d,f.name+' loaded · '+sec(o.d.length/o.sr)+(o.cut?' (only the first '+SMPMAX+' s are kept)':''),null,f.name);}).catch(()=>stat('That file could not be read as audio.'));}
+  q('#s-file').onchange=e=>{loadFile(e.target.files[0]);e.target.value='';};
+  addEventListener('dragover',e=>e.preventDefault());addEventListener('drop',e=>{e.preventDefault();loadFile(e.dataTransfer&&e.dataTransfer.files[0]);});
+  q('#s-wav').onclick=()=>{const x=S();if(!x)return;const [a,e]=range(),n=e-a,buf=new ArrayBuffer(44+n*2),v=new DataView(buf),W=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i));};
+    W(0,'RIFF');v.setUint32(4,36+n*2,true);W(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,x.sr,true);v.setUint32(28,x.sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);W(36,'data');v.setUint32(40,n*2,true);
+    for(let i=0;i<n;i++)v.setInt16(44+i*2,Math.round(clamp(x.d[a+i],-1,1)*32767),true);
+    const url=URL.createObjectURL(new Blob([buf],{type:'audio/wav'})),l=document.createElement('a');l.href=url;l.download=x.name.replace(/\.[a-z0-9]+$/i,'')+'.wav';document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);stat('Saved '+l.download+'.');};
+  /* ---- recording */
+  const fmtT=t=>Math.floor(t/60)+':'+(t%60<10?'0':'')+(t%60).toFixed(1);
+  let src='mic';
+  qa('#s-src button').forEach(b=>b.onclick=()=>{if(mic||recOut)return;src=b.dataset.v;qa('#s-src button').forEach(c=>c.setAttribute('aria-pressed',c===b?'true':'false'));q('#s-devrow').hidden=src!=='mic';
+    q('#s-recnote').textContent=src==='mic'?`Recording replaces what is in this slot (Undo brings it back). Up to ${SMPMAX} seconds, mono.`:'Records whatever the main window is playing, after its limiter. Start sound there first.';});
+  function micStop(){const m=mic;if(!m)return;mic=null;try{m.sp.disconnect();m.in.disconnect();m.stream.getTracks().forEach(t=>t.stop());m.ctx.close();}catch(e){}
+    q('#s-rec').classList.remove('rec-on');q('#s-meter').style.width='0';const n=Math.min(m.n,Math.floor(SMPMAX*m.sr));if(n<64){stat('Nothing was recorded.');return;}
+    const d=new Float32Array(n);let o=0;for(const c of m.chunks){if(o>=n)break;d.set(c.subarray(0,Math.min(c.length,n-o)),o);o+=c.length;}
+    put.sr=m.sr;sel=null;v0=0;v1=1;put(d,'Recorded '+sec(n/m.sr)+' from the microphone.',null,'Mic recording');}
+  q('#s-rec').onclick=()=>{if(mic||recOut)return;stop();
+    if(src==='out'){undo.push({i:cur,x:S()||null});if(undo.length>5)undo.shift();recOut=true;q('#s-rec').classList.add('rec-on');stat('Asking the main window to record…');bus.post({type:'smp-rec',i:cur,on:true});return;}
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){stat('This browser gives no microphone access here. It needs a secure (https) page.');return;}
+    const dev=q('#s-dev').value;
+    navigator.mediaDevices.getUserMedia({audio:Object.assign({echoCancellation:false,noiseSuppression:false,autoGainControl:false},dev?{deviceId:{exact:dev}}:{})}).then(stream=>{
+      const ctx=new (window.AudioContext||window.webkitAudioContext)(),inp=ctx.createMediaStreamSource(stream),sp=ctx.createScriptProcessor(4096,1,1),z=ctx.createGain();z.gain.value=0;
+      mic={ctx,stream,in:inp,sp,chunks:[],n:0,sr:ctx.sampleRate};
+      sp.onaudioprocess=e=>{if(!mic)return;const c=new Float32Array(e.inputBuffer.getChannelData(0));mic.chunks.push(c);mic.n+=c.length;let pk=0;for(let i=0;i<c.length;i+=4){const v=c[i]<0?-c[i]:c[i];if(v>pk)pk=v;}
+        q('#s-meter').style.width=Math.min(100,pk*100)+'%';q('#s-rect').textContent=fmtT(mic.n/mic.sr);if(mic.n>=SMPMAX*mic.sr)micStop();};
+      inp.connect(sp);sp.connect(z);z.connect(ctx.destination);q('#s-rec').classList.add('rec-on');stat('Recording from the microphone…');
+      navigator.mediaDevices.enumerateDevices().then(L=>{const ins=L.filter(d=>d.kind==='audioinput'),cur2=q('#s-dev').value;q('#s-dev').innerHTML='<option value="">Default microphone</option>';
+        ins.forEach(d=>{const o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||'Microphone';q('#s-dev').appendChild(o);});q('#s-dev').value=cur2;}).catch(()=>{});
+    }).catch(()=>stat('The microphone could not be opened. Check that this page is allowed to use it.'));};
+  q('#s-recstop').onclick=()=>{if(mic)micStop();else if(recOut)bus.post({type:'smp-rec',i:cur,on:false});};
+  /* ---- the bus */
+  bus.on(m=>{
+    if(m.type==='smp-changed'&&m.origin!==me&&m.i>=0&&m.i<8)smpLoadOne(m.i).then(()=>{if(m.i===cur){sel=null;pitch=0;}refresh();});
+    else if(m.type==='smp-info'&&Array.isArray(m.users)){users=m.users;refresh();}
+    else if(m.type==='smp-rec-state'){if(m.on){q('#s-rect').textContent=fmtT(m.t||0);stat('Recording the app\'s output…');}
+      else if(recOut){recOut=false;q('#s-rec').classList.remove('rec-on');if(m.err){undo.pop();stat(m.err);}else stat(m.t?'Recorded '+sec(m.t)+' of the app\'s output.':'Nothing was recorded.');refresh();}}
+  });
+  smpChanged=i=>refresh();
+  for(let i=0;i<SMPN;i++)smpLoadOne(i).then(()=>refresh());
+  addEventListener('resize',draw);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>setTimeout(draw,50));
+  refresh();bus.post({type:'smp-hello'});
+}
+
+/* =====================================================================
    Route: the same file is the instrument (default) or the sequencer (#sequencer)
    ===================================================================== */
-const ROUTE_SEQ=location.hash==='#sequencer',ROUTE_INST=/^#instrument/.test(location.hash);
-if(ROUTE_INST){
+const ROUTE_SEQ=location.hash==='#sequencer',ROUTE_INST=/^#instrument/.test(location.hash),ROUTE_SMP=/^#sample/.test(location.hash);
+if(ROUTE_SMP){
+  $('#app').hidden=true;$('#smpOnly').hidden=false;document.title='Sample · Rhythm Into Tone';
+  try{if(window.opener)bus.addPeer(window.opener);}catch(e){}
+  mountSampleEditor($('#smpHost'),(parseInt(location.hash.split('-')[1],10)||1)-1);
+}else if(ROUTE_INST){
   $('#app').hidden=true;$('#instOnly').hidden=false;document.title='Instrument · Rhythm Into Tone';
   try{if(window.opener)bus.addPeer(window.opener);}catch(e){}
   mountInstEditor($('#instHost'),(parseInt(location.hash.split('-')[1],10)||1)-1);
@@ -2127,7 +2375,7 @@ if(ROUTE_INST){
 }else{
   initInstrument();
 }
-addEventListener('hashchange',()=>{if((location.hash==='#sequencer')!==ROUTE_SEQ||/^#instrument/.test(location.hash)!==ROUTE_INST){if(!ROUTE_INST)saveNow();location.reload();}});
+addEventListener('hashchange',()=>{if((location.hash==='#sequencer')!==ROUTE_SEQ||/^#instrument/.test(location.hash)!==ROUTE_INST||/^#sample/.test(location.hash)!==ROUTE_SMP){if(!ROUTE_INST&&!ROUTE_SMP)saveNow();location.reload();}});
 </script>
 
 </body>
