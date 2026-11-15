@@ -121,7 +121,7 @@ In the dot editor, **Inside** chooses what the dot plays: one click, or a wheel 
 
 When a playhead crosses a dot, the wheel inside makes one turn and stops. **Turn** sets how long that turn lasts, as a fraction of the turn of the wheel the dot sits in. If it is longer than the gap to the next dot, the two overlap. Level multiplies and pitch and length add up on the way down. On the wheel, a dot holding a wheel is drawn hollow, with an arc for its turn and small dots for the hits inside. The circles include every click at every level.
 
-## Samples and impulses
+## Samples
 
 A dot can also play a Sample. The Samples panel has eight slots: load an audio file with Load, or drop one on a slot. A sample dot plays a slice of its slot's recording each time it fires. Pitch changes the playback speed, Start and Slice choose the part (drag on the small waveform to move the start), and Length scales the slice. Slices get soft edges, so at tone speeds a sample works as a grain.  On the wheel a sample is a square. Recordings are kept in the browser on that machine (up to 120 seconds each, mono) and are not part of the patch.
 
