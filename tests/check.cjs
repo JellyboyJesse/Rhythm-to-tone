@@ -188,7 +188,7 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   await inst.screenshot({path:path.join(OUT,'instrument-desktop.png'),fullPage:true});
   await inst.$eval('#reset',el=>{el.click();el.click();});await inst.waitForTimeout(200);
   check('Reset patch clears LFOs and restores speed',/none/.test(await inst.textContent('#lfoCount'))&&(await inst.evaluate(()=>state.base.speed))===0.5);
-  await inst.click('[data-go="110"]');await inst.waitForTimeout(700);
+  await inst.evaluate(()=>{state.base.speed=110;});await inst.$eval('#F',el=>el.dispatchEvent(new Event('input')));await inst.waitForTimeout(700);
   const p2=await ctx.newPage();await p2.goto(BASE);await p2.waitForTimeout(400);
   check('settings survive a reload',(await p2.evaluate(()=>state.base.speed))===110);await p2.close();
 
@@ -233,8 +233,7 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       check('samples are kept by the browser across a reload',await kept.evaluate(()=>!!samples[1]&&samples[1].name==='ping.wav'));await kept.close();
       await inst.evaluate(()=>{state.base.speed=4;});await inst.$eval('#dA',el=>{el.value=100;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(1500);
       check('the scope shows the measured signal',/last 4 s/.test(await inst.textContent('#stWin'))&&parseFloat(await inst.textContent('#stPeak'))>0.01,await inst.textContent('#stWin')+' · peak '+await inst.textContent('#stPeak'));
-      await inst.click('#dK [data-k="impulse"]');await inst.waitForTimeout(200);
-      check('a dot can be set to an impulse',await inst.evaluate(()=>state.rings[0].dk[0]==='impulse'&&document.querySelector('#dSc').hidden)&&/impulse/.test(await inst.textContent('#dWv')));
+      check('Impulse is no longer offered for a dot',await inst.evaluate(()=>!document.querySelector('#dK [data-k="impulse"]')&&document.querySelectorAll('#dK button').length===4));
       await inst.click('#sndTabs [data-t="smp"]');await inst.click('#smps .smp:nth-child(2) [data-x]');await inst.waitForTimeout(200);
       check('a sample slot can be cleared',await inst.evaluate(()=>samples[1]===null));}
     {await inst.click('#dK [data-k="inst"]');await inst.click('#dIl [data-s="2"]');await inst.waitForTimeout(200);
@@ -266,9 +265,25 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       await iw.close();
       const saved=await inst.evaluate(()=>{saveNow();return JSON.parse(localStorage.getItem('rit-state-v1')).inst[2].name;});
       check('instruments are saved with the patch',saved==='Glass bell');}
+    {check('choosing Instrument for a dot shows the Instruments list',await inst.evaluate(()=>!document.querySelector('#sndInst').hidden&&document.querySelector('#sndClk').hidden));
+      await inst.click('#sndTabs [data-t="shp"]');await inst.waitForTimeout(150);
+      const cb=await (await inst.$('#shpCv')).boundingBox();await inst.mouse.move(cb.x+4,cb.y+10);await inst.mouse.down();await inst.mouse.move(cb.x+cb.width-4,cb.y+cb.height-10,{steps:6});await inst.mouse.up();await inst.waitForTimeout(200);
+      const sh=await inst.evaluate(()=>state.shapes[0]);
+      check('drawing makes a custom LFO shape',!!sh&&sh.pts.length===32&&sh.pts[0]>0.8&&sh.pts[31]<-0.8&&sh.pts[15]<sh.pts[5]&&sh.pts[15]>sh.pts[26],sh?sh.name+': '+sh.pts[0]+' … '+sh.pts[15]+' … '+sh.pts[31]:'none');
+      await inst.$eval('label[for=F]',el=>el.dispatchEvent(new MouseEvent('click',{altKey:true,bubbles:true,cancelable:true})));await inst.waitForTimeout(150);
+      check('the shape appears in every LFO',await inst.evaluate(()=>{const a=[...document.querySelectorAll('.shapes [data-u="0"]')];return a.length>10&&a.every(b=>!b.hidden)&&[...document.querySelectorAll('.shapes [data-u="1"]')].every(b=>b.hidden);}));
+      await inst.$eval('#lfo-F [data-shape="U1"]',el=>el.click());await inst.$eval('#ld-F',el=>{el.value=el.max;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(150);
+      const lv=await inst.evaluate(()=>{const L={shape:'U1',rate:1,seed:0};return{sel:state.lfo.F.shape,a:lfoVal(L,0.01),b:lfoVal(L,0.5),c:lfoVal(L,0.97),none:lfoVal({shape:'U5',rate:1,seed:0},0.3)};});
+      check('an LFO can use the custom shape',lv.sel==='U1'&&lv.a>0.7&&Math.abs(lv.b)<0.25&&lv.c<-0.7&&lv.none===0,'start '+lv.a.toFixed(2)+', middle '+lv.b.toFixed(2)+', end '+lv.c.toFixed(2));
+      await inst.$eval('#lfo-F [data-x]',el=>el.click());
+      const fits=async w=>{await inst.setViewportSize({width:w,height:900});await inst.waitForTimeout(250);return inst.evaluate(()=>{const bad=[];document.querySelectorAll('#rings .ring').forEach((r,ri)=>{const it=[...r.querySelectorAll('.head label,.stepper,.lvl input,.lvl output')].filter(e=>e.offsetParent).map(e=>e.getBoundingClientRect());
+          for(let i=0;i<it.length;i++)for(let j=i+1;j<it.length;j++){const a=it[i],b=it[j];if(a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1)bad.push(ri);}
+          const rb=r.getBoundingClientRect();it.forEach(a=>{if(a.right>rb.right+1||a.left<rb.left-1)bad.push('out'+ri);});});return bad.length;});};
+      const ov=[];for(const w of[1024,1180,1240,1280,1366,1440,1680])ov.push(w+':'+await fits(w));await inst.setViewportSize({width:1280,height:900});await inst.waitForTimeout(200);
+      check('nothing in the rings panel overlaps at common window widths',ov.every(x=>/:0$/.test(x)),ov.join(' '));}
     await inst.click('#dotReset');await inst.keyboard.press('Escape');await inst.waitForTimeout(150);
     check('Reset dot and Esc clear the editor',await inst.evaluate(()=>state.rings[0].dp[0]===0&&state.rings[0].da[0]===1&&state.rings[0].pld[0]===0&&state.rings[0].dk[0]==='click'&&state.rings[0].kids[0]===null&&document.querySelector('#dotEd').hidden));}
-    {check('choosing Instrument for a dot shows the Instruments list',await inst.evaluate(()=>!document.querySelector('#sndInst').hidden&&document.querySelector('#sndClk').hidden));
+    {
       await inst.evaluate(()=>{const r=state.rings[1];r.dk[0]='wheel';r.kids[0]=newWheel();r.kids[0].rings[0].dk[1]='wheel';r.kids[0].rings[0].kids[1]=newWheel();});await inst.waitForTimeout(300);
       const rows=await inst.$$eval('#map .maprow',els=>els.map(e=>e.textContent));
       check('the map lists every wheel',rows.length===3&&/^Top/.test(rows[0])&&/Ring 2 · dot 1/.test(rows[1])&&/Ring 1 · dot 2/.test(rows[2]),rows.join(' | '));

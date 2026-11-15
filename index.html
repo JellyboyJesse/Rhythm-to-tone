@@ -83,7 +83,7 @@ input[type=checkbox]{accent-color:var(--accent);margin:0}
 .bar label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .bar .grow{flex:1 1 0}
 
-.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px 36px;align-items:start}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr);gap:26px 36px;align-items:start}
 .col{display:grid;gap:26px;min-width:0}
 @media (max-width:1239px){
   .cols{grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:26px 28px}
@@ -181,6 +181,12 @@ canvas{display:block;width:100%}
 .mbox label{display:flex;align-items:center;gap:6px;font-size:12px}
 .mbox p{margin:0}
 .sndb{display:grid;gap:12px;min-width:0}
+#shpCv{width:100%;height:150px;background:var(--panel);box-shadow:0 0 0 1px var(--line);touch-action:none;cursor:crosshair;display:block}
+#shpSlots button{padding:4px 9px;font-size:10px}
+#shpSlots button[data-empty="true"]{color:var(--muted)}
+#shpName{font:400 13px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 8px;min-width:0;flex:1 1 100px}
+.lab2{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.shapes button[data-u]{color:var(--lfo)}
 .map{display:grid}
 .maprow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:baseline;text-align:left;border:0;border-bottom:1px solid var(--soft);border-radius:0;padding:7px 6px 7px calc(6px + var(--d,0)*18px);text-transform:none;letter-spacing:0;font:400 12px var(--mono);border-left:2px solid transparent}
 .maprow b{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase}
@@ -292,14 +298,17 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
 @media (hover:none){.keys{display:none}}
 /* rings as a compact table on a desktop window (kept last so it wins over the stacked layout above) */
 .ringhead{display:none}
-@media (min-width:701px){
-  .ringhead{display:grid;grid-template-columns:minmax(86px,0.7fr) repeat(3,94px) minmax(70px,1fr);gap:0 10px;padding:0 0 4px 12px;font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+#pRings{container-type:inline-size}
+@container (min-width:440px){
+  .ringhead{display:grid;grid-template-columns:minmax(74px,0.7fr) repeat(3,82px) minmax(60px,1fr);gap:0 8px;padding:0 0 4px 12px;font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
   .ringhead span{text-align:center}.ringhead span:last-child{text-align:left}
-  .ring{grid-template-columns:minmax(86px,0.7fr) repeat(3,94px) minmax(70px,1fr);align-items:center;gap:4px 10px;padding:8px 0 8px 12px}
+  .ring{grid-template-columns:minmax(74px,0.7fr) repeat(3,82px) minmax(60px,1fr);align-items:center;gap:4px 8px;padding:8px 0 8px 12px}
   .ring:first-child{padding-top:8px}
   .ring::before,.ring:first-child::before{top:8px;bottom:8px}
   .ring .head{grid-column:auto;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
-  .ring .head label{white-space:nowrap}
+  .ring .head label{white-space:nowrap;overflow:hidden;max-width:100%}
+  .ring .stepper button{padding:2px 6px}
+  .ring .stepper output{min-width:3ch}
   .ring .head .pat{font-size:11px;max-width:100%;overflow:hidden;white-space:nowrap}
   .ring>.ctl{justify-items:center}
   .ring>.ctl .top{min-height:0;justify-content:center}
@@ -367,10 +376,6 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
         <div class="ticks" aria-hidden="true"><span>¼/s</span><span>1/s</span><span>10/s</span><span>100 Hz</span><span>1 kHz</span></div>
         <div id="speedLfo"></div>
         <div class="row">
-          <button type="button" data-go="0.5">Rhythm · ½/s</button>
-          <button type="button" data-go="12">Blur · 12/s</button>
-          <button type="button" data-go="110">Tone · A2</button>
-          <button type="button" data-go="220">Tone · A3</button>
           <button type="button" id="sweep" aria-pressed="false">Sweep ½/s → 220 Hz</button>
           <label class="check"><input type="checkbox" id="snap"> Snap to notes</label>
         </div>
@@ -400,7 +405,7 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
               <div class="ctl"><div class="top"><label for="dL">Length</label><output id="dLv"></output><button type="button" class="lfob" id="dlb-l" aria-expanded="false" aria-label="LFO for this dot's length">LFO</button></div><input type="range" id="dL" min="-200" max="200" step="1"></div>
               <div class="ctl"><div class="top"><label for="dA">Level</label><output id="dAv"></output></div><input type="range" id="dA" min="0" max="100" step="1"></div>
               <div class="ctl dotin"><div class="top"><span class="lab">Plays</span><output id="dWv"></output></div>
-                <div class="row"><div class="seg" id="dK" role="group" aria-label="What this dot plays"><button type="button" data-k="click" aria-pressed="true">Click</button><button type="button" data-k="wheel" aria-pressed="false">Wheel</button><button type="button" data-k="sample" aria-pressed="false">Sample</button><button type="button" data-k="impulse" aria-pressed="false">Impulse</button><button type="button" data-k="inst" aria-pressed="false">Instrument</button></div><button type="button" id="dOpen" hidden>Open wheel ›</button></div></div>
+                <div class="row"><div class="seg" id="dK" role="group" aria-label="What this dot plays"><button type="button" data-k="click" aria-pressed="true">Click</button><button type="button" data-k="wheel" aria-pressed="false">Wheel</button><button type="button" data-k="sample" aria-pressed="false">Sample</button><button type="button" data-k="inst" aria-pressed="false">Instrument</button></div><button type="button" id="dOpen" hidden>Open wheel ›</button></div></div>
               <div id="dSc" hidden>
                 <div class="ctl full"><div class="top"><span class="lab">Slot</span><output id="dSlv"></output></div>
                   <div class="seg" id="dSl" role="group" aria-label="Which sample this dot plays"></div></div>
@@ -427,15 +432,23 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
         <p class="hint">Every wheel in the patch, with the wheels inside its dots listed under it. Click one to open it on the wheel.</p>
       </section>
 
-      <section class="panel" id="pSounds" aria-label="Sounds">
-        <div class="row spread"><h2><b>06</b>Sounds</h2>
-          <div class="seg" id="sndTabs" role="group" aria-label="Which sounds"><button type="button" data-t="clk" aria-pressed="true">Clicks</button><button type="button" data-t="smp" aria-pressed="false">Samples</button><button type="button" data-t="inst" aria-pressed="false">Instruments</button></div></div>
+      <section class="panel" id="pSounds" aria-label="Library: clicks, samples, instruments and LFO shapes">
+        <div class="row spread"><h2><b>06</b>Library</h2>
+          <div class="seg" id="sndTabs" role="group" aria-label="Which sounds"><button type="button" data-t="clk" aria-pressed="true">Clicks</button><button type="button" data-t="smp" aria-pressed="false">Samples</button><button type="button" data-t="inst" aria-pressed="false">Instruments</button><button type="button" data-t="shp" aria-pressed="false">LFO shapes</button></div></div>
         <div class="sndb" id="sndClk">
         <div class="ctls" id="soundCtls"></div>
         <div class="row"><button type="button" id="resync">Re-align rings</button><span class="sub mono" id="engineNote"></span></div>
         <p class="warn" id="dropWarn" hidden>Too many overlapping sounds: some were dropped. Shorten the click or the sample slice, or slow down.</p>
         <p class="hint">Click pitch sets a formant. It stays fixed in Hz while the loop pitch moves, like a vowel. Each click keeps the pitch and length it had when it started, so LFOs on the click change it hit by hit. Detune gives each ring a slightly different speed, so the tone splits into separate beating voices. Shared vibrato wobbles every ring together, which helps the ear hear one sound.</p>
       </div>
+        <div class="sndb" id="sndShp" hidden>
+          <div class="row"><span class="lab2">Slot</span><div class="seg" id="shpSlots" role="group" aria-label="LFO shape slot"></div>
+            <input type="text" id="shpName" maxlength="24" aria-label="Name of this shape" placeholder="Name"></div>
+          <canvas id="shpCv" aria-label="Draw the LFO shape here: one cycle, 32 points"></canvas>
+          <div class="row"><div class="seg" id="shpLine" role="group" aria-label="Line"><button type="button" data-v="1" aria-pressed="true">Smooth</button><button type="button" data-v="0" aria-pressed="false">Steps</button></div>
+            <button type="button" id="shpRand">Randomise</button><button type="button" id="shpFlip">Flip</button><button type="button" id="shpDel">Delete shape</button></div>
+          <p class="sub mono" id="shpNote">Draw in the box to make a shape. It then shows as a numbered button in every LFO's row of shapes.</p>
+        </div>
         <div class="sndb" id="sndSmp" hidden>
         <div class="smps" id="smps"></div>
         <p class="sub mono" id="smpNote">Load or drop an audio file on a slot. Then set a dot to Sample.</p>
@@ -488,8 +501,14 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
 function frac(x){return x-Math.floor(x);}
 function clamp(x,a,b){return x<a?a:x>b?b:x;}
 function rnd(k,seed){return frac(Math.sin(k*127.1+seed*3117.7)*43758.5453);}
+/* Custom LFO shapes: eight slots drawn by the user (state.shapes), named 'U1'..'U8' wherever an LFO shape is chosen.
+   USHAPES holds the slots for lfoVal; setShapes fills it (on the page, and in the engine each time the patch arrives). */
+const USHAPES=[null,null,null,null,null,null,null,null];
+function setShapes(a){for(let i=0;i<8;i++){const x=a?a[i]:null;USHAPES[i]=x&&x.pts&&x.pts.length?x:null;}}
 function lfoVal(L,t){
-  const seed=L.seed||0,ph=t*L.rate+seed;
+  const seed=L.seed||0,ph=t*L.rate+seed,sh=L.shape;
+  if(sh.charCodeAt(0)===85){const U=USHAPES[sh.charCodeAt(1)-49];if(!U)return 0;                 /* 'U' + slot number */
+    const P=U.pts,n=P.length,x=frac(ph)*n,i=x|0;return U.smooth?P[i]+(P[(i+1)%n]-P[i])*(x-i):P[i];}
   switch(L.shape){
     case 'tri':return 1-4*Math.abs(frac(ph)-0.5);
     case 'saw':return 2*frac(ph)-1;
@@ -642,7 +661,7 @@ class Engine{
   setSample(i,d,sr){if(i>=0&&i<8)this.smp[i]=d&&d.length>2?{d,sr:sr||this.sr}:null;}
   setState(S,jump){
     if(S.inst)for(let i=0;i<8;i++){const I=S.inst[i];if(I&&I.src==='wt'&&I.wt!=='smp'&&!this.wt[I.wt])this.wt[I.wt]=wtMake(I.wt);}   /* built here, not when a note starts */
-    this.S=S;this.dirty=true;this.update(this.t);if(jump)this.lf=this.lt;}
+    setShapes(S.shapes);this.S=S;this.dirty=true;this.update(this.t);if(jump)this.lf=this.lt;}
   /* an inner ring's hit positions and dot numbers, worked out once and kept until its pattern changes */
   pat(r){let c=this.pc.get(r);if(!c){c={k:-1,p:[],d:[]};this.pc.set(r,c);}
     const k=r.on?((r.steps*17+r.hits)*17+r.rot):-2;if(c.k!==k){c.k=k;c.p=ringPos(r);c.d=ringDots(r);}return c;}
@@ -891,7 +910,7 @@ class Engine{
 }
 function applyMsg(e,d){if(d.smp)e.setSample(d.smp.i,d.smp.d,d.smp.sr);if(d.note&&e.ready)e.note(d.note.i,0,d.note.amp,d.note.st,d.note.gate*e.sr);if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();}
 
-const WORKLET_SRC=[frac,clamp,rnd,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotWheel,dotSliceA,dotSliceN,wtMake,dotTurn,dotSeed,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
+const WORKLET_SRC='const USHAPES=[null,null,null,null,null,null,null,null];\n'+[frac,clamp,rnd,setShapes,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotWheel,dotSliceA,dotSliceN,wtMake,dotTurn,dotSeed,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
  +'\n'+Engine.toString()+`
 class RTProcessor extends AudioWorkletProcessor{
   constructor(){super();this.e=new Engine(sampleRate);this.c=0;this.port.onmessage=m=>applyMsg(this.e,m.data);}
@@ -922,6 +941,11 @@ for(let i=0;i<4;i++){
   LFOSPEC['r'+i+'level']={name:`Ring ${i+1} level`,max:1,step:0.01,fmt:v=>'±'+Math.round(v*100)+'%'};
 }
 const SHAPES=[['sine','Sin'],['tri','Tri'],['saw','Saw'],['square','Sqr'],['random','S&H'],['drift','Drift']],SHAPE_IDS=SHAPES.map(s=>s[0]);
+const okShape=v=>SHAPE_IDS.includes(v)||/^U[1-8]$/.test(v);
+function newShape(name){return{name:name||'Shape',smooth:true,pts:Array.from({length:32},(_,i)=>Math.round(Math.sin(2*Math.PI*i/32)*100)/100)};}
+function sanShape(x){if(!x||typeof x!=='object'||!Array.isArray(x.pts))return null;
+  return{name:String(x.name||'Shape').slice(0,24),smooth:x.smooth!==false,pts:Array.from({length:32},(_,i)=>typeof x.pts[i]==='number'&&isFinite(x.pts[i])?clamp(x.pts[i],-1,1):0)};}
+const shapeBtns=()=>[1,2,3,4,5,6,7,8].map(i=>`<button type="button" data-shape="U${i}" data-v="U${i}" data-u="${i-1}" aria-pressed="false" hidden>${i}</button>`).join('');
 function hashKey(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return(h>>>0)/4294967296;}
 const rateMap=v=>0.02*Math.pow(1000,v/1000),rateInv=r=>Math.round(Math.log(r/0.02)/Math.log(1000)*1000);
 const fmtRate=r=>r>=1?r.toFixed(2)+' Hz':r.toFixed(3)+' Hz · '+(1/r).toFixed(1)+' s';
@@ -951,7 +975,7 @@ const INST_PRESETS=[
   ['Sweep',{src:'wt',wt:'formant',wp:0,note:48,uni:3,udet:10,a:0.05,d:0.4,s:0.8,r:0.6,ft:'off',mods:[{type:'draw',dest:'wp',depth:1,sync:'loop',rate:1,smooth:true,pts:[0,0.15,0.3,0.5,0.7,0.85,1,0.9,0.75,0.6,0.5,0.4,0.3,0.2,0.1,0.05]}]}],
   ['Organ',{src:'osc',wave:'sine',note:48,o2l:0.5,o2w:'sine',o2s:12,o2f:0,sub:0.4,a:0.005,d:0.1,s:1,r:0.08,ft:'off'}]];
 function sanMod(x){if(!x||typeof x!=='object'||!MOD_TYPES.includes(x.type))return null;const d=newMod(x.type),sync=MOD_SYNC.includes(x.sync)?x.sync:'hz';
-  return{type:x.type,dest:MOD_DESTS.includes(x.dest)?x.dest:'fc',depth:num(x.depth,0,1,0.3),sync,rate:sync==='loop'?Math.round(num(x.rate,1,32,1)):num(x.rate,0.02,40,0.5),shape:SHAPE_IDS.includes(x.shape)?x.shape:'sine',
+  return{type:x.type,dest:MOD_DESTS.includes(x.dest)?x.dest:'fc',depth:num(x.depth,0,1,0.3),sync,rate:sync==='loop'?Math.round(num(x.rate,1,32,1)):num(x.rate,0.02,40,0.5),shape:okShape(x.shape)?x.shape:'sine',
     pts:Array.from({length:16},(_,i)=>num(Array.isArray(x.pts)?x.pts[i]:undefined,-1,1,d.pts[i])),smooth:x.smooth!==false,ring:Math.round(num(x.ring,0,3,0)),val:['da','dp','dl'].includes(x.val)?x.val:'da',glide:num(x.glide,0,2,0)};}
 const INST_WAVES=['sine','saw','square','noise'],INST_MODES=['one','held','loop','ping','rev'],INST_FT=['off','lp','lp4','bp','hp','nt','cb'],INST_VM=['poly','mono','legato'];
 function newInst(name){return{name:name||'Instrument',src:'osc',wave:'saw',ss:0,note:48,fine:0,mode:'held',st:0,ls:0.25,le:0.75,a:0.01,d:0.2,s:0.6,r:0.4,vel:0.7,
@@ -972,7 +996,7 @@ const blank=()=>Array(16).fill(null);
 function defaultSeq(){return{playing:false,steps:8,bpm:96,div:2,swing:0,clock:'tempo',loopsPerStep:1,glideTime:0.12,
   gate:Array(16).fill(true),glide:Array(16).fill(false),
   lanes:[{key:'speed',snap:true,vals:blank()},{key:'F',snap:false,vals:blank()},{key:'r0rot',snap:false,vals:blank()},{key:'',snap:false,vals:blank()}]};}
-function defaults(){return{base:{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6},rings:defaultRings(),lfo:{},seq:defaultSeq(),inst:Array(8).fill(null)};}
+function defaults(){return{base:{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6},rings:defaultRings(),lfo:{},seq:defaultSeq(),inst:Array(8).fill(null),shapes:Array(8).fill(null)};}
 
 function sanitizeSeq(q){
   const d=defaultSeq();if(!q||typeof q!=='object')return d;
@@ -987,7 +1011,7 @@ function sanitizeSeq(q){
 /* one ring, and the wheels inside its dots (depth 0 = a top ring; wheels below the third level are dropped) */
 function sanRing(x,r,depth){x=x&&typeof x==='object'?x:{};const steps=Math.round(num(x.steps,1,16,r.steps));
   const arr=(a,lo,hi,d)=>Array.from({length:16},(_,k)=>num(Array.isArray(a)?a[k]:undefined,lo,hi,d));
-  const shp=a=>Array.from({length:16},(_,k)=>Array.isArray(a)&&SHAPE_IDS.includes(a[k])?a[k]:'sine');
+  const shp=a=>Array.from({length:16},(_,k)=>Array.isArray(a)&&okShape(a[k])?a[k]:'sine');
   return{on:typeof x.on==='boolean'?x.on:r.on,steps,hits:Math.round(num(x.hits,0,steps,Math.min(r.hits,steps))),rot:Math.round(num(x.rot,0,steps-1,0)),level:num(x.level,0,1,1),
     dp:arr(x.dp,-24,24,0),dl:arr(x.dl,-2,2,0),da:arr(x.da,0,1,1),
     dk:Array.from({length:16},(_,k)=>Array.isArray(x.dk)&&DOT_KINDS.includes(x.dk[k])?x.dk[k]:'click'),dt:arr(x.dt,1/64,1,0.25),
@@ -1001,7 +1025,8 @@ function sanitizeState(o){
   d.base={speed:num(B.speed,SMIN,SMAX,0.5),F:num(B.F,60,4000,700),sigma:num(B.sigma,0.2,8,1.2),det:num(B.det,0,30,0),vib:num(B.vib,0,60,0),vol:num(B.vol,0,1,0.6)};
   if(Array.isArray(o.rings))d.rings=d.rings.map((r,i)=>sanRing(o.rings[i],r,0));
   if(o.lfo&&typeof o.lfo==='object')for(const k in o.lfo){if(!LFOSPEC[k])continue;const l=o.lfo[k]||{};
-    d.lfo[k]={shape:SHAPE_IDS.includes(l.shape)?l.shape:'sine',rate:num(l.rate,0.02,20,0.2),depth:num(l.depth,0,LFOSPEC[k].max,0),seed:hashKey(k)};}
+    d.lfo[k]={shape:okShape(l.shape)?l.shape:'sine',rate:num(l.rate,0.02,20,0.2),depth:num(l.depth,0,LFOSPEC[k].max,0),seed:hashKey(k)};}
+  d.shapes=Array.from({length:8},(_,i)=>sanShape(Array.isArray(o.shapes)?o.shapes[i]:null));
   d.inst=Array.from({length:8},(_,i)=>sanInst(Array.isArray(o.inst)?o.inst[i]:null));
   d.seq=sanitizeSeq(o.seq);d.seq.playing=false;
   return d;
@@ -1308,7 +1333,7 @@ function initInstrument(){
   function wheelAt(n){let rs=state.rings;for(let k=0;k<n;k++){const v=view[k],w=rs[v.ri]&&rs[v.ri].kids[v.d];if(!w)return null;rs=w.rings;}return rs;}
   const VR=()=>wheelAt(view.length)||state.rings;
   const eachRing=(rs,f)=>rs.forEach(r=>{f(r);r.kids.forEach(w=>{if(w)eachRing(w.rings,f);});});
-  let drawMap=()=>{};
+  let drawMap=()=>{},syncShapesAll=()=>{};
   function sendState(jump){audio.send({S:JSON.parse(JSON.stringify(state)),jump:!!jump});}
   function changed(){sendState();saveSoon();}
   function sendSample(i){const x=samples[i];audio.send({smp:{i,d:x?x.d:null,sr:x?x.sr:0}});}
@@ -1328,7 +1353,7 @@ function initInstrument(){
   function makeLfoPanel(host,key){
     const spec=LFOSPEC[key],p=document.createElement('div');p.className='lfo';p.id='lfo-'+key;p.hidden=true;
     p.innerHTML=`<div class="ttl"><span>LFO · ${spec.name}</span><button type="button" data-x>Remove LFO</button></div>
-      <div class="shapes" role="group" aria-label="LFO shape">${SHAPES.map(([s,n])=>`<button type="button" data-shape="${s}" aria-pressed="false">${n}</button>`).join('')}</div>
+      <div class="shapes" role="group" aria-label="LFO shape">${SHAPES.map(([s,n])=>`<button type="button" data-shape="${s}" aria-pressed="false">${n}</button>`).join('')}${shapeBtns()}</div>
       <div class="ctl"><div class="top"><label for="lr-${key}">Rate</label><output id="lr-${key}v"></output></div><input type="range" id="lr-${key}" min="0" max="1000"></div>
       <div class="ctl"><div class="top"><label for="ld-${key}">Depth</label><output id="ld-${key}v"></output></div><input type="range" id="ld-${key}" min="0" max="${spec.max}" step="${spec.step}"></div>`;
     host.appendChild(p);
@@ -1395,7 +1420,7 @@ function initInstrument(){
     syncLfoCount();}
   function makeDotLfo(w){const c=DL[w],p=document.createElement('div');p.className='lfo';p.id='dlfo-'+w;p.hidden=true;
     p.innerHTML=`<div class="ttl"><span>LFO · ${c.name}</span><button type="button" data-x>Remove LFO</button></div>
-      <div class="shapes" role="group" aria-label="LFO shape">${SHAPES.map(([sh,n])=>`<button type="button" data-shape="${sh}" aria-pressed="false">${n}</button>`).join('')}</div>
+      <div class="shapes" role="group" aria-label="LFO shape">${SHAPES.map(([sh,n])=>`<button type="button" data-shape="${sh}" aria-pressed="false">${n}</button>`).join('')}${shapeBtns()}</div>
       <div class="ctl"><div class="top"><label for="dr-${w}">Rate</label><output id="dr-${w}v"></output></div><input type="range" id="dr-${w}" min="0" max="1000"></div>
       <div class="ctl"><div class="top"><label for="dd-${w}">Depth</label><output id="dd-${w}v"></output></div><input type="range" id="dd-${w}" min="0" max="${c.max}" step="${c.step}"></div>`;
     $('.dotctls').appendChild(p);
@@ -1421,7 +1446,7 @@ function initInstrument(){
     syncDotUI(true);changed();});
   /* --- instruments: eight slots in the patch, edited in their own window --- */
   function needInst(i){if(!state.inst[i]){state.inst[i]=newInst('Instrument '+(i+1));drawInsts();postInst(null);}}
-  function postInst(origin){bus.post({type:'inst-sync',inst:state.inst,smp:samples.map(x=>x?x.name:null),origin});}
+  function postInst(origin){bus.post({type:'inst-sync',inst:state.inst,smp:samples.map(x=>x?x.name:null),shp:state.shapes.map(x=>x?x.name:null),origin});}
   let instWin=null;
   function openInst(i){needInst(i);changed();
     const url=location.href.split('#')[0]+'#instrument-'+(i+1);
@@ -1546,9 +1571,45 @@ function initInstrument(){
   /* the tuning controls sit with Speed, and Volume in the top bar */
   for(const [id,key,host] of [['D','det','#tuneCtls'],['V','vib','#tuneCtls'],['O','vol','#tbVol']]){$(host).appendChild($('#'+id).closest('.ctl'));$(host).appendChild($('#lfo-'+key));}
   /* Sounds: one panel, three lists */
-  const showSnd=t=>{$$('#sndTabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t?'true':'false'));$('#sndClk').hidden=t!=='clk';$('#sndSmp').hidden=t!=='smp';$('#sndInst').hidden=t!=='inst';};
+  const showSnd=t=>{$$('#sndTabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t?'true':'false'));$('#sndShp').hidden=t!=='shp';$('#sndClk').hidden=t!=='clk';$('#sndSmp').hidden=t!=='smp';$('#sndInst').hidden=t!=='inst';};
   $$('#sndTabs button').forEach(b=>b.onclick=()=>showSnd(b.dataset.t));
   $$('#dK button').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k;if(sel&&(k==='sample'||k==='inst'||k==='click'))showSnd(k==='sample'?'smp':k==='inst'?'inst':'clk');}));
+  /* LFO shapes: eight slots, drawn here, usable in every LFO */
+  let shpCur=0;
+  const syncShapeBtns=()=>{$$('[data-u]').forEach(b=>{const x=state.shapes[+b.dataset.u];b.hidden=!x;b.title=x?x.name:'';});};
+  function drawShape(){const cv=$('#shpCv');if($('#sndShp').hidden)return;const {g,w,h}=fit(cv);g.clearRect(0,0,w,h);const x=state.shapes[shpCur],n=32,cw=w/n,Y=v=>h/2-v*(h/2-6);
+    g.strokeStyle=T['--soft'];g.lineWidth=1;for(let i=4;i<n;i+=4){g.beginPath();g.moveTo(i*cw,0);g.lineTo(i*cw,h);g.stroke();}
+    g.strokeStyle=T['--line'];g.beginPath();g.moveTo(0,h/2);g.lineTo(w,h/2);g.stroke();
+    if(!x){g.fillStyle=T['--muted'];g.font=font(11);g.textAlign='center';g.fillText('Empty slot: draw here to make a shape',w/2,h/2-8);return;}
+    g.strokeStyle=T['--lfo'];g.lineWidth=2;g.beginPath();
+    if(x.smooth)for(let i=0;i<=n;i++){const y=Y(x.pts[i%n]);i?g.lineTo(i*cw,y):g.moveTo(0,y);}
+    else for(let i=0;i<n;i++){const y=Y(x.pts[i]);i?g.lineTo(i*cw,y):g.moveTo(0,y);g.lineTo((i+1)*cw,y);}
+    g.stroke();}
+  function syncShapes(){const x=state.shapes[shpCur];
+    $$('#shpSlots button').forEach(b=>{b.setAttribute('aria-pressed',+b.dataset.s===shpCur?'true':'false');b.dataset.empty=!state.shapes[+b.dataset.s];});
+    if(document.activeElement!==$('#shpName'))$('#shpName').value=x?x.name:'';$('#shpName').disabled=!x;
+    $$('#shpLine button').forEach(b=>b.setAttribute('aria-pressed',!!x&&(b.dataset.v==='1')===x.smooth?'true':'false'));
+    for(const id of['#shpRand','#shpFlip','#shpDel'])$(id).disabled=!x;
+    setText('#shpNote',x?`Shape ${shpCur+1} shows as button ${shpCur+1} in every LFO's row of shapes, here and in the instrument window.`:"Draw in the box to make a shape. It then shows as a numbered button in every LFO's row of shapes.");
+    syncShapeBtns();drawShape();}
+  const shapeChanged=()=>{setShapes(state.shapes);syncShapes();changed();postInst(null);};
+  $('#shpSlots').innerHTML=[0,1,2,3,4,5,6,7].map(i=>`<button type="button" data-s="${i}" aria-pressed="false">${i+1}</button>`).join('');
+  $$('#shpSlots button').forEach(b=>b.onclick=()=>{shpCur=+b.dataset.s;syncShapes();});
+  $('#shpName').oninput=e=>{const x=state.shapes[shpCur];if(x){x.name=e.target.value.slice(0,24)||'Shape';syncShapeBtns();changed();postInst(null);}};
+  $$('#shpLine button').forEach(b=>b.onclick=()=>{const x=state.shapes[shpCur];if(x){x.smooth=b.dataset.v==='1';shapeChanged();}});
+  $('#shpRand').onclick=()=>{const x=state.shapes[shpCur];if(x){x.pts=x.pts.map(()=>Math.round((Math.random()*2-1)*100)/100);shapeChanged();}};
+  $('#shpFlip').onclick=()=>{const x=state.shapes[shpCur];if(x){x.pts=x.pts.map(v=>-v);shapeChanged();}};
+  $('#shpDel').onclick=()=>{state.shapes[shpCur]=null;shapeChanged();};
+  {const cv=$('#shpCv');let down=false,last=-1;
+    const at=e=>{const b=cv.getBoundingClientRect();let made=false;if(!state.shapes[shpCur]){state.shapes[shpCur]=newShape('Shape '+(shpCur+1));made=true;}
+      const x=state.shapes[shpCur],i=clamp(Math.floor((e.clientX-b.left)/b.width*32),0,31),v=Math.round(clamp(1-2*(e.clientY-b.top-6)/Math.max(1,b.height-12),-1,1)*100)/100;
+      if(last>=0&&Math.abs(i-last)>1){const a=Math.min(i,last),z=Math.max(i,last),v0=x.pts[last];for(let k=a;k<=z;k++)x.pts[k]=Math.round((v0+(v-v0)*(Math.abs(k-last)/Math.abs(i-last)))*100)/100;}   /* fill the gap of a fast stroke */
+      x.pts[i]=v;last=i;setShapes(state.shapes);if(made)syncShapes();else drawShape();changed();if(made)postInst(null);};
+    cv.addEventListener('pointerdown',e=>{down=true;last=-1;try{cv.setPointerCapture(e.pointerId);}catch(_){}at(e);});
+    cv.addEventListener('pointermove',e=>{if(down)at(e);});cv.addEventListener('pointerup',()=>{down=false;});cv.addEventListener('pointercancel',()=>{down=false;});}
+  syncShapesAll=()=>{setShapes(state.shapes);syncShapes();};syncShapesAll();
+  $$('#sndTabs button').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.t==='shp')syncShapes();}));
+
   /* the map: every wheel in the patch, as a list you can jump from */
   let mapSig='';const KN={click:['click','clicks'],wheel:['wheel','wheels'],sample:['sample','samples'],impulse:['impulse','impulses'],inst:['instrument','instruments']};
   drawMap=()=>{const rows=[];
@@ -1576,7 +1637,7 @@ function initInstrument(){
     if(!resetArm){b.textContent='Tap again to reset';resetArm=setTimeout(()=>{resetArm=0;b.textContent='Reset patch';},3000);return;}
     clearTimeout(resetArm);resetArm=0;b.textContent='Reset patch';
     const d=defaults();state.base=d.base;state.rings=d.rings;state.lfo={};view.length=0;syncView();$$('.lfo').forEach(p=>p.hidden=true);selectDot(null);syncAllUI();changed();};
-  function syncAllUI(){speedEl.value=s2v(state.base.speed);$('#F').value=FmapInv(state.base.F);$('#S').value=SmapInv(state.base.sigma);
+  function syncAllUI(){syncShapesAll();speedEl.value=s2v(state.base.speed);$('#F').value=FmapInv(state.base.F);$('#S').value=SmapInv(state.base.sigma);
     $('#D').value=Math.round(state.base.det*10);$('#V').value=Math.round(state.base.vib*10);$('#O').value=Math.round(state.base.vol*100);
     syncRingUI();Object.keys(LFOSPEC).forEach(syncLfoUI);}
 
@@ -1931,7 +1992,7 @@ function mountInstEditor(host,slot0){
             <div class="row"><span class="lab">Mod ${n+1}</span><div class="seg" role="group" aria-label="Modulator ${n+1} type" data-mseg="type">${[['off','Off'],['lfo','LFO'],['draw','Drawn'],['wheel','Wheel'],['rand','Random']].map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="false">${t}</button>`).join('')}</div></div>
             <div class="mbody col" style="gap:10px">
               <div class="row"><label class="lab" for="m${n}-dest">To</label><select id="m${n}-dest" data-mk="dest">${Object.entries(DEST).map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select></div>
-              <div data-t="lfo"><div class="seg" role="group" aria-label="Shape" data-mseg="shape">${SHAPES.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="false">${t}</button>`).join('')}</div></div>
+              <div data-t="lfo"><div class="seg" role="group" aria-label="Shape" data-mseg="shape">${SHAPES.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="false">${t}</button>`).join('')}${shapeBtns()}</div></div>
               <div data-t="draw" class="col" style="gap:8px"><canvas class="mdraw" aria-label="Draw the shape here: 16 steps"></canvas>
                 <div class="row"><div class="seg" role="group" aria-label="Line" data-mseg="smooth"><button type="button" data-v="1" aria-pressed="false">Smooth</button><button type="button" data-v="0" aria-pressed="false">Steps</button></div><button type="button" data-act="flat">Clear</button><button type="button" data-act="rand">Randomise</button></div></div>
               <div data-t="wheel" class="row"><span class="pair"><span class="lab">Reads ring</span><div class="seg" role="group" aria-label="Which ring of the top wheel" data-mseg="ring">${[0,1,2,3].map(v=>`<button type="button" data-v="${v}" aria-pressed="false">${v+1}</button>`).join('')}</div></span>
@@ -2040,7 +2101,7 @@ function mountInstEditor(host,slot0){
   q('#i-paste').onclick=()=>{let v=null;try{v=sanInst(JSON.parse(localStorage.getItem('rit-inst-clip')));}catch(e){}if(!v){q('#i-stat').textContent='Nothing copied yet.';return;}inst[cur]=v;sync();commit();q('#i-stat').textContent='Pasted into slot '+(cur+1)+'.';};
   q('#i-aud').onclick=()=>bus.post({type:'inst-note',i:cur,st:0,gate:0.6});
   q('#i-close').onclick=()=>window.close();
-  bus.on(m=>{if(m.type!=='inst-sync')return;linked=true;names=m.smp||names;
+  bus.on(m=>{if(m.type!=='inst-sync')return;linked=true;names=m.smp||names;qa('[data-u]').forEach(b=>{const nm=m.shp?m.shp[+b.dataset.u]:null;b.hidden=!nm;b.title=nm||'';});
     if(m.origin!==me||!inst.some(Boolean))inst=(m.inst||[]).map(sanInst).concat(Array(8).fill(null)).slice(0,8);
     q('#i-stat').textContent='Saved in the patch · slot '+(cur+1);sync();});
   smpChanged=()=>sync();smpLoadAll();

@@ -111,7 +111,9 @@ The LFO buttons beside a dot's Pitch and Length give that dot its own LFO, with 
 
 ## Finding your way around
 
-The top bar holds sound, the note readout, a small scope, Volume, the sequencer, and three menus (LFOs, Patch, View). To give a control an LFO, hold ⌥ (Alt) and click it; the LFO button then stays visible on that control. The Map lists every wheel in the patch, with the wheels inside its dots under it, and opens the one you click. Sounds has tabs for Clicks, Samples and Instruments. The Circles panel can be switched on from the View menu.
+The top bar holds sound, the note readout, a small scope, Volume, the sequencer, and three menus (LFOs, Patch, View). To give a control an LFO, hold ⌥ (Alt) and click it; the LFO button then stays visible on that control. The Map lists every wheel in the patch, with the wheels inside its dots under it, and opens the one you click. The Library panel has tabs for Clicks, Samples, Instruments and LFO shapes. The Circles panel can be switched on from the View menu.
+
+**Your own LFO shapes.** The Library panel's LFO shapes tab has eight slots. Pick a slot and draw one cycle in the box (smooth or stepped). Each shape you make shows up as a numbered button in every LFO's row of shapes, in the main window and in the instrument window, and is saved with the patch.
 
 ## Wheels inside dots
 
@@ -121,7 +123,7 @@ When a playhead crosses a dot, the wheel inside makes one turn and stops. **Turn
 
 ## Samples and impulses
 
-**Inside** can also be Sample or Impulse. The Samples panel has eight slots: load an audio file with Load, or drop one on a slot. A sample dot plays a slice of its slot's recording each time it fires. Pitch changes the playback speed, Start and Slice choose the part (drag on the small waveform to move the start), and Length scales the slice. Slices get soft edges, so at tone speeds a sample works as a grain. An impulse dot is a single spike with no pitch. On the wheel a sample is a square and an impulse is a spike. Recordings are kept in the browser on that machine (up to 120 seconds each, mono) and are not part of the patch.
+A dot can also play a Sample. The Samples panel has eight slots: load an audio file with Load, or drop one on a slot. A sample dot plays a slice of its slot's recording each time it fires. Pitch changes the playback speed, Start and Slice choose the part (drag on the small waveform to move the start), and Length scales the slice. Slices get soft edges, so at tone speeds a sample works as a grain.  On the wheel a sample is a square. Recordings are kept in the browser on that machine (up to 120 seconds each, mono) and are not part of the patch.
 
 The Scope shows the signal going to the speaker: two turns of the loop when it is a tone, the level over the last four seconds when it is a rhythm.
 
