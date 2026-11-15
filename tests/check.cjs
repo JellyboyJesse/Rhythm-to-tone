@@ -353,6 +353,116 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       await p.screenshot({path:path.join(OUT,`${name}-phone-${scheme}.png`),fullPage:true});await p.close();}
     await ph.close();}
 
+
+  /* 7. sample playback, pause, sections and the track, dot LFOs */
+  {await inst.close();const p=await ctx.newPage();watch(p,'track page');await p.goto(BASE+'#sequencer');await p.waitForTimeout(300);   /* the sequencer page does not save the patch as it leaves */
+    await p.evaluate(()=>{try{localStorage.clear();}catch(e){}});await p.goto('about:blank');await p.goto(BASE);await p.waitForTimeout(500);
+    const r=await p.evaluate(()=>{
+      const sr=48000,z=()=>({on:false,steps:1,hits:0,rot:0,level:1}),R=o=>Object.assign(sanRing({on:true,steps:1,hits:1},mkRing(1,1,true),0),o);
+      const base=()=>{const S=sanitizeState(null);S.base.speed=2;S.base.sigma=0.5;S.rings=[R({}),z(),z(),z()].map((x,i)=>sanRing(x,mkRing(1,1,false),0));return S;};
+      const run=(e,sec,t0)=>{const n=Math.round(sec*sr/128)*128,o=new Float32Array(n);for(let i=0;i<n;i+=128)e.render(o.subarray(i,i+128),128,(t0||0)+i/sr);return o;};
+      const en=(o,a,b)=>{let v=0;for(let i=Math.round(a*sr);i<Math.round(b*sr)&&i<o.length;i++)v+=o[i]*o[i];return v;};
+      const tone=new Float32Array(48000*2);for(let i=0;i<tone.length;i++)tone[i]=0.5*Math.sin(2*Math.PI*300*i/48000);
+      const out={};
+      /* cut: a 2 s recording fired 8 times a second. With Cut only the newest hit (and one fading) sounds; with Overlap they pile up. */
+      const mk=(cut,extra)=>{const S=base();S.base.speed=8;S.rings[0].dk[0]='sample';S.rings[0].ds[0]=3;S.smpp[3]=sanSmpPlay(Object.assign({cut},extra||{}));const e=new Engine(sr);applyMsg(e,{smp:{i:3,d:tone,sr:48000}});applyMsg(e,{S,jump:true});return e;};
+      let e=mk(true);run(e,1.03);out.cutVoices=e.vo.filter(o=>o.on).length;
+      e=mk(false);run(e,1.03);out.overVoices=e.vo.filter(o=>o.on).length;
+      /* replacing the recording fades what was playing; Stop all silences everything */
+      e=mk(true);run(e,0.3);applyMsg(e,{smp:{i:3,d:new Float32Array(4800),sr:48000}});run(e,0.01,0.3);out.oldLeft=e.vo.filter(o=>o.on&&o.d===tone).length;
+      e=mk(false);run(e,0.6);applyMsg(e,{stop:true});applyMsg(e,{pause:true});const q=run(e,0.1,0.6);out.stopTail=en(q,0.02,0.1);
+      /* envelope on a sample: Held for 1/8 of a 0.5 s turn with a 20 ms release. One dot at 2 loops a second fires at 0.5 s. */
+      {const S=base();S.rings[0].dk[0]='sample';S.rings[0].ds[0]=3;S.smpp[3]=sanSmpPlay({mode:'held',hold:0.125,a:0.002,r:0.02});const e2=new Engine(sr);applyMsg(e2,{smp:{i:3,d:tone,sr:48000}});applyMsg(e2,{S,jump:true});
+        const o=run(e2,0.95);out.heldIn=en(o,0.51,0.56);out.heldAfter=en(o,0.7,0.95);}
+      /* pause: the playhead stands still and nothing new fires; un-pausing carries on from the same place */
+      {const S=base();const e2=new Engine(sr);applyMsg(e2,{S,jump:true});run(e2,0.3);const m0=e2.master;applyMsg(e2,{pause:true});const o=run(e2,1,0.3);out.pauseMove=Math.abs(e2.master-m0);out.pauseSound=en(o,0.1,1);
+        applyMsg(e2,{pause:false});const o2=run(e2,0.4,1.3);out.resume=en(o2,0.15,0.3);out.pauseT=e2.t;}
+      /* the track: section A (2 loops/s, 1 trip, played twice) then B (4 loops/s, 1 trip). It should end 2×0.5 + 0.25 = 1.25 s in, and the first click must sound at once. */
+      {const S=base();const A=sanitizeState(S),B=sanitizeState(S);B.base.speed=4;B.base.F=1400;
+        S.sections=[{name:'A',trips:1,base:A.base,rings:A.rings,lfo:{},seq:A.seq},{name:'B',trips:1,base:B.base,rings:B.rings,lfo:{},seq:B.seq}];S.track={items:[{s:0,rep:2},{s:1,rep:1}],loop:false};
+        const e2=new Engine(sr);applyMsg(e2,{S,jump:true});applyMsg(e2,{track:{play:true,from:0,loop:false}});
+        const buf=new Float32Array(128);let t=0,doneAt=-1,first=0;const seen=[];
+        while(t<2){e2.render(buf,128,t);if(t<0.01)for(const v of buf)first=Math.max(first,Math.abs(v));t+=128/sr;const ti=e2.tOn?e2.tI:-1;if(seen[seen.length-1]!==ti)seen.push(ti);if(doneAt<0&&e2.done)doneAt=t;}
+        out.trackDone=doneAt;out.trackSeen=seen.join(',');out.trackFirst=first;out.trackSpeed=e2.E.speed;}
+      /* a dot's level LFO: a very slow square holds one value for the test, so the click is at level 0.5 ± 0.3 */
+      {const pk=ald=>{const S=base();S.rings[0].da[0]=0.5;S.rings[0].ald[0]=ald;S.rings[0].alr[0]=0.02;S.rings[0].als[0]='square';const e2=new Engine(sr);applyMsg(e2,{S,jump:true});const o=run(e2,0.6);let m=0;for(const v of o)m=Math.max(m,Math.abs(v));
+          return{m,want:dotAmp(S.rings[0],0,0,0.5,{shape:'sine',rate:1,seed:0})};};const a=pk(0),b=pk(0.3);out.lvlRatio=b.m/a.m;out.lvlWant=b.want/0.5;}
+      /* eight modulators, and one of the new destinations (the eighth modulator opens the noise level) */
+      {const I=sanInst(Object.assign(newInst('t'),{src:'osc',wave:'sine',note:69,ft:'off',a:0.002,s:1,nz:0}));out.modSlots=I.mods.length;
+        const lvl=on=>{const S=base();S.rings[0].dk[0]='inst';S.rings[0].di[0]=0;S.inst[0]=JSON.parse(JSON.stringify(I));if(on)S.inst[0].mods[7]=sanMod({type:'lfo',dest:'nz',depth:1,sync:'hz',rate:0.02,shape:'square'});
+          const e2=new Engine(sr);applyMsg(e2,{S,jump:true});const o=run(e2,0.62);let hi=0;for(let i=Math.round(0.52*sr)+1;i<o.length;i++)hi+=(o[i]-o[i-1])**2;return hi;};
+        out.nzOff=lvl(false);out.nzOn=lvl(true);}
+      /* old patches: no smpp, no sections, four modulators */
+      {const S=sanitizeState({rings:[{on:true,steps:4,hits:4}],inst:[{name:'x',mods:[{type:'lfo',dest:'fc'}]}]});out.oldOk=S.smpp.length===8&&S.smpp[0].cut===true&&S.sections.length===0&&S.cur===-1&&S.inst[0].mods.length===8&&S.inst[0].mods[0].dest==='fc'&&S.rings[0].ald.length===16;}
+      return out;});
+    check('Cut: a new hit on a sample stops the one before it',r.cutVoices<=2&&r.overVoices>=6,`${r.cutVoices} voices with Cut, ${r.overVoices} with Overlap`);
+    check('replacing a recording fades out what was playing it',r.oldLeft===0,r.oldLeft+' voices left on the old audio after 10 ms');
+    check('Stop all silences everything',r.stopTail<1e-9,'energy after 20 ms '+r.stopTail.toExponential(1));
+    check('a sample follows its envelope: held, then released',r.heldIn>0.1&&r.heldAfter<r.heldIn*1e-5,'held '+r.heldIn.toFixed(2)+', after '+r.heldAfter.toExponential(1));
+    check('Pause freezes the playhead and the clock, and un-pausing carries on',r.pauseMove<1e-9&&r.pauseSound<1e-9&&r.resume>1e-4&&r.pauseT<0.75,`moved ${r.pauseMove}, sound ${r.pauseSound.toExponential(1)}, after resume ${r.resume.toExponential(1)}, clock ${r.pauseT.toFixed(2)} s`);
+    check('the track plays its sections in order and switches as the playhead crosses the top',Math.abs(r.trackDone-1.25)<0.01&&r.trackSeen==='0,1,-1'&&r.trackFirst>0.01&&Math.abs(r.trackSpeed-4)<1e-6,`ended at ${r.trackDone.toFixed(4)} s, parts ${r.trackSeen}, first click ${r.trackFirst.toFixed(3)}`);
+    check('a dot\'s level LFO moves its level',Math.abs(r.lvlRatio-r.lvlWant)<0.01&&Math.abs(r.lvlWant-1)>0.3,`engine ×${r.lvlRatio.toFixed(3)}, maths ×${r.lvlWant.toFixed(3)}`);
+    check('eight modulators, and a modulator can reach the noise level',r.modSlots===8&&r.nzOn>r.nzOff*20,`${r.modSlots} slots, roughness ${r.nzOff.toExponential(1)} → ${r.nzOn.toExponential(1)}`);
+    check('older patches load with the new settings filled in',r.oldOk);
+    /* the page */
+    check('the timeline counts the sounds of one trip',(await p.textContent('#tlN'))==='10'&&/2\.00 s/.test(await p.textContent('#tlTrip')),(await p.textContent('#tlN'))+' sounds · '+(await p.textContent('#tlTrip')));
+    const ink=await p.evaluate(()=>{const c=document.querySelector('#tl'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i]>40)n++;return n;});
+    check('the timeline is drawn',ink>300,ink+' px');
+    await p.click('#pause');await p.waitForTimeout(150);
+    const tb=await p.locator('#tl').boundingBox();await p.mouse.click(tb.x+tb.width*0.5+3,tb.y+50);await p.waitForTimeout(150);
+    check('clicking a sound on the timeline selects its dot',await p.evaluate(()=>!document.querySelector('#dotEd').hidden),await p.textContent('#dotTitle'));
+    check('Pause is shown as on',(await p.getAttribute('#pause','aria-pressed'))==='true'&&(await p.textContent('#tlNote'))==='paused');
+    await p.keyboard.press('k');await p.waitForTimeout(100);
+    check('K lets it run again',(await p.getAttribute('#pause','aria-pressed'))==='false');
+    await p.evaluate(()=>document.querySelector('#dA').dispatchEvent(new MouseEvent('click',{bubbles:true,altKey:true})));await p.waitForTimeout(100);
+    check('Alt-click on a dot\'s Level gives it an LFO',await p.evaluate(()=>!document.querySelector('#dlfo-a').hidden&&state.rings.some(r=>r.ald.some(v=>v>0))));
+    await p.click('#dotClose');
+    /* sections */
+    await p.evaluate(()=>{state.base.speed=4;});
+    await p.click('#secAdd');await p.waitForTimeout(100);await p.fill('#secName','Intro');
+    await p.click('#secAdd');await p.waitForTimeout(100);await p.fill('#secName','Fast');
+    await p.focus('#speed');await p.evaluate(()=>{const s=document.querySelector('#speed');s.value=String(Math.round(Math.log(8/0.25)/Math.log(1000/0.25)*1000));s.dispatchEvent(new Event('input',{bubbles:true}));});
+    await p.click('#secTp');await p.waitForTimeout(100);
+    const s1=await p.evaluate(()=>({n:state.sections.length,cur:state.cur,sp:[state.sections[0].base.speed,state.sections[1].base.speed],same:state.rings===state.sections[1].rings,trips:state.sections[1].trips,names:state.sections.map(x=>x.name).join(',')}));
+    check('the wheel can be saved as sections, and editing the wheel edits the selected one',s1.n===2&&s1.cur===1&&s1.sp[0]===4&&Math.abs(s1.sp[1]-8)<0.2&&s1.same&&s1.trips===2&&s1.names==='Intro,Fast',JSON.stringify(s1));
+    await p.click('#secList button:nth-child(1)');await p.waitForTimeout(100);
+    check('choosing a section puts it back on the wheel',await p.evaluate(()=>state.cur===0&&state.base.speed===4&&state.rings===state.sections[0].rings));
+    await p.click('#secToTrack');await p.click('#secList button:nth-child(2)');await p.click('#secToTrack');await p.click('#secTm');await p.waitForTimeout(100);
+    await p.click('#trk button:nth-child(1)');await p.click('#trkRp');await p.click('#trk button:nth-child(1)');await p.waitForTimeout(100);
+    check('sections can be placed on the track with repeats',await p.evaluate(()=>JSON.stringify(state.track.items)==='[{"s":0,"rep":2},{"s":1,"rep":1}]'),await p.textContent('#trkNote'));
+    await p.waitForTimeout(600);
+    const kept=await ctx.newPage();await kept.goto(BASE);await kept.waitForTimeout(400);
+    check('sections and the track are saved with the patch',await kept.evaluate(()=>state.sections.length===2&&state.cur===1&&state.track.items.length===2&&state.rings===state.sections[1].rings&&state.sections[0].name==='Intro'));await kept.close();
+    /* export: 2 × 0.25 s + 0.125 s = 0.625 s of track, plus the last click's tail */
+    const dl=p.waitForEvent('download',{timeout:15000}).catch(()=>null);await p.click('#trkWav');const file=await dl;await p.waitForTimeout(200);
+    let wavSec=0;if(file){const fp=await file.path();const b=fs.readFileSync(fp);wavSec=(b.length-44)/2/b.readUInt32LE(24);}
+    check('the track exports as a WAV file of the right length',!!file&&wavSec>0.5&&wavSec<0.8,wavSec.toFixed(3)+' s · '+await p.textContent('#trkNote'));
+    await p.click('#secBounce');await p.waitForTimeout(1200);
+    check('a section can be bounced to a sample slot',await p.evaluate(()=>!!samples[0]&&samples[0].name==='Fast'&&samples[0].d.length>1000),await p.textContent('#trkNote'));
+    /* live: the track plays, the wheel follows it from section to section, and Stop gives the wheel back */
+    await p.check('#trkLoop');await p.click('#trkPlay');const curs=new Set();for(let i=0;i<24;i++){await p.waitForTimeout(60);curs.add(await p.evaluate(()=>state.cur));}
+    check('while the track plays, the wheel follows it',curs.has(0)&&curs.has(1)&&(await p.getAttribute('#trkPlay','aria-pressed'))==='true',[...curs].join(',')+' · '+await p.textContent('#trkNote'));
+    await p.screenshot({path:path.join(OUT,'instrument-track.png'),fullPage:true});
+    await p.click('#trkPlay');await p.waitForTimeout(200);
+    check('Stop track gives the wheel back',(await p.getAttribute('#trkPlay','aria-pressed'))==='false');
+    await p.click('#secDel');await p.click('#secDel');await p.waitForTimeout(100);
+    check('deleting a section takes it off the track too',await p.evaluate(()=>state.sections.length===1&&state.track.items.every(q=>q.s===0)&&state.cur===0&&state.rings===state.sections[0].rings));
+    await p.evaluate(()=>{samples[0]=null;return smpStore(0);});
+    /* sample window: the playback settings */
+    const sw=await ctx.newPage();watch(sw,'sample playback');await sw.goto(BASE+'#sample-3');await sw.waitForTimeout(900);
+    await sw.click('#s-pb [data-seg="mode"] [data-v="loop"]');await sw.click('#s-pb [data-seg="cut"] [data-v="false"]');
+    await sw.evaluate(()=>{const s=document.querySelector('#i-a');s.value='500';s.dispatchEvent(new Event('input',{bubbles:true}));});
+    await sw.evaluate(()=>document.querySelector('#i-fc').dispatchEvent(new MouseEvent('click',{bubbles:true,altKey:true})));await sw.waitForTimeout(400);
+    const pbk=await p.evaluate(()=>({mode:state.smpp[2].mode,cut:state.smpp[2].cut,a:state.smpp[2].a,mod:state.smpp[2].mods[0]&&state.smpp[2].mods[0].dest,other:state.smpp[1].mode}));
+    check('playback settings edited in the sample window reach the patch',pbk.mode==='loop'&&pbk.cut===false&&pbk.a>0.02&&pbk.mod==='fc'&&pbk.other==='one',JSON.stringify(pbk));
+    check('the playback panels show what applies to a sample',await sw.evaluate(()=>document.querySelector('#i-p1').hidden&&!document.querySelector('#i-cutrow').hidden&&!document.querySelector('#i-hold').closest('.ctl').hidden&&document.querySelector('.iw-top[hidden]')!==null));
+    await sw.click('#s-slots [data-s="1"]');await sw.waitForTimeout(200);
+    check('the playback panels follow the slot',await sw.evaluate(()=>document.querySelector('#s-pb [data-seg="mode"] [aria-pressed="true"]').dataset.v)==='one');
+    await sw.screenshot({path:path.join(OUT,'sample-window-playback.png'),fullPage:true});
+    await sw.setViewportSize({width:390,height:844});await sw.waitForTimeout(200);
+    check('the sample window with playback at 390 px has no sideways scroll',await sw.evaluate(()=>document.documentElement.scrollWidth)<=390);
+    await sw.close();await p.close();}
+
   check('no page errors',errs.length===0,errs.join(' | ')||'none');
   await browser.close();
   console.log(failed?`\n${failed} CHECK(S) FAILED`:'\nALL CHECKS PASSED');

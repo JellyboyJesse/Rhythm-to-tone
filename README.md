@@ -127,6 +127,16 @@ A dot can also play a Sample. The Samples panel has eight slots: load an audio f
 
 The Scope shows the signal going to the speaker: two turns of the loop when it is a tone, the level over the last four seconds when it is a rhythm.
 
+## How a sample plays
+
+By default a new hit on a sample slot cuts the one before it, with a short fade, so a long sample no longer piles up on itself. Under **Playback** in the sample window each slot has its own play mode (one-shot, held, loop, ping-pong, reverse), Cut or Overlap, an envelope, a filter, drive and up to eight modulators. Hold ⌥ (Alt) and click a control there to give it a modulator. When a recording is edited or replaced, anything still playing the old one fades out. **Stop all** in the top bar fades everything.
+
+## Pause, the timeline, sections and the track
+
+**Pause** (K) freezes the playhead and the LFOs. The **Timeline** shows the top wheel unrolled: one lane per ring, ticks for clicks, bars for samples and notes for as long as they sound, brackets for wheels inside dots, and the LFO curves underneath. Click a sound to select its dot, and drag up or down to set its level.
+
+A **section** is the whole wheel saved under a name. The wheel on screen is always the selected section, so editing the wheel edits that section. Trips sets how many times round a section lasts. The **track** is sections in playing order, each with a number of repeats; it changes section exactly as the playhead crosses the top. **Export WAV** renders the track to a file, and **Bounce to a sample** renders one section into an empty sample slot. All sections share one Library.
+
 ## The sample window
 
 Edit on a sample slot (in the Library panel, or Edit sample on a dot) opens the sample window. Drag across the waveform to select a part; edits act on the selection, or on the whole recording when nothing is selected, and the last five can be undone.
