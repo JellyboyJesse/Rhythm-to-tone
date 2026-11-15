@@ -74,6 +74,7 @@ Bus messages (keep them small and JSON-serialisable):
 2. Serve the repo (`python3 -m http.server 8765`) and run `node tests/check.cjs`. It must print `ALL CHECKS PASSED`.
 3. Look at the screenshots in `tests/out/` for anything visual you changed.
 4. Tell Jesse what was not checked by ear. Headless tests can't judge sound or levels.
+5. Push to `main` without asking once the checks pass (Jesse said so on 15 Nov 2026). Say in the reply that it was pushed. Anything outside this repo still needs his go-ahead.
 
 ## Ideas discussed but not built
 
