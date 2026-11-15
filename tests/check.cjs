@@ -160,29 +160,8 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   const note=await inst.textContent('#engineNote');
   check('Start sound uses the AudioWorklet engine',/AudioWorklet/.test(note),note);
 
-  /* 3. sequencer in its own tab stays in sync */
-  const seq=await ctx.newPage();watch(seq,'sequencer');
-  await seq.goto(BASE+'#sequencer');await seq.waitForTimeout(1300);
-  check('sequencer tab connects to the instrument',/Connected/.test(await seq.textContent('[data-r=conn]')));
-  await seq.click('[data-ex=melody]');await seq.waitForTimeout(300);
-  const lanes=await inst.evaluate(()=>state.seq.lanes.map(l=>l.key+':'+l.vals.filter(v=>v!==null).length).join(' '));
-  check('example sequence reaches the instrument',lanes.startsWith('speed:8 F:8'),lanes);
-  await seq.click('[data-r=play]');
-  const seen=new Set();for(let i=0;i<12;i++){await seq.waitForTimeout(220);seen.add(await inst.textContent('#tbStep'));}
-  check('instrument plays through the steps',seen.size>=5,[...seen].join(' '));
-  const cv=await seq.$$('.lane canvas:not(.trig)'),bb=await cv[2].boundingBox();
-  await seq.mouse.move(bb.x+5,bb.y+bb.height*0.3);await seq.mouse.down();await seq.mouse.move(bb.x+bb.width*0.45,bb.y+bb.height*0.7,{steps:8});await seq.mouse.up();await seq.waitForTimeout(250);
-  const drawn=await inst.evaluate(()=>state.seq.lanes[2].vals.filter(v=>v!==null).length);
-  check('drawing in a lane reaches the instrument',drawn>=6,drawn+' steps');
-  const tb=await (await seq.$('canvas.trig')).boundingBox();await seq.mouse.click(tb.x+tb.width*(2.5/16),tb.y+28);await seq.waitForTimeout(200);
-  check('tapping a gate reaches the instrument',(await inst.evaluate(()=>state.seq.gate[2]))===false);
-  await seq.screenshot({path:path.join(OUT,'sequencer-desktop.png'),fullPage:true});
-  await inst.bringToFront();await inst.click('#tbPlay');await inst.waitForTimeout(500);
-  check('Stop on the instrument updates the sequencer',(await seq.textContent('[data-r=play]'))==='Play');
-
-  /* 4. docked sequencer, LFOs, reset, saved state */
-  await inst.click('#seqDock');await inst.waitForTimeout(900);
-  check('docked sequencer connects',/Connected/.test(await inst.textContent('#dock [data-r=conn]')));
+  /* 3-4. the old step sequencer has no controls any more; LFOs, reset, saved state */
+  check('the old sequencer controls are gone',await inst.evaluate(()=>!document.querySelector('#tbPlay')&&!document.querySelector('#seqDock')&&!!document.querySelector('#pSeq')));
   await inst.$eval('label[for=F]',el=>el.dispatchEvent(new MouseEvent('click',{altKey:true,bubbles:true,cancelable:true})));await inst.click('#mLfo summary');await inst.click('#scatter');await inst.click('#mLfo summary');await inst.waitForTimeout(300);
   check('LFOs can be added',/active/.test(await inst.textContent('#lfoCount'))&&!/none/.test(await inst.textContent('#lfoCount')));
   await inst.screenshot({path:path.join(OUT,'instrument-desktop.png'),fullPage:true});
@@ -201,8 +180,11 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     await inst.$eval('#dP',el=>{el.value=7;el.dispatchEvent(new Event('input'));});
     await inst.$eval('#dA',el=>{el.value=40;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(200);
     check('dot pitch and level are stored',await inst.evaluate(()=>state.rings[0].dp[0]===7&&state.rings[0].da[0]===0.4));
-    await inst.$eval('label[for=dP]',el=>el.dispatchEvent(new MouseEvent('click',{altKey:true,bubbles:true,cancelable:true})));await inst.waitForTimeout(200);
-    check('a dot LFO can be added',await inst.evaluate(()=>state.rings[0].pld[0]===2&&!document.querySelector('#dlfo-p').hidden)&&/1 active/.test(await inst.textContent('#lfoCount')));
+    check('a dot without a pitch LFO shows no pitch LFO button (Sequence takes its place)',await inst.evaluate(()=>document.querySelector('#dlb-p').hidden&&!document.querySelector('#dSq').hidden));
+    await inst.$eval('label[for=dP]',el=>el.dispatchEvent(new MouseEvent('click',{altKey:true,bubbles:true,cancelable:true})));await inst.waitForTimeout(100);
+    await inst.$eval('label[for=dA]',el=>el.dispatchEvent(new MouseEvent('click',{altKey:true,bubbles:true,cancelable:true})));await inst.waitForTimeout(200);
+    check('a dot LFO can be added',await inst.evaluate(()=>state.rings[0].pld[0]===0&&state.rings[0].ald[0]===0.3&&!document.querySelector('#dlfo-a').hidden)&&/1 active/.test(await inst.textContent('#lfoCount')));
+    await inst.evaluate(()=>{state.rings[0].ald[0]=0;});
     await inst.screenshot({path:path.join(OUT,'instrument-dot.png')});
     await inst.click('#dK [data-k="wheel"]');await inst.$eval('#dT',el=>{el.value=500;el.dispatchEvent(new Event('input'));});await inst.waitForTimeout(250);
     check('a wheel can be put inside a dot',await inst.evaluate(()=>state.rings[0].dk[0]==='wheel'&&!!state.rings[0].kids[0]&&Math.abs(state.rings[0].dt[0]-0.5)<1e-9&&!document.querySelector('#dTc').hidden)&&/wheel/.test(await inst.textContent('#dWv'))&&/0\.50 loop/.test(await inst.textContent('#dTv')),await inst.textContent('#dWv')+' | '+await inst.textContent('#dTv'));
@@ -339,9 +321,9 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   /* 5. fallback engine when AudioWorklet is missing */
   const fb=await ctx.newPage();watch(fb,'fallback');
   await fb.addInitScript(()=>{Object.defineProperty(BaseAudioContext.prototype,'audioWorklet',{get(){return undefined;}});});
-  await fb.goto(BASE);await fb.waitForTimeout(300);await fb.click('#start');await fb.waitForTimeout(600);await fb.click('#tbPlay');
-  const fs2=new Set();for(let i=0;i<6;i++){await fb.waitForTimeout(250);fs2.add(await fb.textContent('#tbStep'));}
-  check('fallback engine plays the sequence',/fallback/.test(await fb.textContent('#engineNote'))&&fs2.size>=3,[...fs2].join(' '));
+  await fb.goto(BASE);await fb.waitForTimeout(300);await fb.evaluate(()=>{state.base.speed=8;});await fb.click('#start');await fb.waitForTimeout(400);
+  const fs2=new Set();for(let i=0;i<6;i++){await fb.waitForTimeout(200);fs2.add(await fb.evaluate(()=>__audio.rep?__audio.rep.t.toFixed(2):'-'));}
+  check('fallback engine runs',/fallback/.test(await fb.textContent('#engineNote'))&&fs2.size>=4,[...fs2].join(' '));
   await fb.close();
 
   /* 6. phone width, light and dark */
@@ -481,6 +463,93 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     await aw.setViewportSize({width:390,height:844});await aw.waitForTimeout(200);
     check('the arranger at 390 px has no sideways scroll',await aw.evaluate(()=>document.documentElement.scrollWidth)<=390);
     await aw.evaluate(()=>{try{localStorage.removeItem('rit-arr-v1');}catch(e){}return arrWipe();});await aw.close();
+
+    /* per-dot sequences in the engine */
+    const sq=await p.evaluate(()=>{
+      const sr=48000,z=()=>({on:false,steps:1,hits:0,rot:0,level:1}),R=o=>Object.assign(sanRing({on:true,steps:1,hits:1},mkRing(1,1,true),0),o);
+      const base=()=>{const S=sanitizeState(null);S.base.speed=2;S.base.sigma=0.5;S.rings=[R({}),z(),z(),z()].map((x,i)=>sanRing(x,mkRing(1,1,false),0));S.sections=[];S.cur=-1;return S;};
+      const run=(e,sec)=>{const n=Math.round(sec*sr/128)*128,o=new Float32Array(n);for(let i=0;i<n;i+=128)e.render(o.subarray(i,i+128),128,i/sr);return o;};
+      const TN=(o,f,a,b)=>{let re=0,im=0;for(let i=Math.round(a*sr);i<Math.round(b*sr);i++){const w=2*Math.PI*f*i/sr;re+=o[i]*Math.cos(w);im+=o[i]*Math.sin(w);}return Math.hypot(re,im);};
+      const E2=(o,a,b)=>{let v=0;for(let i=Math.round(a*sr);i<Math.round(b*sr);i++)v+=o[i]*o[i];return v;};
+      const sine=()=>Object.assign(newInst('s'),{src:'osc',wave:'sine',note:69,a:0.002,d:0.05,s:1,r:0.01,ft:'off',vel:1,level:1});
+      const hz=st=>440*Math.pow(2,st/12),out={};
+      const withSeq=(edit,S0)=>{const S=S0||base();S.inst[0]=sine();S.rings[0].dk[0]='inst';S.rings[0].di[0]=0;const Q=newSeq();Q.n=3;Q.nt=[0,2,4].concat(Array(13).fill(0));edit&&edit(Q,S);S.rings[0].sq[0]={on:true,link:-1,s:Q};return S;};
+      const best=(o,t,cands)=>{let bi=-1,bv=0;cands.forEach((c,i)=>{const v=TN(o,hz(c),t+0.02,t+0.1);if(v>bv){bv=v;bi=i;}});return bi;};
+      /* steps: minor scale, degrees 0 2 4 = 0, 3, 7 semitones; the dot fires at 0.5, 1.0, 1.5, 2.0 s */
+      {const e=new Engine(sr);applyMsg(e,{S:withSeq(),jump:true});const o=run(e,2.2);out.steps=[0.5,1,1.5,2].map(t=>[0,3,7][best(o,t,[0,3,7])]).join(',');}
+      /* back, and a root of D: 2, 9, 5 … wait: back from the start plays the last step first */
+      {const S=withSeq(Q=>{Q.ord='back';});S.scale={root:2,sc:'minor'};const e=new Engine(sr);applyMsg(e,{S,jump:true});const o=run(e,2.2);out.back=[0.5,1,1.5,2].map(t=>[2,5,9][best(o,t,[2,5,9])]).join(',');}
+      /* off, chance 0, and a 1:2 condition: steps 1 (off) and 2 (chance 0) are silent; step 0 plays on pass 0 only, so 2.0 s is silent too */
+      {const S=withSeq(Q=>{Q.on[1]=false;Q.ch[2]=0;Q.cn[0]='1:2';});const e=new Engine(sr);applyMsg(e,{S,jump:true});const o=run(e,2.2);out.silent=[0.5,1,1.5,2].map(t=>E2(o,t+0.01,t+0.1)>1e-3?1:0).join('');}
+      /* a chord: a triad on degree 0 sounds 0, 3 and 7 together */
+      {const S=withSeq(Q=>{Q.n=1;Q.cd[0]='tri';});S.inst[0].vm='poly';const e=new Engine(sr);applyMsg(e,{S,jump:true});const o=run(e,0.62);
+        const a=[0,3,7].map(c=>TN(o,hz(c),0.52,0.6)),off=TN(o,hz(5),0.52,0.6);out.chord=Math.min(...a)/(off+1e-9);}
+      /* repeats with Arp: 3 repeats of a triad spread over the turn (0.5 s) play 0, 3, 7 one after another */
+      {const S=withSeq(Q=>{Q.n=1;Q.cd[0]='tri';Q.rp[0]=3;Q.arp=true;});const e=new Engine(sr);applyMsg(e,{S,jump:true});const o=run(e,1.0);
+        out.arp=[0.5,0.5+1/6,0.5+2/6].map(t=>[0,3,7][best(o,t,[0,3,7])]).join(',');}
+      /* a slot shared by two dots on rings of different speed: each keeps its own place */
+      {const S=base();S.inst[0]=sine();S.inst[0].vm='poly';S.rings[1]=sanRing({on:true,steps:2,hits:2},mkRing(2,2,true),0);
+        for(const [ri,d] of [[0,0],[1,0],[1,1]]){S.rings[ri].dk[d]='inst';S.rings[ri].di[d]=0;S.rings[ri].sq[d]={on:true,link:3,s:newSeq()};}
+        const Q=newSeq('shared');Q.n=2;Q.nt=[0,4].concat(Array(14).fill(0));S.sqs[3]=Q;
+        const e=new Engine(sr);applyMsg(e,{S,jump:true});run(e,1.3);out.shared=JSON.stringify(e.report().sq);}
+      /* Slice mode: a recording of four tones, 1/4 each; the step's note 2 plays the third */
+      {const S=base(),n=48000,rec=new Float32Array(n),fs=[300,500,700,900];for(let i=0;i<n;i++)rec[i]=0.5*Math.sin(2*Math.PI*fs[Math.floor(i/(n/4))]*i/48000);
+        S.rings[0].dk[0]='sample';S.rings[0].ds[0]=1;S.rings[0].dsn[0]=0.25;const Q=newSeq();Q.n=1;Q.sm='slice';Q.nt[0]=2;S.rings[0].sq[0]={on:true,link:-1,s:Q};
+        const e=new Engine(sr);applyMsg(e,{smp:{i:1,d:rec,sr:48000}});applyMsg(e,{S,jump:true});const o=run(e,0.7);const v=fs.map(f=>TN(o,f,0.52,0.65));out.slice=v.indexOf(Math.max(...v));}
+      /* the maths: clicks with a sequence (an octave chord, two repeats) against the page's spectrum formula */
+      {const S=base();S.base.speed=100;S.base.sigma=1.2;S.rings[0]=sanRing({on:true,steps:3,hits:2},mkRing(3,2,true),0);const Q=newSeq();Q.n=1;Q.cd[0]='oct';Q.rp[0]=2;S.rings[0].sq[1]={on:true,link:-1,s:Q};
+        const e=new Engine(sr);applyMsg(e,{S,jump:true});const N=sr,o=new Float32Array(N);for(let i=0;i<N;i+=128)e.render(o.subarray(i,i+128),128,i/sr);
+        const D=dotList(effParams(S,0,-1,newEff()),0,{S,pos:e.report().sq}),H=[],Pm=[];
+        for(let k=1;k<=24;k++){let re=0,im=0;for(let i=sr/2;i<N;i++){const a=2*Math.PI*k*100*i/sr;re+=o[i]*Math.cos(a);im+=o[i]*Math.sin(a);}H.push(Math.hypot(re,im));Pm.push(heardMag(D,k,k*100));}
+        const mh=Math.max(...H),mp=Math.max(...Pm);let err=0;H.forEach((h,i)=>err=Math.max(err,Math.abs(h/mh-Pm[i]/mp)));out.maths=err;out.mathsN=D.length;}
+      return out;});
+    check('a dot sequence steps through its notes, one step each time the dot fires',sq.steps==='0,3,7,0',sq.steps);
+    check('play order Back and the patch root',sq.back==='9,5,2,9',sq.back);
+    check('steps can be off, have a chance, and play only on some passes',sq.silent==='1000',sq.silent);
+    check('a step can be a chord',sq.chord>8,'chord notes against a note not in it: ×'+sq.chord.toFixed(0));
+    check('Arp spreads a chord across the repeats',sq.arp==='0,3,7',sq.arp);
+    check('two dots sharing a slot keep their own places in it',sq.shared==='{"1":1,"17":1,"18":0}',sq.shared);
+    check('Slice mode: a step chooses the slice of a sample',sq.slice===2,'tone '+(sq.slice+1)+' of 4');
+    check('the engine matches the maths with a sequence (repeats and an octave chord)',sq.maths<0.01&&sq.mathsN===5,`error ${(sq.maths*100).toFixed(2)}%, ${sq.mathsN} clicks per loop`);
+    /* the editor */
+    await p.evaluate(()=>document.querySelector('#wheel').scrollIntoView({block:'center'}));await p.waitForTimeout(150);
+    const clickDot=async(k)=>{const wb=await (await p.$('#wheel')).boundingBox(),R=Math.min(wb.width,wb.height)/2-34,gap=(R-R*0.3)/4;await p.mouse.click(wb.x+wb.width/2,wb.y+wb.height/2-(R-k*gap-gap*0.15));await p.waitForTimeout(200);};
+    await p.evaluate(()=>{state.rings.forEach(r=>{r.on=true;r.sq.fill(null);});state.sqs.fill(null);});
+    await clickDot(0);await p.click('#sqLink [data-v="own"]');await p.waitForTimeout(150);
+    check('a dot\'s sequence can be turned on',await p.evaluate(()=>{const x=state.rings[0].sq[0];return !!x&&x.on&&x.link===-1&&!document.querySelector('#sqBody').hidden;}));
+    await p.click('[data-w="up"]');
+    check('Arp up writes the chord tones up the steps',await p.evaluate(()=>state.rings[0].sq[0].s.nt.slice(0,8).join(','))==='0,2,4,7,9,11,0,2');
+    const sb=await p.locator('#sqCv').boundingBox();
+    await p.mouse.move(sb.x+sb.width*(0.5/16),sb.y+8);await p.mouse.down();await p.mouse.move(sb.x+sb.width*(2.5/16),sb.y+8,{steps:6});await p.mouse.up();
+    await p.mouse.click(sb.x+sb.width*(3.5/16),sb.y+sb.height-8);
+    await p.click('#sqTab [data-v="cd"]');await p.mouse.click(sb.x+sb.width*(4.5/16),sb.y+50);
+    const ed=await p.evaluate(()=>{const Q=state.rings[0].sq[0].s;return{nt:Q.nt.slice(0,3),on3:Q.on[3],cd4:Q.cd[4]};});
+    check('drawing on the strip sets notes, turns steps off and sets chords',ed.nt.every(v=>v>=12)&&ed.on3===false&&ed.cd4==='tri',JSON.stringify(ed));
+    await p.click('#sqSave');await p.waitForTimeout(100);
+    await p.evaluate(()=>__selectDot(1,0));await p.click('#sqLink [data-v="0"]');await p.waitForTimeout(150);
+    check('a second dot can use the same slot',await p.evaluate(()=>state.sqs[0]&&state.rings[0].sq[0].link===0&&state.rings[1].sq[0].link===0&&state.sqs[0].nt[0]>=12));
+    await p.click('#sndTabs [data-t="sq"]');await p.waitForTimeout(150);
+    check('the Library shows the slot and who uses it',/Used by 2 dots/.test(await p.textContent('#sqSlotNote')),await p.textContent('#sqSlotNote'));
+    await p.click('#sqOwn');await p.waitForTimeout(100);await p.click('[data-w="clear"]');
+    check('Make own copy unlinks one dot from the slot',await p.evaluate(()=>state.rings[1].sq[0].link===-1&&state.rings[1].sq[0].s.nt[0]===0&&state.sqs[0].nt[0]>=12));
+    await p.click('#sqCopy');await p.evaluate(()=>__selectDot(2,0));await p.click('#sqPaste');
+    check('a sequence can be copied to another dot',await p.evaluate(()=>{const x=state.rings[2].sq[0];return !!x&&x.on&&x.link===-1&&x.s.nt.slice(0,8).every(v=>v===0);}));
+    await p.waitForTimeout(300);
+    check('the Sequences panel lists every dot with a sequence',/3 dots with a sequence/.test(await p.textContent('#sqOvNote')),await p.textContent('#sqOvNote'));
+    /* while it plays, the engine reports where each sequence is, and the page draws it */
+    await p.evaluate(()=>{state.base.speed=4;});await p.click('#sqTab [data-v="nt"]');
+    if(!(await p.evaluate(()=>__audio.running)))await p.click('#start');
+    await p.evaluate(()=>document.querySelector('#F').dispatchEvent(new Event('input')));await p.waitForTimeout(900);
+    const rp=await p.evaluate(()=>__audio.rep&&__audio.rep.sq?Object.keys(__audio.rep.sq).sort().join(','):'');
+    check('the engine reports where each sequence is',rp==='1,17,33',rp);
+    await p.screenshot({path:path.join(OUT,'instrument-sequence.png'),fullPage:true});
+    /* the Sequences window */
+    const qw=await ctx.newPage();watch(qw,'sequences window');await qw.goto(BASE+'#sequencer');await qw.waitForTimeout(1200);
+    check('the Sequences window connects and lists the dots',/Connected/.test(await qw.textContent('[data-r=conn]'))&&/Click a row/.test(await qw.textContent('#sqWnote')));
+    const wv=await qw.locator('#sqWv').boundingBox();await qw.mouse.click(wv.x+40,wv.y+2+28*2+14);await qw.waitForTimeout(300);
+    check('clicking a row in the window opens that dot in the main window',/Ring 3 · dot 1/.test(await p.textContent('#dotTitle')),await p.textContent('#dotTitle'));
+    await qw.screenshot({path:path.join(OUT,'sequences-window.png')});await qw.close();
+    await p.evaluate(()=>{state.rings.forEach(r=>r.sq.fill(null));state.sqs.fill(null);});await p.click('#start');
     /* sample window: the playback settings */
     const sw=await ctx.newPage();watch(sw,'sample playback');await sw.goto(BASE+'#sample-3');await sw.waitForTimeout(900);
     await sw.click('#s-pb [data-seg="mode"] [data-v="loop"]');await sw.click('#s-pb [data-seg="cut"] [data-v="false"]');

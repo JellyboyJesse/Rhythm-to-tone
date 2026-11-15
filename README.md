@@ -24,13 +24,13 @@ Press **Start sound** in the bar at the top. Everything else works without sound
   - Detune gives each ring a slightly different speed. The loop then stops repeating exactly and the tone splits into separate beating voices.
   - Shared vibrato moves every ring together, which helps the ear hear one sound.
 - **LFOs.** Every control has an **LFO** tag. Tap it to open its drawer. There are six shapes (sine, triangle, saw, square, random steps, smooth drift), with a rate from about one cycle a minute to 20 Hz and a depth. **Scatter** puts four random LFOs on; **Clear all** removes them. **Calm visuals** stops the flashing playheads at speed.
-- **Sequencer.** Open it with **Open in new window**, or with **Show here** to see it on the same page.
-  - The top row rests or plays each step. The row below it makes a step glide into the next.
-  - Four lanes each lock one control to a value on chosen steps: speed or pitch, click pitch or length, detune, vibrato, volume, or any ring's steps, hits, rotate or level. Drag across the steps to draw values. Steps left empty use the front-panel setting, and LFOs still move on top.
-  - Two clocks:
-    - **Tempo**: BPM, step length and swing.
-    - **Loops**: one step every so many loops, so in the rhythm range the sequence changes with each bar.
-  - The examples are *Melody*, *Pulse to pitch* (a step-by-step climb from rhythm into tone) and *Bar changes*.
+- **Sequences.** Every dot can have a sequence of its own, under **Sequence** in the dot editor. It moves one step each time the dot fires.
+  - Each step has a note in the scale, on or off, a chance, repeats (a roll of up to 8), a level, a chord, and a condition (always, 1st of 2, first pass only, and so on). Choose which one to draw with the tabs above the strip; click the squares underneath to turn steps on and off.
+  - **Write** fills the steps for you: Random, Walk, Arp up, down and up-down, Mutate, Reverse, Shift and Clear. **Plays** sets the order: forward, back, ping-pong, random or drunk. **Arp chords across repeats** plays a chord's notes one per repeat.
+  - What a note means depends on the dot: a note on an instrument, the playback speed of a sample (or, with **A step sets: Slice**, which slice of it plays), the click pitch, or a transposition of a whole inner wheel.
+  - **Own** gives the dot its own sequence. A number saves it to one of eight slots in the patch, which other dots can share: edit it from any of them and they all change, while each keeps its own place. **Make own copy**, **Copy** and **Paste** move sequences between dots. The patch scale and the slots are in the Library's **Sequences** tab.
+  - Panel 09 lists every dot with a sequence and the step each is on; **Window** shows the same list in its own window. Click a row to open that dot.
+  - The old step sequencer (lanes that changed controls for the whole wheel) has been removed. Patches that used it still load, but its steps no longer play.
 
 Your patch and sequence are saved in your browser and come back next time. **Reset patch** (tap twice) restores the defaults.
 
@@ -49,7 +49,7 @@ How the sound is made:
 
 - **One engine at every speed.** There is no switch between rhythm and pitch. Every hit starts a short, smooth click (a Gaussian-windowed sine) at its exact time, down to a fraction of a sample. Overlapping clicks simply add together. Because of that, the output is the Fourier series above at any speed. The tests check this against the formula.
 - **Clicks keep their settings.** Each click keeps the pitch and length it had when it started, as in pulsar synthesis. LFOs on the click therefore change it hit by hit.
-- **Sequencer and LFOs run inside the sound engine.** Their timing is exact even when the page is in the background.
+- **Sequences and LFOs run inside the sound engine.** Their timing is exact even when the page is in the background.
 - **Fallback engine.** On browsers without AudioWorklet, the same engine runs through an older audio API.
 
 Further reading:
@@ -85,9 +85,9 @@ node tests/check.cjs
 The checks cover:
 
 - the engine's harmonics against the formula
-- sequencer timing and rests
+- per-dot sequences: steps, order, chance, conditions, chords, arp, repeats, shared slots and slices, and the engine against the maths with a sequence
 - every LFO at once at four speeds
-- the instrument and sequencer staying in sync across tabs and on one page
+- the main window and the sequences window staying in step
 - reset and saved settings
 - the fallback engine
 - no sideways scroll at phone width in light and dark
@@ -97,7 +97,7 @@ Screenshots go to `tests/out/`. The tests can't judge how it sounds, so listen t
 ## Files
 
 ```
-index.html        the whole app: page, styles, sound engine, sequencer
+index.html        the whole app: page, styles, sound engine, sequences
 tests/check.cjs   headless browser checks (needs Playwright)
 README.md         this file
 CLAUDE.md         working notes for Claude
@@ -111,7 +111,7 @@ The LFO buttons beside a dot's Pitch and Length give that dot its own LFO, with 
 
 ## Finding your way around
 
-The top bar holds sound, the note readout, a small scope, Volume, the sequencer, and three menus (LFOs, Patch, View). To give a control an LFO, hold ⌥ (Alt) and click it; the LFO button then stays visible on that control. The Map lists every wheel in the patch, with the wheels inside its dots under it, and opens the one you click. The Library panel has tabs for Clicks, Samples, Instruments and LFO shapes. The Circles panel can be switched on from the View menu.
+The top bar holds sound, the note readout, a small scope, Pause and Stop all, Volume, and three menus (LFOs, Patch, View). To give a control an LFO, hold ⌥ (Alt) and click it; the LFO button then stays visible on that control. The Map lists every wheel in the patch, with the wheels inside its dots under it, and opens the one you click. The Library panel has tabs for Clicks, Samples, Instruments and LFO shapes. The Circles panel can be switched on from the View menu.
 
 **Your own LFO shapes.** The Library panel's LFO shapes tab has eight slots. Pick a slot and draw one cycle in the box (smooth or stepped). Each shape you make shows up as a numbered button in every LFO's row of shapes, in the main window and in the instrument window, and is saved with the patch.
 
@@ -163,4 +163,4 @@ Changes are heard in the main window straight away. Recording the app's output n
 
 ## Using it as a Mac app
 
-In Chrome use the install button in the address bar. In Safari on macOS Sonoma or later, choose File → Add to Dock. It then runs in its own window with its own Dock icon. Keyboard: Space starts and stops the sound, P plays the sequencer, 1–4 switch rings, ← and → move the speed by a semitone (with Shift, an octave), N shows the notes.
+In Chrome use the install button in the address bar. In Safari on macOS Sonoma or later, choose File → Add to Dock. It then runs in its own window with its own Dock icon. Keyboard: Space starts and stops the sound, K pauses, 1–4 switch rings, ← and → move the speed by a semitone (with Shift, an octave), N shows the notes.

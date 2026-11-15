@@ -166,6 +166,21 @@ canvas{display:block;width:100%}
 .iw .pair{display:inline-flex;align-items:center;gap:8px;flex-wrap:nowrap}
 .iw .row{gap:8px 16px}
 .iw .lab{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.sqbox{grid-column:1/-1;display:grid;gap:8px;border-top:1px solid var(--soft);padding-top:8px;min-width:0}
+.sqbox .seg button{padding:4px 7px;font-size:10px}
+.sqbox .seg,#sndTabs{flex-wrap:wrap;max-width:100%}
+#sndTabs button{padding:4px 8px}
+.sqbox .seg button[aria-pressed="true"]{background:var(--c,var(--accent));color:var(--bg)}
+#sqLink button[data-empty=true]{color:var(--muted)}
+#sqBody{display:grid;gap:8px;min-width:0}
+#sqCv{display:block;width:100%;height:150px;touch-action:none;cursor:ns-resize}
+.sqw{display:flex;flex-wrap:wrap;gap:4px}.sqw button{padding:3px 7px;font-size:10px}
+.sqbox .pair{display:inline-flex;align-items:center;gap:6px}
+.sqbox select{font:400 12px var(--mono);max-width:12em}
+#sqOv{display:block;width:100%;height:60px;cursor:pointer}
+#sqPrev{display:block;width:100%;height:56px}
+#sqSlots button{min-width:26px}
+#sqName{font:400 13px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 8px;width:11em;min-width:0}
 .pbhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin:30px 0 16px;padding-top:14px;border-top:2px solid var(--ink)}
 .pbhead h2{margin:0}
 #tl{display:block;width:100%;height:196px;touch-action:none;cursor:pointer}
@@ -364,13 +379,6 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
     <div class="tbscope"><canvas id="scope" aria-label="The signal going to the speaker"></canvas><span class="sub mono" id="stPeak">—</span><span id="stWin" hidden></span><span id="stF" hidden></span></div>
     <div class="tbvol" id="tbVol"></div>
     <span class="grow"></span>
-    <div class="seqctl">
-      <span class="lbl">Sequencer</span>
-      <button type="button" id="tbPlay" aria-pressed="false">Play</button>
-      <span class="sub mono" id="tbStep"></span>
-      <button type="button" id="seqWin"><span class="lg">Window</span><span class="sm">Window</span></button>
-      <button type="button" id="seqDock" aria-expanded="false">Dock</button>
-    </div>
     <details class="menu" id="mLfo"><summary>LFOs · <span id="lfoCount">none</span></summary><div class="mbox">
       <p class="sub mono">Hold ⌥ (Alt) and click a control to give it an LFO. On a phone, the LFO buttons stay visible.</p>
       <button type="button" id="scatter">Scatter 4 random LFOs</button><button type="button" id="clearLfo">Clear all</button>
@@ -382,9 +390,8 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
   </div>
   <p class="toast" id="toast" role="status" hidden></p>
 
-  <p class="hint">Build a loop as a rhythm, then speed it up until it fuses into one tone. Each dot can play a click, a sample, an instrument, or a whole wheel of its own. Every control can have an LFO, and the sequencer can change any of them step by step.</p>
+  <p class="hint">Build a loop as a rhythm, then speed it up until it fuses into one tone. Each dot can play a click, a sample, an instrument, or a whole wheel of its own. Every control can have an LFO, and every dot can have a sequence of its own.</p>
 
-  <section class="panel" id="dock" hidden aria-label="Sequencer"></section>
 
   <div class="cols">
     <div class="col colA">
@@ -455,10 +462,30 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
                   <div class="seg" id="dIl" role="group" aria-label="Which instrument this dot plays"></div></div>
                 <div class="row full"><button type="button" id="dIe">Edit instrument ›</button></div>
               </div>
+              <div class="sqbox" id="dSq">
+                <div class="row"><span class="lab2">Sequence</span><div class="seg" id="sqLink" role="group" aria-label="This dot's sequence: off, its own, or one of the patch's slots"><button type="button" data-v="off" aria-pressed="true">Off</button><button type="button" data-v="own" aria-pressed="false">Own</button><button type="button" data-v="0" aria-pressed="false" title="Slot 1">1</button><button type="button" data-v="1" aria-pressed="false" title="Slot 2">2</button><button type="button" data-v="2" aria-pressed="false" title="Slot 3">3</button><button type="button" data-v="3" aria-pressed="false" title="Slot 4">4</button><button type="button" data-v="4" aria-pressed="false" title="Slot 5">5</button><button type="button" data-v="5" aria-pressed="false" title="Slot 6">6</button><button type="button" data-v="6" aria-pressed="false" title="Slot 7">7</button><button type="button" data-v="7" aria-pressed="false" title="Slot 8">8</button></div>
+                  <button type="button" id="sqOwn" hidden>Make own copy</button><button type="button" id="sqSave" hidden>Save to a slot</button><button type="button" id="sqCopy">Copy</button><button type="button" id="sqPaste">Paste</button></div>
+                <div id="sqBody" hidden>
+                  <div class="row"><div class="seg" id="sqTab" role="group" aria-label="Which value to draw"><button type="button" data-v="nt" aria-pressed="true">Note</button><button type="button" data-v="ch" aria-pressed="false">Chance</button><button type="button" data-v="rp" aria-pressed="false">Repeat</button><button type="button" data-v="lv" aria-pressed="false">Level</button><button type="button" data-v="cd" aria-pressed="false">Chord</button><button type="button" data-v="cn" aria-pressed="false">When</button></div>
+                    <span class="pair"><span class="lab2">Steps</span><button type="button" id="sqNm" aria-label="Fewer steps">−</button><output id="sqN" class="mono">8</output><button type="button" id="sqNp" aria-label="More steps">+</button></span></div>
+                  <canvas id="sqCv" aria-label="The steps. Drag up and down to set the value shown; click the row of squares underneath to turn steps on and off."></canvas>
+                  <p class="sub mono" id="sqRead"></p>
+                  <div class="row"><span class="lab2">Write</span><span class="sqw"><button type="button" data-w="rand">Random</button><button type="button" data-w="walk">Walk</button><button type="button" data-w="up">Arp up</button><button type="button" data-w="down">Arp down</button><button type="button" data-w="updown">Up-down</button><button type="button" data-w="mut">Mutate</button><button type="button" data-w="rev">Reverse</button><button type="button" data-w="shift">Shift ›</button><button type="button" data-w="clear">Clear</button></span></div>
+                  <div class="row"><span class="lab2">Plays</span><div class="seg" id="sqOrd" role="group" aria-label="Order the steps play in"><button type="button" data-v="fwd">Forward</button><button type="button" data-v="back">Back</button><button type="button" data-v="ping">Ping-pong</button><button type="button" data-v="rand">Random</button><button type="button" data-v="drunk">Drunk</button></div>
+                    <label class="check"><input type="checkbox" id="sqArp"> Arp chords across repeats</label></div>
+                  <div class="row"><label class="lab2" for="sqScl">Scale</label><select id="sqScl"></select><span class="pair" id="sqSmRow"><span class="lab2">A step sets</span><div class="seg" id="sqSm" role="group" aria-label="What a step's note does on a sample"><button type="button" data-v="note">Speed</button><button type="button" data-v="slice">Slice</button></div></span>
+                    <button type="button" id="sqRestart" title="Send every sequence back to its first step">Restart all</button></div>
+                </div>
+              </div>
               <div class="ctl" id="dTc" hidden><div class="top"><label for="dT">Turn</label><output id="dTv"></output><button type="button" class="lfob" id="dlb-t" aria-expanded="false" aria-label="LFO for this wheel's turn">LFO</button></div><input type="range" id="dT" min="0" max="600" step="1"></div>
             </div>
           </div>
         </div>
+      </section>
+      <section class="panel" id="pSeq" aria-label="Sequences">
+        <div class="row spread"><h2><b>09</b>Sequences</h2><button type="button" id="sqWin">Window</button></div>
+        <canvas id="sqOv" aria-label="Every dot that has a sequence, one row each, with the step playing now marked. Click a row to open that dot."></canvas>
+        <p class="sub mono" id="sqOvNote"></p>
       </section>
     </div>
 
@@ -471,13 +498,20 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
 
       <section class="panel" id="pSounds" aria-label="Library: clicks, samples, instruments and LFO shapes">
         <div class="row spread"><h2><b>06</b>Library</h2>
-          <div class="seg" id="sndTabs" role="group" aria-label="Which sounds"><button type="button" data-t="clk" aria-pressed="true">Clicks</button><button type="button" data-t="smp" aria-pressed="false">Samples</button><button type="button" data-t="inst" aria-pressed="false">Instruments</button><button type="button" data-t="shp" aria-pressed="false">LFO shapes</button></div></div>
+          <div class="seg" id="sndTabs" role="group" aria-label="Which sounds"><button type="button" data-t="clk" aria-pressed="true">Clicks</button><button type="button" data-t="smp" aria-pressed="false">Samples</button><button type="button" data-t="inst" aria-pressed="false">Instruments</button><button type="button" data-t="shp" aria-pressed="false">LFO shapes</button><button type="button" data-t="sq" aria-pressed="false">Sequences</button></div></div>
         <div class="sndb" id="sndClk">
         <div class="ctls" id="soundCtls"></div>
         <div class="row"><button type="button" id="resync">Re-align rings</button><span class="sub mono" id="engineNote"></span></div>
         <p class="warn" id="dropWarn" hidden>Too many overlapping sounds: some were dropped. Shorten the click or the sample slice, or slow down.</p>
         <p class="hint">Click pitch sets a formant. It stays fixed in Hz while the loop pitch moves, like a vowel. Each click keeps the pitch and length it had when it started, so LFOs on the click change it hit by hit. Detune gives each ring a slightly different speed, so the tone splits into separate beating voices. Shared vibrato wobbles every ring together, which helps the ear hear one sound.</p>
       </div>
+        <div class="sndb" id="sndSq" hidden>
+          <div class="row"><span class="lab2">Patch scale</span><select id="scRoot" aria-label="Root note"></select><select id="scSc" aria-label="Scale"></select></div>
+          <div class="row"><span class="lab2">Slot</span><div class="seg" id="sqSlots" role="group" aria-label="Sequence slot"></div><input type="text" id="sqName" maxlength="24" aria-label="Name of this sequence" placeholder="Name"></div>
+          <canvas id="sqPrev" aria-label="The steps of the sequence in this slot"></canvas>
+          <div class="row"><button type="button" id="sqDel">Clear slot</button><span class="sub mono" id="sqSlotNote"></span></div>
+          <p class="hint">The patch scale is the one every sequence uses unless it chooses its own. A slot holds a sequence that several dots can share: editing it from any of them changes them all, while each dot keeps its own place in it. Clearing a slot gives each dot that used it a copy of its own.</p>
+        </div>
         <div class="sndb" id="sndShp" hidden>
           <div class="row"><span class="lab2">Slot</span><div class="seg" id="shpSlots" role="group" aria-label="LFO shape slot"></div>
             <input type="text" id="shpName" maxlength="24" aria-label="Name of this shape" placeholder="Name"></div>
@@ -529,7 +563,6 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
 
   <footer class="keys" aria-label="Keyboard shortcuts">
     <span><kbd>Space</kbd>Sound</span>
-    <span><kbd>P</kbd>Sequencer</span>
     <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>Rings</span>
     <span><kbd>←</kbd><kbd>→</kbd>Semitone</span>
     <span><kbd>⇧←</kbd><kbd>⇧→</kbd>Octave</span>
@@ -546,9 +579,9 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
 <div class="wrap" id="seqOnly" hidden>
   <header>
     <h1>Rhythm Into Tone</h1>
-    <p class="lede">Sequencer window. It plays the instrument page open in your other window or tab. Keep that page open with its sound started.</p>
+    <p class="lede">Sequences window. It shows every dot that has a sequence in the main window, with the step playing now. Click a row to open that dot there.</p>
   </header>
-  <section class="panel" id="seqHost" aria-label="Sequencer"></section>
+  <section class="panel" id="seqHost" aria-label="Sequences"></section>
 </div>
 
 <script>
@@ -563,6 +596,8 @@ function rnd(k,seed){return frac(Math.sin(k*127.1+seed*3117.7)*43758.5453);}
 /* Custom LFO shapes: eight slots drawn by the user (state.shapes), named 'U1'..'U8' wherever an LFO shape is chosen.
    USHAPES holds the slots for lfoVal; setShapes fills it (on the page, and in the engine each time the patch arrives). */
 const USHAPES=[null,null,null,null,null,null,null,null];
+const SCALES={major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],dorian:[0,2,3,5,7,9,10],phrygian:[0,1,3,5,7,8,10],lydian:[0,2,4,6,7,9,11],mixo:[0,2,4,5,7,9,10],
+  hmin:[0,2,3,5,7,8,11],pmaj:[0,2,4,7,9],pmin:[0,3,5,7,10],whole:[0,2,4,6,8,10],chrom:[0,1,2,3,4,5,6,7,8,9,10,11]};
 function setShapes(a){for(let i=0;i<8;i++){const x=a?a[i]:null;USHAPES[i]=x&&x.pts&&x.pts.length?x:null;}}
 function lfoVal(L,t){
   const seed=L.seed||0,ph=t*L.rate+seed,sh=L.shape;
@@ -597,14 +632,14 @@ function lockVal(key,u){
 }
 function newEff(){
   const rings=[];
-  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,dp:null,dl:null,da:null,dk:null,dt:null,kids:null,ds:null,dss:null,dsn:null,di:null,pld:null,plr:null,pls:null,lld:null,llr:null,lls:null,ald:null,alr:null,als:null,sld:null,slr:null,sls:null,tld:null,tlr:null,tls:null,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level']});
+  for(let i=0;i<4;i++)rings.push({on:false,steps:1,hits:0,rot:0,rotf:0,off:0,level:0,dp:null,dl:null,da:null,dk:null,dt:null,kids:null,ds:null,dss:null,dsn:null,di:null,pld:null,plr:null,pls:null,lld:null,llr:null,lls:null,sq:null,ald:null,alr:null,als:null,sld:null,slr:null,sls:null,tld:null,tlr:null,tls:null,k:['r'+i+'steps','r'+i+'hits','r'+i+'rot','r'+i+'level']});
   return{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6,gate:true,glide:false,rings};
 }
 /* base values -> sequencer locks -> LFOs. Fills E in place (no allocation, safe for the audio thread) */
 function effParams(S,t,step,E){
   const B=S.base,L=S.lfo||{},q=S.seq;
   let sp=B.speed,F=B.F,sg=B.sigma,det=B.det,vib=B.vib,vol=B.vol;
-  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;o.dp=r.dp||null;o.dl=r.dl||null;o.da=r.da||null;o.dk=r.dk||null;o.dt=r.dt||null;o.kids=r.kids||null;o.ds=r.ds||null;o.dss=r.dss||null;o.dsn=r.dsn||null;o.di=r.di||null;o.pld=r.pld||null;o.plr=r.plr||null;o.pls=r.pls||null;o.lld=r.lld||null;o.llr=r.llr||null;o.lls=r.lls||null;o.ald=r.ald||null;o.alr=r.alr||null;o.als=r.als||null;o.sld=r.sld||null;o.slr=r.slr||null;o.sls=r.sls||null;o.tld=r.tld||null;o.tlr=r.tlr||null;o.tls=r.tls||null;}
+  for(let i=0;i<4;i++){const r=S.rings[i],o=E.rings[i];o.on=!!r.on;o.steps=r.steps;o.hits=r.hits;o.rotf=r.rot;o.level=r.level;o.dp=r.dp||null;o.dl=r.dl||null;o.da=r.da||null;o.dk=r.dk||null;o.dt=r.dt||null;o.kids=r.kids||null;o.ds=r.ds||null;o.dss=r.dss||null;o.dsn=r.dsn||null;o.di=r.di||null;o.pld=r.pld||null;o.plr=r.plr||null;o.pls=r.pls||null;o.lld=r.lld||null;o.llr=r.llr||null;o.lls=r.lls||null;o.sq=r.sq||null;o.ald=r.ald||null;o.alr=r.alr||null;o.als=r.als||null;o.sld=r.sld||null;o.slr=r.slr||null;o.sls=r.sls||null;o.tld=r.tld||null;o.tlr=r.tlr||null;o.tls=r.tls||null;}
   E.gate=true;E.glide=false;
   if(step>=0&&q){
     E.gate=q.gate[step]!==false;E.glide=!!q.glide[step];
@@ -672,6 +707,20 @@ function wtMake(kind){const F=16,N=2048,o=new Float32Array(F*N);
     let pk=1e-9;for(let i=0;i<N;i++){const v=o[b+i]<0?-o[b+i]:o[b+i];if(v>pk)pk=v;}
     for(let i=0;i<N;i++)o[b+i]/=pk;}
   return o;}
+/* Per-dot sequences. A dot's sequence moves one step each time the dot fires. Steps hold a note as a scale degree (nt), on/off, chance (ch),
+   repeats (rp, 1-8, spread over the ring's average gap between dots), level (lv), chord (cd) and a condition on which pass round it plays (cn).
+   degSemi turns a degree into semitones in a scale (SCALES, written into the worklet by hand); sqHits lists what one step plays, into a
+   preallocated array: four numbers per hit (when, as a fraction of the repeat span; semitones; level; slice index or NaN). Engine and page both use it. */
+function degSemi(deg,sc){const n=sc.length,o=Math.floor(deg/n);return sc[deg-o*n]+12*o;}
+function chordN(c){return c==='tri'||c==='s2'||c==='s4'?3:c==='sev'?4:c==='oct'?2:1;}
+function chordDeg(c,i){if(c==='s2')return i===0?0:i===1?1:4;if(c==='s4')return i===0?0:i===1?3:4;return c==='oct'?0:i*2;}
+function sqHits(Q,k,sc,root,out){const rp=Math.max(1,Math.min(8,Q.rp[k]|0)),nt=Q.nt[k]|0,lv=Q.lv[k],sl=Q.sm==='slice',c=sl?'':Q.cd[k],cn=chordN(c);let m=0;
+  for(let j=0;j<rp;j++){const a=Q.arp&&cn>1?j%cn:0,b=Q.arp&&cn>1?a+1:cn;
+    for(let i=a;i<b;i++){const o=m*4;if(o+3>=out.length)return m;out[o]=j/rp;out[o+2]=lv;
+      if(sl){out[o+1]=0;out[o+3]=nt;}else{out[o+1]=root+degSemi(nt+chordDeg(c,i),sc)+(c==='oct'?12*i:0);out[o+3]=NaN;}m++;}}
+  return m;}
+/* a dot's key for remembering where its sequence is: the dot on a top ring, then each dot on the way down (64 per level) */
+function sqKey(parent,ri,d){return parent*64+ri*16+d+1;}
 function dotSeed(ri,d){return frac((ri*32+d+1)*0.6180339887);}
 /* One of a dot's own LFOs: dep, rt, sh are the ring's arrays of depth, rate and shape; k tells the dot's LFOs apart (each has its own start phase). */
 function dotLv(dep,rt,sh,ri,d,k,t,L){const x=dep?dep[d]||0:0;if(!(x>0)||!L)return 0;L.shape=sh?sh[d]||'sine':'sine';L.rate=rt?rt[d]||0.5:0.5;L.seed=dotSeed(ri,d+16*k);return x*lfoVal(L,t);}
@@ -709,13 +758,16 @@ class Engine{
     this.pT=new Float64Array(PM);this.pA=new Float64Array(PM);this.pP=new Float64Array(PM);this.pL=new Float64Array(PM);this.pW=new Float64Array(PM);
     this.pI=new Int8Array(PM);this.pD=new Int8Array(PM);this.pZ=new Int8Array(PM);this.pR=new Array(PM).fill(null);
     this.pc=new WeakMap();this.dirty=true;this.nl=0;
+    /* queued hits of a sequence step (already resolved: they play, not fire), each dot's key, and a sequence step's slice */
+    this.pF=new Int8Array(PM);this.pK=new Float64Array(PM);this.pS=new Float64Array(PM);
+    this.sqm=new Map();this.hb=new Float64Array(4*40);this.rs=12345;
     /* samples: the recordings (8 slots), and the slices now playing: recording, place in it, speed, time played and to play, edge length, level */
     this.smp=[null,null,null,null,null,null,null,null];
     /* how a sample slot plays when the patch says nothing about it: one-shot, a new hit cuts the last, 3 ms in and 5 ms out */
     this.SP0={src:'smp',wave:'saw',ss:0,note:60,fine:0,mode:'one',st:0,ls:0,le:1,a:0.003,d:0.2,s:1,r:0.005,vel:1,ft:'off',fc:1800,fq:0.3,fe:0,fk:0,fa:0.005,fd:0.5,fs:0.3,fr:0.3,
       vm:'poly',vn:8,glide:0,level:1,wt:'saw',wp:0,mods:null,uni:1,udet:0,o2l:0,o2w:'sine',o2s:0,o2f:0,fm:0,ring:0,sub:0,nz:0,drive:0,elin:false,eloop:false,cut:true,hold:0.25};
     /* P = the patch now playing: S itself, or one section of it while the track plays. tz is taken off the clock, so LFOs restart with each section and stand still in a pause. */
-    this.solo=-1;this.raw=false;   /* solo: only this top ring sounds; raw: no limiter. Both are for rendering each ring to its own clip. */
+    this.solo=-1;this.raw=false;this.ssc=null;   /* solo: only this top ring sounds; raw: no limiter. Both are for rendering each ring to its own clip. */
     this.P=null;this.secS=null;this.paused=false;this.tz=0;this.tOn=false;this.tI=0;this.tL=0;this.tLoop=true;this.done=false;
     /* impulses: each is written into this short ring as a band-limited spike (a windowed sinc, 8 samples late) */
     this.ib=new Float32Array(64);this.ip=0;
@@ -736,7 +788,7 @@ class Engine{
     if(S.sections&&S.sections.length){this.secS=[];   /* each section as a patch of its own: its wheels, speed, LFOs and steps, with the shared Library */
       for(let k=0;k<S.sections.length;k++){const x=S.sections[k];if(!x||!x.base||!x.rings){this.secS.push(null);continue;}
         const q=x.seq||S.seq;if(q&&S.seq)q.playing=S.seq.playing;
-        this.secS.push({base:x.base,rings:x.rings,lfo:x.lfo||{},seq:q,inst:S.inst,shapes:S.shapes,smpp:S.smpp,trips:x.trips||1});}}
+        this.secS.push({base:x.base,rings:x.rings,lfo:x.lfo||{},seq:q,inst:S.inst,shapes:S.shapes,smpp:S.smpp,sqs:S.sqs,scale:S.scale,trips:x.trips||1});}}
     this.P=this.tView()||S;if(this.P===S)this.tOn=false;
     this.dirty=true;this.update(this.t);if(jump)this.lf=this.lt;}
   /* the section the track is on, as a patch (null when the track is not playing or has nothing to play) */
@@ -746,7 +798,7 @@ class Engine{
     if(!m.play){this.tOn=false;this.P=this.S;this.dirty=true;if(this.S)this.update(this.t);return;}
     this.tOn=true;this.tI=m.from|0;this.tL=-1;this.tLoop=m.loop!==false;this.done=false;this.paused=false;
     const V=this.tView();if(!V){this.tOn=false;return;}
-    this.P=V;this.tz+=this.t;this.t=0;this.seqOn=false;this.dirty=true;this.stopAll();this.update(0);this.lf=this.lt;
+    this.P=V;this.tz+=this.t;this.t=0;this.seqOn=false;this.dirty=true;this.stopAll();this.sqm.clear();this.update(0);this.lf=this.lt;
     this.master=1-1e-9;for(const r of this.rings){r.ph=this.master-r.off;this.seek(r);}}
   /* the top playhead has come round: count the trip, and move to the next section when this one has had all its trips */
   trip(){this.tL++;const T=this.S.track,it=T.items[this.tI],V=this.P;
@@ -794,32 +846,67 @@ class Engine{
      time and fires in the same way when it comes due, so wheels can sit inside wheels. A turn keeps the length it started with and plays
      out even if the next dot fires first. Level multiplies and pitch and length add up on the way down.
      r = the ring the dot is on, age = samples since it fired, st/ol = pitch and length so far, Lp = this wheel's turn in samples. */
-  fire(r,ri,d,age,amp,st,ol,Lp,depth){
+  rnd(){this.rs=(Math.imul(this.rs,1664525)+1013904223)>>>0;return this.rs/4294967296;}
+  /* the sequence a dot plays: its own, or the patch's slot it is linked to (null: none) */
+  sqOf(r,d){const x=r.sq?r.sq[d]:null;if(!x||!x.on)return null;if(x.link>=0){const P=this.P;return P&&P.sqs?P.sqs[x.link]||null:null;}return x.s||null;}
+  /* move a dot's sequence on by one step and remember where it is (pos), which pass round it is on (pass), and how many times it has moved */
+  sqAdv(Q,pk){let s=this.sqm.get(pk);if(!s){s={pos:-1,dir:1,pass:-1,cnt:0};this.sqm.set(pk,s);}
+    const n=Math.max(1,Q.n|0),o=Q.ord;if(s.pos>=n)s.pos=n-1;
+    if(o==='rand'){s.pos=Math.floor(this.rnd()*n);s.pass=Math.floor(s.cnt/n);}
+    else if(o==='drunk'){s.pos=s.pos<0?0:((s.pos+(this.rnd()<0.5?-1:1))%n+n)%n;s.pass=Math.floor(s.cnt/n);}
+    else if(o==='back'){s.pos=s.pos<=0?n-1:s.pos-1;if(s.pos===n-1)s.pass++;}
+    else if(o==='ping'){if(s.pos<0||n===1){s.pos=0;s.dir=1;s.pass++;}else{let p=s.pos+s.dir;if(p>=n){s.dir=-1;p=n-2;}else if(p<0){s.dir=1;p=1;}s.pos=p;if(p===0)s.pass++;}}
+    else{s.pos=s.pos<0||s.pos+1>=n?0:s.pos+1;if(s.pos===0)s.pass++;}
+    s.cnt++;return s;}
+  /* does a step's condition let it play on this pass: all, a:b (the a-th of every b passes), first, not first */
+  sqCond(c,pass){if(!c||c==='all')return true;if(c==='first')return pass===0;if(c==='nfirst')return pass>0;
+    const a=c.charCodeAt(0)-48,b=c.charCodeAt(2)-48;return b>0&&pass%b===a-1;}
+  /* A dot fires: its level, pitch and length (with their LFOs), then its sequence step if it has one, then what it plays (play).
+     A step can be off, fail its chance or its condition, and then nothing sounds. Its repeats and chord notes are set down in the queue. */
+  fire(r,ri,d,age,amp,st,ol,Lp,depth,pk){
     amp*=dotAmp(r,ri,d,this.t,this.L);
     if(!(amp>0))return;
     st+=dotPitch(r,ri,d,this.t,this.L);ol+=dotLen(r,ri,d,this.t,this.L);
+    const Q=this.sqOf(r,d);
+    if(Q){const s=this.sqAdv(Q,pk),k=s.pos;
+      if(!Q.on[k]||!this.sqCond(Q.cn[k],s.pass)||(Q.ch[k]<1&&this.rnd()>=Q.ch[k]))return;
+      const P=this.P,sc=SCALES[Q.scl]||SCALES[P&&P.scale?P.scale.sc:'']||SCALES.minor,root=P&&P.scale?P.scale.root|0:0;
+      const H=this.hb,m=sqHits(Q,k,sc,root,H),span=Lp/Math.max(1,r.hits|0);
+      for(let h=0;h<m;h++){const o=h*4,a=amp*H[o+2],sm=st+H[o+1],sk=H[o+3],dly=H[o]*span-age;if(!(a>0))continue;
+        if(dly<=0)this.play(r,ri,d,-dly,a,sm,ol,Lp,depth,pk,sk);
+        else if(this.pN<this.PM){const q=this.pN++,tm=this.n+dly;this.pT[q]=tm;this.pR[q]=r;this.pI[q]=ri;this.pD[q]=d;this.pA[q]=a;this.pP[q]=sm;this.pL[q]=ol;this.pW[q]=Lp;this.pZ[q]=depth;this.pK[q]=pk;this.pS[q]=sk;this.pF[q]=1;if(tm<this.pMin)this.pMin=tm;}
+        else this.dropped++;}
+      return;}
+    this.play(r,ri,d,age,amp,st,ol,Lp,depth,pk,NaN);}
+  /* What a dot plays once its level and pitch are settled. A dot holding a wheel starts that wheel's one turn: each of its dots is set down
+     at its exact time and fires in the same way when it comes due, so wheels can sit inside wheels. A turn keeps the length it started with
+     and plays out even if the next dot fires first. Level multiplies and pitch and length add up on the way down.
+     r = the ring the dot is on, age = samples since it fired, st/ol = pitch and length so far, Lp = this wheel's turn in samples,
+     pk = the dot's key, sk = a sequence step's slice (NaN: none). */
+  play(r,ri,d,age,amp,st,ol,Lp,depth,pk,sk){
     const W=dotWheel(r,d,depth);
     if(W){const T=dotTurn(r,d,ri,this.t,this.L)*Lp;
       for(let ci=0;ci<4;ci++){const c=W.rings[ci];if(!c||!c.on||!(c.level>0))continue;
         const pc=this.pat(c),P=pc.p,a=amp*c.level;
-        for(let j=0;j<P.length;j++){const dly=P[j]*T-age;
-          if(dly<=0)this.fire(c,ci,pc.d[j],-dly,a,st,ol,T,depth+1);
-          else if(this.pN<this.PM){const q=this.pN++,tm=this.n+dly;this.pT[q]=tm;this.pR[q]=c;this.pI[q]=ci;this.pD[q]=pc.d[j];this.pA[q]=a;this.pP[q]=st;this.pL[q]=ol;this.pW[q]=T;this.pZ[q]=depth+1;if(tm<this.pMin)this.pMin=tm;}
+        for(let j=0;j<P.length;j++){const dly=P[j]*T-age,ck=sqKey(pk,ci,pc.d[j]);
+          if(dly<=0)this.fire(c,ci,pc.d[j],-dly,a,st,ol,T,depth+1,ck);
+          else if(this.pN<this.PM){const q=this.pN++,tm=this.n+dly;this.pT[q]=tm;this.pR[q]=c;this.pI[q]=ci;this.pD[q]=pc.d[j];this.pA[q]=a;this.pP[q]=st;this.pL[q]=ol;this.pW[q]=T;this.pZ[q]=depth+1;this.pK[q]=ck;this.pF[q]=0;if(tm<this.pMin)this.pMin=tm;}
           else this.dropped++;}}
       return;}
     const kd=r.dk?r.dk[d]:'click';
-    if(kd==='sample'){this.slice(age,amp,r,ri,d,st,ol,Lp);return;}
+    if(kd==='sample'){this.slice(age,amp,r,ri,d,st,ol,Lp,sk);return;}
     if(kd==='inst'){this.note(r.di?r.di[d]|0:0,age,amp,st,Lp*0.25*Math.pow(2,ol));return;}
     if(kd==='impulse'){this.spike(age,amp);return;}
     this.click(age,amp,dotF(this.E.F,st),dotS(this.E.sigma,ol));
   }
   /* A sample dot plays its slice through the same voices as an instrument, with the slot's own playback settings (P.smpp): play mode,
      envelope, filter and modulators. By default a new hit on a slot cuts the one before it (4 ms fade). Pitch is playback speed. */
-  slice(age,amp,r,ri,d,st,ol,Lp){
+  slice(age,amp,r,ri,d,st,ol,Lp,sk){
     const sl=r.ds?r.ds[d]|0:0,S=this.smp[sl];if(!S)return;
-    const I=(this.P&&this.P.smpp?this.P.smpp[sl]:null)||this.SP0,n=S.d.length,N=dotSliceN(r,d,ol,n,ri,this.t,this.L);
+    const I=(this.P&&this.P.smpp?this.P.smpp[sl]:null)||this.SP0,n=S.d.length;let N=dotSliceN(r,d,ol,n,ri,this.t,this.L),A=dotSliceA(r,d,n,ri,this.t,this.L);
+    if(sk===sk){const q=r.dsn?r.dsn[d]||1:1;A=((A+sk*q*n)%n+n)%n;N=Math.min(N,n-1-A);}   /* a sequence in Slice mode: step k plays the k-th slice on from Start */
     if(!(N>=2))return;
-    this.note(8+sl,age,amp,st,Lp*(I.hold||0.25),I,S,dotSliceA(r,d,n,ri,this.t,this.L),N);
+    this.note(8+sl,age,amp,st,Lp*(I.hold||0.25),I,S,A,N);
   }
   /* audition a whole recording through its slot's playback settings */
   shot(sl,gate){const S=this.smp[sl];if(!S)return;const I=(this.P&&this.P.smpp?this.P.smpp[sl]:null)||this.SP0;this.note(8+sl,0,1,0,gate,I,S,0,S.d.length-1);}
@@ -836,14 +923,14 @@ class Engine{
     const semi=st+I.fine/100,inc=d?Math.pow(2,semi/12)*dsr/sr:440*Math.pow(2,(I.note-69+semi)/12)/sr;
     const VO=this.vo,mono=!dot&&I.vm!=='poly';let v=null,cnt=0,old=null;
     for(let q=0;q<this.NV;q++){const x=VO[q];if(x.on&&x.slot===slot&&!(x.xf>0)){cnt++;if(!old||x.t>old.t)old=x;}}
-    if(dot&&I.cut!==false&&old){for(let q=0;q<this.NV;q++){const x=VO[q];if(x.on&&x.slot===slot&&!(x.xf>0))x.xf=1/(0.004*sr);}cnt=0;old=null;}   /* cut: the last hit fades, this one starts fresh */
+    if(dot&&I.cut!==false&&old){for(let q=0;q<this.NV;q++){const x=VO[q];if(x.on&&x.slot===slot&&!(x.xf>0)&&x.n0!==this.n)x.xf=1/(0.004*sr);}cnt=0;old=null;}   /* notes of one chord start together and do not cut each other */   /* cut: the last hit fades, this one starts fresh */
     if(mono&&old){v=old;
       if(I.vm==='legato'&&v.stg<3&&v.t<v.gate){v.tinc=inc;v.gl=I.glide>0?1-Math.exp(-1/(I.glide*sr)):1;v.gate=v.t+gate;v.st=semi;return;}}   /* legato: slide to the new note, no new attack */
     else if(old&&cnt>=(dot?8:I.vn))v=old;                                   /* out of voices for this slot: take the oldest */
     else{for(let q=0;q<this.NV;q++)if(!VO[q].on){v=VO[q];break;}if(!v){this.dropped++;return;}}
     const was=v.on,slide=mono&&was&&I.glide>0&&!d;
     v.slot=slot;v.I=I;v.d=d;v.tinc=inc;if(!slide)v.inc=inc;v.gl=slide?1-Math.exp(-1/(I.glide*sr)):1;
-    v.xf=0;v.t=age;v.gate=d&&I.mode==='one'?Infinity:Math.max(1,gate);v.stg=0;v.fst=0;v.st=semi;v.g=0;v.es=I.s;v.efs=I.fs;
+    v.xf=0;v.n0=this.n;v.t=age;v.gate=d&&I.mode==='one'?Infinity:Math.max(1,gate);v.stg=0;v.fst=0;v.st=semi;v.g=0;v.es=I.s;v.efs=I.fs;
     if(!was){v.env=0;v.fen=0;v.ic1=0;v.ic2=0;v.ic3=0;v.ic4=0;v.ph=0;v.ph2=0;v.phs=0;if(I.ft==='cb')v.cb.fill(0);
       v.up[0]=0;for(let u=1;u<7;u++){v.seed=(Math.imul(v.seed,1664525)+1013904223)>>>0;v.up[u]=v.seed/4294967296;}}           /* a re-used voice carries on from its level, so there is no click */
     v.w=W;v.nf=nf;v.fresh=true;v.glen=dot&&(I.mode==='one'||I.mode==='rev')?N/inc:v.gate<Infinity?v.gate:d?d.length/inc:sr;
@@ -909,9 +996,9 @@ class Engine{
       if(!this.ready){out[i]=0;continue;}
       if(run&&this.n>=this.pMin){let mn=Infinity;   /* inner dots that are due */
         for(let q=0;q<this.pN;){const tm=this.pT[q];
-          if(tm<=this.n){const c=this.pR[q],ci=this.pI[q],dd=this.pD[q],a=this.pA[q],st=this.pP[q],ol=this.pL[q],T=this.pW[q],z=this.pZ[q],l=--this.pN;
-            this.pT[q]=this.pT[l];this.pR[q]=this.pR[l];this.pR[l]=null;this.pI[q]=this.pI[l];this.pD[q]=this.pD[l];this.pA[q]=this.pA[l];this.pP[q]=this.pP[l];this.pL[q]=this.pL[l];this.pW[q]=this.pW[l];this.pZ[q]=this.pZ[l];
-            this.fire(c,ci,dd,this.n-tm,a,st,ol,T,z);}
+          if(tm<=this.n){const c=this.pR[q],ci=this.pI[q],dd=this.pD[q],a=this.pA[q],st=this.pP[q],ol=this.pL[q],T=this.pW[q],z=this.pZ[q],pk=this.pK[q],sk=this.pS[q],f=this.pF[q],l=--this.pN;
+            this.pT[q]=this.pT[l];this.pR[q]=this.pR[l];this.pR[l]=null;this.pI[q]=this.pI[l];this.pD[q]=this.pD[l];this.pA[q]=this.pA[l];this.pP[q]=this.pP[l];this.pL[q]=this.pL[l];this.pW[q]=this.pW[l];this.pZ[q]=this.pZ[l];this.pK[q]=this.pK[l];this.pS[q]=this.pS[l];this.pF[q]=this.pF[l];
+            if(f)this.play(c,ci,dd,this.n-tm,a,st,ol,T,z,pk,sk);else this.fire(c,ci,dd,this.n-tm,a,st,ol,T,z,pk);}
           else{if(tm<mn)mn=tm;q++;}}
         this.pMin=mn;}
       const E=this.E;
@@ -925,7 +1012,7 @@ class Engine{
         if(!P.length){if(r.ph>=1)r.ph-=1;continue;}
         let tg=r.base+P[r.next];
         while(tg<=r.ph){
-          if(E.gate&&r.amp>0&&(this.solo<0||this.solo===ri))this.fire(E.rings[ri],ri,r.dot[r.next],(r.ph-tg)/inc,r.amp,0,0,1/inc,0);
+          if(E.gate&&r.amp>0&&(this.solo<0||this.solo===ri))this.fire(E.rings[ri],ri,r.dot[r.next],(r.ph-tg)/inc,r.amp,0,0,1/inc,0,sqKey(0,ri,r.dot[r.next]));
           r.next++;if(r.next>=P.length){r.next=0;r.base+=1;}
           tg=r.base+P[r.next];
         }
@@ -1004,12 +1091,13 @@ class Engine{
     if(this.ready){if(this.dirty){this.dirty=false;this.nl=this.leaves(this.E.rings,0);}const hits=this.nl;
       const overlap=Math.exp(this.lf)*hits*6*this.E.sigma/1000;this.comp+=(1/Math.sqrt(1+overlap)-this.comp)*0.3;}
   }
-  report(){const r=[];for(const x of this.rings)r.push(frac(x.ph+x.off));return{m:this.master,r,f:Math.exp(this.lf),d:this.dropped,t:this.t,step:this.step,l:this.loops,p:this.paused,ti:this.tOn?this.tI:-1,tl:this.tL,done:this.done};}
+  report(){const r=[];for(const x of this.rings)r.push(frac(x.ph+x.off));const sq={};for(const [k,v] of this.sqm)sq[k]=v.pos;   /* where each sequence is, for the page to draw */
+    return{sq,m:this.master,r,f:Math.exp(this.lf),d:this.dropped,t:this.t,step:this.step,l:this.loops,p:this.paused,ti:this.tOn?this.tI:-1,tl:this.tL,done:this.done};}
 }
 function applyMsg(e,d){if(d.smp)e.setSample(d.smp.i,d.smp.d,d.smp.sr);if(d.note&&e.ready){if(d.note.i>=8)e.shot(d.note.i-8,d.note.gate*e.sr);else e.note(d.note.i,0,d.note.amp,d.note.st,d.note.gate*e.sr);}
-  if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();if(d.stop)e.stopAll();if(d.pause!==undefined){e.paused=!!d.pause;if(!e.paused)e.done=false;}if(d.track&&e.S)e.setTrack(d.track);}
+  if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();if(d.stop)e.stopAll();if(d.sqreset)e.sqm.clear();if(d.pause!==undefined){e.paused=!!d.pause;if(!e.paused)e.done=false;}if(d.track&&e.S)e.setTrack(d.track);}
 
-const WORKLET_SRC='const USHAPES=[null,null,null,null,null,null,null,null];\n'+[frac,clamp,rnd,setShapes,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotWheel,dotSliceA,dotSliceN,wtMake,dotSeed,dotLv,dotAmp,dotTurn,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
+const WORKLET_SRC='const USHAPES=[null,null,null,null,null,null,null,null];\nconst SCALES='+JSON.stringify(SCALES)+';\n'+[frac,clamp,rnd,setShapes,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotWheel,dotSliceA,dotSliceN,wtMake,degSemi,chordN,chordDeg,sqHits,sqKey,dotSeed,dotLv,dotAmp,dotTurn,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
  +'\n'+Engine.toString()+`
 class RTProcessor extends AudioWorkletProcessor{
   constructor(){super();this.e=new Engine(sampleRate);this.c=0;this.port.onmessage=m=>applyMsg(this.e,m.data);}
@@ -1091,17 +1179,28 @@ function sanInst(x){if(!x||typeof x!=='object')return null;const pick=(v,l,d)=>l
    in turns of the wheel the dot sits on. */
 function newSmpPlay(){return Object.assign(newInst('Playback'),{src:'smp',mode:'one',a:0.003,d:0.2,s:1,r:0.005,vel:1,ft:'off',fe:0,fk:0,level:1,cut:true,hold:0.25});}
 function sanSmpPlay(x){x=x&&typeof x==='object'?x:{};const o=sanInst(Object.assign(newSmpPlay(),x));o.src='smp';o.cut=x.cut!==false;o.hold=num(x.hold,1/64,4,0.25);return o;}
+/* A sequence (a dot's own, or one of the patch's eight slots, state.sqs): n steps (1-16), play order ord (fwd back ping rand drunk),
+   arp (chord notes one per repeat), sm (what a step's note does on a sample: 'note' = playback speed, 'slice' = which slice), scl (a scale
+   name, or '' for the patch's), and per step: on, nt (scale degree), ch (chance), rp (repeats), lv (level), cd (chord), cn (condition).
+   A dot's entry in ring.sq is null (no sequence) or {on, link (-1 = its own; 0-7 = a slot), s (its own sequence, kept while linked)}. */
+const SQ_ORD=['fwd','back','ping','rand','drunk'],SQ_CD=['','tri','sev','s2','s4','oct'],SQ_CN=['all','1:2','2:2','1:3','1:4','4:4','first','nfirst'];
+function newSeq(name){return{name:name||'Sequence',n:8,ord:'fwd',arp:false,sm:'note',scl:'',on:Array(16).fill(true),nt:Array(16).fill(0),ch:Array(16).fill(1),rp:Array(16).fill(1),lv:Array(16).fill(1),cd:Array(16).fill(''),cn:Array(16).fill('all')};}
+function sanSeq(x){if(!x||typeof x!=='object')return null;const a=(v,f)=>Array.from({length:16},(_,k)=>f(Array.isArray(v)?v[k]:undefined));
+  return{name:String(x.name||'Sequence').slice(0,24),n:Math.round(num(x.n,1,16,8)),ord:SQ_ORD.includes(x.ord)?x.ord:'fwd',arp:x.arp===true,sm:x.sm==='slice'?'slice':'note',scl:SCALES[x.scl]?x.scl:'',
+    on:a(x.on,v=>v!==false),nt:a(x.nt,v=>Math.round(num(v,-24,24,0))),ch:a(x.ch,v=>num(v,0,1,1)),rp:a(x.rp,v=>Math.round(num(v,1,8,1))),lv:a(x.lv,v=>num(v,0,1,1)),
+    cd:a(x.cd,v=>SQ_CD.includes(v)?v:''),cn:a(x.cn,v=>SQ_CN.includes(v)?v:'all')};}
+function sanSqEntry(x){if(!x||typeof x!=='object')return null;return{on:x.on!==false,link:Math.round(num(x.link,-1,7,-1)),s:sanSeq(x.s)||newSeq()};}
 function mkRing(steps,hits,on){return{on:!!on,steps,hits,rot:0,level:1,dp:Array(16).fill(0),dl:Array(16).fill(0),da:Array(16).fill(1),
   dk:Array(16).fill('click'),dt:Array(16).fill(0.25),kids:Array(16).fill(null),ds:Array(16).fill(0),dss:Array(16).fill(0),dsn:Array(16).fill(1),di:Array(16).fill(0),
   pld:Array(16).fill(0),plr:Array(16).fill(0.5),pls:Array(16).fill('sine'),lld:Array(16).fill(0),llr:Array(16).fill(0.5),lls:Array(16).fill('sine'),
-  ald:Array(16).fill(0),alr:Array(16).fill(0.5),als:Array(16).fill('sine'),sld:Array(16).fill(0),slr:Array(16).fill(0.5),sls:Array(16).fill('sine'),tld:Array(16).fill(0),tlr:Array(16).fill(0.5),tls:Array(16).fill('sine')};}
+  sq:Array(16).fill(null),ald:Array(16).fill(0),alr:Array(16).fill(0.5),als:Array(16).fill('sine'),sld:Array(16).fill(0),slr:Array(16).fill(0.5),sls:Array(16).fill('sine'),tld:Array(16).fill(0),tlr:Array(16).fill(0.5),tls:Array(16).fill('sine')};}
 function defaultRings(){return[1,2,3,4].map(n=>mkRing(n,n,true));}
 function newWheel(){return{rings:[mkRing(4,4,true),mkRing(3,3,false),mkRing(2,2,false),mkRing(1,1,false)]};}
 const blank=()=>Array(16).fill(null);
 function defaultSeq(){return{playing:false,steps:8,bpm:96,div:2,swing:0,clock:'tempo',loopsPerStep:1,glideTime:0.12,
   gate:Array(16).fill(true),glide:Array(16).fill(false),
   lanes:[{key:'speed',snap:true,vals:blank()},{key:'F',snap:false,vals:blank()},{key:'r0rot',snap:false,vals:blank()},{key:'',snap:false,vals:blank()}]};}
-function defaults(){return{base:{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6},rings:defaultRings(),lfo:{},seq:defaultSeq(),inst:Array(8).fill(null),shapes:Array(8).fill(null),smpp:Array.from({length:8},newSmpPlay),sections:[],cur:-1,track:{items:[],loop:true}};}
+function defaults(){return{base:{speed:0.5,F:700,sigma:1.2,det:0,vib:0,vol:0.6},rings:defaultRings(),lfo:{},seq:defaultSeq(),inst:Array(8).fill(null),shapes:Array(8).fill(null),smpp:Array.from({length:8},newSmpPlay),sections:[],cur:-1,track:{items:[],loop:true},sqs:Array(8).fill(null),scale:{root:0,sc:'minor'}};}
 
 function sanitizeSeq(q){
   const d=defaultSeq();if(!q||typeof q!=='object')return d;
@@ -1124,7 +1223,7 @@ function sanRing(x,r,depth){x=x&&typeof x==='object'?x:{};const steps=Math.round
     kids:Array.from({length:16},(_,k)=>{const w=Array.isArray(x.kids)?x.kids[k]:null;if(depth>=3||!w||!Array.isArray(w.rings))return null;
       return{rings:newWheel().rings.map((nr,i)=>sanRing(w.rings[i],nr,depth+1))};}),
     pld:arr(x.pld,0,24,0),plr:arr(x.plr,0.02,20,0.5),pls:shp(x.pls),lld:arr(x.lld,0,2,0),llr:arr(x.llr,0.02,20,0.5),lls:shp(x.lls),
-    ald:arr(x.ald,0,1,0),alr:arr(x.alr,0.02,20,0.5),als:shp(x.als),sld:arr(x.sld,0,1,0),slr:arr(x.slr,0.02,20,0.5),sls:shp(x.sls),tld:arr(x.tld,0,3,0),tlr:arr(x.tlr,0.02,20,0.5),tls:shp(x.tls)};}
+    sq:Array.from({length:16},(_,k)=>sanSqEntry(Array.isArray(x.sq)?x.sq[k]:null)),ald:arr(x.ald,0,1,0),alr:arr(x.alr,0.02,20,0.5),als:shp(x.als),sld:arr(x.sld,0,1,0),slr:arr(x.slr,0.02,20,0.5),sls:shp(x.sls),tld:arr(x.tld,0,3,0),tlr:arr(x.tlr,0.02,20,0.5),tls:shp(x.tls)};}
 function sanitizeState(o){
   const d=defaults();if(!o||typeof o!=='object')return d;
   const B=o.base||{};
@@ -1136,6 +1235,8 @@ function sanitizeState(o){
   d.inst=Array.from({length:8},(_,i)=>sanInst(Array.isArray(o.inst)?o.inst[i]:null));
   d.seq=sanitizeSeq(o.seq);d.seq.playing=false;
   d.smpp=Array.from({length:8},(_,i)=>sanSmpPlay(Array.isArray(o.smpp)?o.smpp[i]:null));
+  d.sqs=Array.from({length:8},(_,i)=>sanSeq(Array.isArray(o.sqs)?o.sqs[i]:null));
+  {const c=o.scale||{};d.scale={root:Math.round(num(c.root,0,11,0)),sc:SCALES[c.sc]?c.sc:'minor'};}
   /* Sections: each is one wheel saved whole (its rings and the wheels inside them, speed and click settings, LFOs and sequencer steps),
      with a name and how many trips round it lasts. The Library (instruments, shapes, sample playback) is shared by all of them.
      cur = the section on the wheel now (-1: none). track = sections in playing order, each repeated rep times. */
@@ -1201,18 +1302,26 @@ function smpDecode(buf){const OC=window.OfflineAudioContext||window.webkitOfflin
 
 /* The loop as a list of dots, and its spectrum. Each click is exp(-t²/2σ²)·sin(2πFt), centred 3σ after its hit, so its spectrum is
    σ·[exp(-2π²σ²(ν-F)²) − exp(-2π²σ²(ν+F)²)] with a delay phase. Summing that over the dots gives exactly what the engine plays. */
-function dotList(E,t){const out=[],L={shape:'sine',rate:1,seed:0};t=t||0;out.mod=false;out.cut=false;
+/* The page's view of a dot's sequence: the same choice the engine makes (sqOf), and what its current step plays. SQ = {S: the patch, pos: where
+   each sequence is, from the engine's report}. A step that is off plays nothing; chance and conditions are left out (they are decided as it plays). */
+function sqResolve(S,r,d){const x=r.sq?r.sq[d]:null;if(!x||!x.on)return null;return x.link>=0?(S&&S.sqs?S.sqs[x.link]||null:null):x.s||null;}
+function sqNow(S,Q,pos){const k=pos>=0&&pos<Q.n?pos:0;if(!Q.on[k])return{k,hits:[]};const sc=SCALES[Q.scl]||SCALES[S&&S.scale?S.scale.sc:'']||SCALES.minor,H=new Float64Array(160),m=sqHits(Q,k,sc,S&&S.scale?S.scale.root|0:0,H),hits=[];
+  for(let h=0;h<m;h++)hits.push({f:H[h*4],st:H[h*4+1],lv:H[h*4+2],sk:H[h*4+3]});return{k,hits};}
+function dotList(E,t,SQ){const out=[],L={shape:'sine',rate:1,seed:0};t=t||0;out.mod=false;out.cut=false;
+  SQ=SQ||{};const SS=SQ.S||(typeof state!=='undefined'?state:null),PS=SQ.pos||{};
   const lfo=(r,d)=>(r.pld&&r.pld[d]>0)||(r.lld&&r.lld[d]>0)||(r.ald&&r.ald[d]>0)||(r.tld&&r.tld[d]>0);
   /* p0, span = where this wheel's turn starts and how long it lasts, in top loops. A wheel inside a dot is walked the same way. */
-  const walk=(rings,depth,p0,span,amp,st0,ol0,ri0,d0)=>{
+  const walk=(rings,depth,p0,span,amp,st0,ol0,ri0,d0,pk0)=>{
     for(let i=0;i<4;i++){const r=rings[i];if(!r||!r.on||r.hits<=0||!(r.level>0))continue;const pos=ringPos(r),ids=ringDots(r),off=r.off||0;
       for(let j=0;j<pos.length;j++){const d=ids[j],a=amp*r.level*dotAmp(r,i,d,t,L);if(!(a>0))continue;
         if(lfo(r,d))out.mod=true;
-        const st=st0+dotPitch(r,i,d,t,L),ol=ol0+dotLen(r,i,d,t,L),p=p0+(pos[j]+off)*span,W=dotWheel(r,d,depth),ri=depth?ri0:i,dd=depth?d0:d;
-        if(W){walk(W.rings,depth+1,p,span*dotTurn(r,d,i,t,L),a,st,ol,ri,dd);continue;}
-        if(out.length>=4096){out.cut=true;return;}
-        out.push({ri,d:dd,p,a,F:dotF(E.F,st),s:dotS(E.sigma,ol)/1000,k:r.dk?r.dk[d]:'click'});}}};
-  walk(E.rings,0,0,1,1,0,0,0,0);
+        const st=st0+dotPitch(r,i,d,t,L),ol=ol0+dotLen(r,i,d,t,L),p=p0+(pos[j]+off)*span,W=dotWheel(r,d,depth),ri=depth?ri0:i,dd=depth?d0:d,pk=sqKey(pk0,i,d),Q=sqResolve(SS,r,d);
+        const hits=Q?(out.mod=true,sqNow(SS,Q,PS[pk]===undefined?-1:PS[pk]).hits):[{f:0,st:0,lv:1}],gap=span/Math.max(1,r.hits);
+        for(const h of hits){const a2=a*h.lv,p2=p+h.f*gap,s2=st+h.st;if(!(a2>0))continue;
+          if(W){walk(W.rings,depth+1,p2,span*dotTurn(r,d,i,t,L),a2,s2,ol,ri,dd,pk);continue;}
+          if(out.length>=4096){out.cut=true;return;}
+          out.push({ri,d:dd,p:p2,a:a2,F:dotF(E.F,s2),s:dotS(E.sigma,ol)/1000,k:r.dk?r.dk[d]:'click'});}}}};
+  walk(E.rings,0,0,1,1,0,0,0,0,0);
   return out;}
 function heardMag(D,n,nu){let re=0,im=0;
   for(const o of D){const k=2*Math.PI*Math.PI*o.s*o.s,d1=k*(nu-o.F)*(nu-o.F);if(d1>16)continue;
@@ -1313,152 +1422,36 @@ const bus=(()=>{
       recv(m,true);}};
 })();
 
+/* One row per sequenced dot: where it sits, its steps (a bar at each step's note), the step playing now, and the selected dot outlined.
+   Used by the Sequences panel and the Sequences window. */
+function drawSqRows(cv,rows,pos,running,selPk){const {g,w,h}=fit(cv);g.clearRect(0,0,w,h);const RH=28,LW=Math.min(170,w*0.34),cw=(w-LW)/16;
+  rows.forEach((o,i)=>{const y=2+i*RH,col=T[RC[o.ri]],p=pos?pos[o.pk]:undefined,now=p===undefined?-1:p;
+    g.fillStyle=col;g.fillRect(0,y+3,3,RH-6);
+    if(o.pk===selPk){g.strokeStyle=T['--ink'];g.lineWidth=1;g.strokeRect(0.5,y+0.5,w-1,RH-1);}
+    g.fillStyle=T['--ink'];g.font=font(10,500);g.textAlign='left';g.fillText(o.label,8,y+12);
+    g.fillStyle=T['--muted'];g.font=font(9);g.fillText((o.kind==='inst'?'instrument':o.kind)+(o.link>=0?' · slot '+(o.link+1)+' '+o.name:''),8,y+23);
+    for(let k=0;k<16;k++){const x=LW+k*cw,inN=k<o.n;
+      if(k===now&&running){g.fillStyle=col;g.globalAlpha=0.2;g.fillRect(x,y+1,cw,RH-2);}
+      g.globalAlpha=inN?(o.on[k]?1:0.25):0.08;g.fillStyle=col;
+      const v=o.sm==='slice'?clamp(o.nt[k],0,15)/15*2-1:clamp(o.nt[k],-14,14)/14,yy=y+RH/2-v*(RH/2-5);g.fillRect(x+2,yy-2,cw-4,4);g.globalAlpha=1;}
+    g.strokeStyle=T['--soft'];g.beginPath();g.moveTo(0,y+RH+0.5);g.lineTo(w,y+RH+0.5);g.stroke();});}
+
 /* =====================================================================
-   Sequencer view (used in its own window, or docked in the instrument)
+   Sequences window (#sequencer). It shows what the main window sends: one row per sequenced dot, and where each one is.
    ===================================================================== */
-function mountSequencer(host,opts){
-  const me='q'+Math.random().toString(36).slice(2,8);
-  let seq=sanitizeSeq(state.seq);seq.playing=false;
-  let st={at:0,running:false,playing:false,step:-1};
-  let tool='draw',dirty=false,queued=false,hover=null,drag=null;
-  host.innerHTML=`
-    <div class="row spread"><h2><b>09</b>Sequencer</h2><span class="chip" data-r="conn">Looking for the instrument…</span></div>
-    <div class="seqbar">
-      <button type="button" class="playbtn" data-r="play" aria-pressed="false">Play</button>
-      <div class="fld"><span>Clock</span><div class="seg" role="group" aria-label="Clock" data-r="clock"><button type="button" data-v="tempo">Tempo</button><button type="button" data-v="loops">Loops</button></div></div>
-      <div class="fld" data-show="tempo"><label for="${me}-bpm">BPM</label><input type="number" id="${me}-bpm" data-r="bpm" min="20" max="300" step="1"></div>
-      <div class="fld" data-show="tempo"><span>Step length</span><div class="seg" role="group" aria-label="Step length" data-r="div"><button type="button" data-v="1">¼</button><button type="button" data-v="2">⅛</button><button type="button" data-v="4">1/16</button></div></div>
-      <div class="fld" data-show="loops"><span>Loops per step</span><div class="stepper"><button type="button" data-r="lps-" aria-label="Fewer loops per step">−</button><output data-r="lps"></output><button type="button" data-r="lps+" aria-label="More loops per step">+</button></div></div>
-      <div class="fld"><span>Length</span><div class="stepper"><button type="button" data-r="len-" aria-label="Fewer steps">−</button><output data-r="len"></output><button type="button" data-r="len+" aria-label="More steps">+</button></div></div>
-      <div class="fld" data-show="tempo"><label for="${me}-sw">Swing <output data-r="swv"></output></label><input type="range" id="${me}-sw" data-r="swing" min="0" max="50"></div>
-      <div class="fld"><label for="${me}-gl">Glide time <output data-r="glv"></output></label><input type="range" id="${me}-gl" data-r="glide" min="10" max="1000"></div>
-    </div>
-    <div class="row">
-      <div class="seg" role="group" aria-label="Drawing tool" data-r="tool"><button type="button" data-v="draw">Draw</button><button type="button" data-v="erase">Erase</button></div>
-      <span class="sub">Examples</span>
-      <button type="button" data-ex="melody">Melody</button><button type="button" data-ex="sweep">Pulse to pitch</button><button type="button" data-ex="bars">Bar changes</button>
-      <button type="button" data-r="clear">Clear steps</button>
-    </div>
-    <div class="lanes" data-r="lanes">
-      <div class="lane"><div class="lhead"><span class="lname">Gate and glide</span><span class="sub">Top row: tap to rest a step. Bottom row: glide into a step.</span></div><canvas class="trig" data-r="trig" aria-label="Gate and glide for each step"></canvas></div>
-    </div>
-    <p class="hint">Each lane locks one control to a value on chosen steps: drag across the steps to draw values. Steps without a value use the front-panel setting, and LFOs still move on top. Tempo clock counts beats. Loops clock moves one step every so many loops of the instrument, so in the rhythm range the sequence changes with the bar.</p>`;
-  const q=s=>host.querySelector(s);
-  const lanesBox=q('[data-r=lanes]'),trig=q('[data-r=trig]');
-  const laneEls=[];
-  for(let j=0;j<4;j++){
-    const el=document.createElement('div');el.className='lane';
-    el.innerHTML=`<div class="lhead"><label class="lname" for="${me}-sel${j}">Lane ${j+1}</label><select id="${me}-sel${j}">${LANE_OPTIONS}</select><label class="check snapl"><input type="checkbox"> Snap to notes</label><button type="button" class="mini">Clear lane</button><output></output></div><canvas aria-label="Lane ${j+1}: value per step"></canvas>`;
-    lanesBox.appendChild(el);
-    const sel=el.querySelector('select'),snap=el.querySelector('input'),out=el.querySelector('output'),clr=el.querySelector('.mini'),cv=el.querySelector('canvas');
-    sel.onchange=()=>{seq.lanes[j].key=sel.value;seq.lanes[j].snap=sel.value==='speed';syncControls();commit();};
-    snap.onchange=()=>{seq.lanes[j].snap=snap.checked;commit();};
-    clr.onclick=()=>{seq.lanes[j].vals.fill(null);commit();};
-    bindLane(cv,j);
-    laneEls.push({sel,snap,snapl:el.querySelector('.snapl'),out,cv});
-  }
-  const connected=()=>performance.now()-st.at<2500;
-  function commit(now){if(!connected())dirty=true;
-    if(now){send();return;}if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;send();});}
-  function send(){bus.post({type:'seq',seq:JSON.parse(JSON.stringify(seq)),origin:me});}
-
-  /* transport and settings */
-  q('[data-r=play]').onclick=()=>{
-    if(!connected()){flash();return;}
-    st.playing=!st.playing;bus.post({type:'transport',play:st.playing});syncTransport();};
-  $$('[data-r=clock] button',host).forEach(b=>b.onclick=()=>{seq.clock=b.dataset.v;syncControls();commit();});
-  $$('[data-r=div] button',host).forEach(b=>b.onclick=()=>{seq.div=+b.dataset.v;syncControls();commit();});
-  $$('[data-r=tool] button',host).forEach(b=>b.onclick=()=>{tool=b.dataset.v;syncControls();});
-  q('[data-r=bpm]').onchange=e=>{seq.bpm=clamp(Math.round(+e.target.value)||96,20,300);syncControls();commit();};
-  q('[data-r="lps-"]').onclick=()=>{seq.loopsPerStep=clamp(seq.loopsPerStep-1,1,64);syncControls();commit();};
-  q('[data-r="lps+"]').onclick=()=>{seq.loopsPerStep=clamp(seq.loopsPerStep+1,1,64);syncControls();commit();};
-  q('[data-r="len-"]').onclick=()=>{seq.steps=clamp(seq.steps-1,1,16);syncControls();commit();};
-  q('[data-r="len+"]').onclick=()=>{seq.steps=clamp(seq.steps+1,1,16);syncControls();commit();};
-  q('[data-r=swing]').oninput=e=>{seq.swing=+e.target.value/100;syncControls();commit();};
-  q('[data-r=glide]').oninput=e=>{seq.glideTime=+e.target.value/1000;syncControls();commit();};
-  $$('[data-ex]',host).forEach(b=>b.onclick=()=>{seq=exampleSeq(b.dataset.ex);syncControls();commit(true);});
-  q('[data-r=clear]').onclick=()=>{seq.lanes.forEach(l=>l.vals.fill(null));seq.gate.fill(true);seq.glide.fill(false);commit();};
-
-  function syncControls(){
-    $$('[data-r=clock] button',host).forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===seq.clock));
-    $$('[data-r=div] button',host).forEach(b=>b.setAttribute('aria-pressed',+b.dataset.v===seq.div));
-    $$('[data-r=tool] button',host).forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===tool));
-    $$('[data-show]',host).forEach(el=>el.hidden=el.dataset.show!==seq.clock);
-    const bpm=q('[data-r=bpm]');if(document.activeElement!==bpm)bpm.value=Math.round(seq.bpm);
-    setTextEl(q('[data-r=lps]'),String(seq.loopsPerStep));setTextEl(q('[data-r=len]'),String(seq.steps));
-    q('[data-r=swing]').value=Math.round(seq.swing*100);setTextEl(q('[data-r=swv]'),Math.round(seq.swing*100)+'%');
-    q('[data-r=glide]').value=Math.round(seq.glideTime*1000);setTextEl(q('[data-r=glv]'),Math.round(seq.glideTime*1000)+' ms');
-    laneEls.forEach((L,j)=>{const ln=seq.lanes[j];L.sel.value=ln.key;L.snapl.hidden=!(ln.key==='speed'||ln.key==='F');L.snap.checked=!!ln.snap;});
-  }
-  function syncTransport(){
-    const pb=q('[data-r=play]');pb.setAttribute('aria-pressed',st.playing);setTextEl(pb,st.playing?'Stop':'Play');
-    const c=q('[data-r=conn]');
-    if(!connected()){c.dataset.state='warn';setTextEl(c,opts.docked?'Starting…':'Not connected: open the instrument page in another tab or window');}
-    else if(!st.running){c.dataset.state='warn';setTextEl(c,opts.docked?'Sound is off: press Start sound':'Connected · sound is off: press Start sound on the instrument page');}
-    else{c.dataset.state='ok';setTextEl(c,'Connected · sound on'+(st.playing&&st.step>=0?` · step ${st.step+1} of ${seq.steps}`:''));}
-  }
-  let flashT=0;function flash(){const c=q('[data-r=conn]');c.animate?.([{transform:'scale(1)'},{transform:'scale(1.06)'},{transform:'scale(1)'}],{duration:300});clearTimeout(flashT);}
-
-  bus.on(m=>{
-    if(m.type==='seq-sync'&&m.origin!==me){if(!drag){seq=sanitizeSeq(m.seq);syncControls();}}
-    else if(m.type==='status'){const was=connected();st={at:performance.now(),running:!!m.running,playing:!!m.playing,step:m.step};
-      if(!was){if(dirty){dirty=false;commit(true);}else bus.post({type:'hello'});}
-      syncTransport();}
-  });
-
-  /* lane editing */
-  function colAt(cv,e){const r=cv.getBoundingClientRect();return clamp(Math.floor((e.clientX-r.left)/r.width*16),0,15);}
-  function bindLane(cv,j){
-    const paint=e=>{const ln=seq.lanes[j],r=cv.getBoundingClientRect(),col=colAt(cv,e),pt=14,pb=4;
-      const u=clamp(1-(e.clientY-r.top-pt)/(r.height-pt-pb),0,1);
-      ln.vals[col]=tool==='erase'?null:quantU(ln.key,u,ln.snap);hover={lane:j,col};commit();};
-    cv.addEventListener('pointerdown',e=>{if(!seq.lanes[j].key)return;e.preventDefault();try{cv.setPointerCapture(e.pointerId);}catch(_){}drag={lane:j};paint(e);});
-    cv.addEventListener('pointermove',e=>{hover={lane:j,col:colAt(cv,e)};if(drag&&drag.lane===j)paint(e);});
-    const end=()=>{drag=null;};cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
-    cv.addEventListener('pointerleave',()=>{if(!drag)hover=null;});
-  }
-  const TR={num:16,gate:42};
-  const trigRow=(e)=>{const y=e.clientY-trig.getBoundingClientRect().top;return y<TR.num?null:y<TR.gate?'gate':'glide';};
-  trig.addEventListener('pointerdown',e=>{const row=trigRow(e);if(!row)return;e.preventDefault();try{trig.setPointerCapture(e.pointerId);}catch(_){}
-    const col=colAt(trig,e),arr=row==='gate'?seq.gate:seq.glide,cur=row==='gate'?arr[col]!==false:!!arr[col];
-    drag={trig:row,val:!cur};arr[col]=drag.val;commit();});
-  trig.addEventListener('pointermove',e=>{if(drag&&drag.trig){const arr=drag.trig==='gate'?seq.gate:seq.glide;const col=colAt(trig,e);if(arr[col]!==drag.val){arr[col]=drag.val;commit();}}});
-  trig.addEventListener('pointerup',()=>{drag=null;});trig.addEventListener('pointercancel',()=>{drag=null;});
-
-  /* drawing */
-  const laneColor=k=>k&&k[0]==='r'&&k.length>2&&k!=='r'?T[RC[+k[1]]]:T['--accent'];
-  function beatEvery(){return seq.clock==='tempo'?(seq.div===1?4:seq.div):4;}
-  function common(g,w,h){const cw=w/16,be=beatEvery();
-    for(let c=1;c<16;c++){g.fillStyle=T['--line'];g.globalAlpha=c%be===0?1:0.35;g.fillRect(Math.round(c*cw),0,1,h);}g.globalAlpha=1;
-    if(st.playing&&st.step>=0&&connected()){g.fillStyle=T['--lfo'];g.globalAlpha=0.2;g.fillRect(st.step*cw,0,cw,h);g.globalAlpha=1;}
-    return cw;}
-  function dimTail(g,w,h){if(seq.steps<16){const cw=w/16;g.fillStyle=T['--panel'];g.globalAlpha=0.65;g.fillRect(seq.steps*cw,0,w-seq.steps*cw,h);g.globalAlpha=1;}}
-  function drawTrig(){const {g,w,h}=fit(trig);g.clearRect(0,0,w,h);const cw=common(g,w,h);
-    g.textAlign='center';
-    for(let c=0;c<16;c++){const x=c*cw+cw/2,on=seq.gate[c]!==false,gl=!!seq.glide[c],cur=st.playing&&st.step===c&&connected();
-      g.fillStyle=cur?T['--lfo']:T['--muted'];g.font=font(10,cur?600:400);g.fillText(String(c+1),x,11);
-      const bw=Math.min(22,cw*0.62),bx=x-bw/2,by=TR.num+3,bh=TR.gate-TR.num-6;
-      if(on){g.fillStyle=T['--ink'];g.globalAlpha=0.85;g.fillRect(bx,by,bw,bh);g.globalAlpha=1;}
-      else{g.strokeStyle=T['--muted'];g.lineWidth=1;g.strokeRect(bx+0.5,by+0.5,bw-1,bh-1);}
-      const gy=TR.gate+4,gh=h-TR.gate-8;
-      if(gl){g.strokeStyle=T['--lfo'];g.lineWidth=2;g.beginPath();g.moveTo(bx,gy+gh);g.quadraticCurveTo(bx+bw*0.5,gy+gh,bx+bw,gy);g.stroke();}
-      else{g.fillStyle=T['--muted'];g.globalAlpha=0.5;g.fillRect(x-1.5,gy+gh/2-1.5,3,3);g.globalAlpha=1;}}
-    dimTail(g,w,h);}
-  function drawLane(j){const L=laneEls[j],{g,w,h}=fit(L.cv);g.clearRect(0,0,w,h);const cw=common(g,w,h),ln=seq.lanes[j],pt=14,pb=4,H=h-pt-pb;
-    if(!ln.key){dimTail(g,w,h);g.fillStyle=T['--muted'];g.font=font(12);g.textAlign='center';g.fillText('Choose a control for this lane',w/2,h/2+4);setTextEl(L.out,'');return;}
-    const col=laneColor(ln.key);g.textAlign='center';g.font=font(10);
-    for(let c=0;c<16;c++){const u=ln.vals[c],x=c*cw;
-      if(u===null||u===undefined){g.fillStyle=T['--muted'];g.globalAlpha=0.55;g.fillRect(x+cw*0.3,h-pb-2,cw*0.4,2);g.globalAlpha=1;continue;}
-      const bh=Math.max(2,u*H);g.fillStyle=col;g.fillRect(x+cw*0.14,pt+H-bh,cw*0.72,bh);
-      if(cw>=34){g.fillStyle=T['--ink'];g.fillText(fmtLock(ln.key,u,false),x+cw/2,11);}}
-    if(hover&&hover.lane===j){g.strokeStyle=T['--ink'];g.globalAlpha=0.55;g.lineWidth=1;g.strokeRect(hover.col*cw+0.5,0.5,cw-1,h-1);g.globalAlpha=1;}
-    dimTail(g,w,h);
-    let t='';if(hover&&hover.lane===j){const u=ln.vals[hover.col];t=`Step ${hover.col+1}: `+(u===null||u===undefined?'no lock':fmtLock(ln.key,u,true));}
-    setTextEl(L.out,t);}
-  function loop(){if(!document.hidden&&host.offsetParent!==null){drawTrig();for(let j=0;j<4;j++)drawLane(j);syncTransport();}requestAnimationFrame(loop);}
-  syncControls();syncTransport();requestAnimationFrame(loop);
-  bus.post({type:'hello'});
-  return{};
+function mountSeqWindow(host){
+  let rows=[],pos={},running=false,seen=0;
+  host.innerHTML=`<div class="row spread"><h2><b>09</b>Sequences</h2><span class="chip" data-r="conn">Looking for the main window…</span></div>
+    <canvas id="sqWv" style="display:block;width:100%;height:60px;cursor:pointer" aria-label="Every dot that has a sequence, with the step playing now. Click a row to open that dot in the main window."></canvas>
+    <p class="sub mono" id="sqWnote"></p>`;
+  const cv=host.querySelector('#sqWv');
+  bus.on(m=>{if(m.type==='sq-rows'){rows=m.rows||[];seen=performance.now();}else if(m.type==='sq-pos'){pos=m.pos||{};running=!!m.running;seen=performance.now();}});
+  cv.addEventListener('pointerdown',e=>{const b=cv.getBoundingClientRect(),o=rows[Math.floor((e.clientY-b.top-2)/28)];if(o)bus.post({type:'sq-open',path:o.path});});
+  function loop(){const live=performance.now()-seen<3000;host.querySelector('[data-r=conn]').textContent=live?'Connected':'Looking for the main window…';
+    const want=Math.max(36,rows.length*28+4);if(Math.abs(cv.getBoundingClientRect().height-want)>1)cv.style.height=want+'px';
+    drawSqRows(cv,rows,pos,running,-1);host.querySelector('#sqWnote').textContent=rows.length?'Click a row to open that dot in the main window.':'No dot has a sequence yet.';
+    requestAnimationFrame(loop);}
+  bus.post({type:'sq-hello'});setInterval(()=>{if(performance.now()-seen>2500)bus.post({type:'sq-hello'});},1500);requestAnimationFrame(loop);
 }
 
 /* =====================================================================
@@ -1468,6 +1461,7 @@ function initInstrument(){
   const ui={view:'rhythm',nc:16,calm:matchMedia('(prefers-reduced-motion: reduce)').matches,snap:false};
   $('#calm').checked=ui.calm;
   const audio={ctx:null,running:false,send:()=>{},rep:null,sr:48000,lastDrop:0,dropT:0,mode:''};
+  window.__audio=audio;   /* for the tests */
   const PRESETS=[['1:2:3:4',[[1,1],[2,2],[3,3],[4,4]]],['2 vs 3',[[2,2],[3,3]]],['3:4:5',[[3,3],[4,4],[5,5]]],['Tresillo',[[8,3]]],['Cinquillo',[[8,5]]],['7 in 12',[[12,7]]]];
   const s2v=f=>Math.round(Math.log(f/SMIN)/Math.log(SMAX/SMIN)*1000),v2s=v=>SMIN*Math.pow(SMAX/SMIN,v/1000);
   const Fmap=v=>60*Math.pow(4000/60,v/1000),FmapInv=f=>Math.round(Math.log(f/60)/Math.log(4000/60)*1000);
@@ -1481,7 +1475,8 @@ function initInstrument(){
   const eachRing=(rs,f)=>rs.forEach(r=>{f(r);r.kids.forEach(w=>{if(w)eachRing(w.rings,f);});});
   let drawMap=()=>{},syncShapesAll=()=>{};
   function sendState(jump){secAlias(state);audio.send({S:JSON.parse(JSON.stringify(state)),jump:!!jump});}
-  function changed(){sendState();saveSoon();}
+  let postRows=()=>{};
+  function changed(){sendState();saveSoon();postRows();}
   function sendSample(i){const x=samples[i];audio.send({smp:{i,d:x?x.d:null,sr:x?x.sr:0}});}
   const fmtSec=t=>t>=1?t.toFixed(2)+' s':(t*1000).toFixed(t<0.01?2:1)+' ms';
   let toastT=0;function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,6000);}
@@ -1560,6 +1555,8 @@ function initInstrument(){
     $('#dSs').value=Math.round(r.dss[sel.d]*1000);$('#dSn').value=Math.round(1000*(1+Math.log10(r.dsn[sel.d])/3));
     $('#dOpen').hidden=!(isW&&r.kids[sel.d]&&view.length<3);$('#dTc').hidden=!isW;$('#dT').value=Math.round(600+100*Math.log2(r.dt[sel.d]));
     $('#dP').value=r.dp[sel.d];$('#dL').value=Math.round(r.dl[sel.d]*100);$('#dA').value=Math.round(r.da[sel.d]*100);
+    $('#dlb-p').hidden=!(r.pld[sel.d]>0);   /* the pitch LFO stays only on dots that already use one: Sequence takes its place */
+    syncSq();
     for(const w in DL){const c=DL[w],p=$('#dlfo-'+w),b=$('#dlb-'+w),dep=r[c.dep][sel.d],on=dep>0,rel=w==='s'?isS:w==='t'?isW:true;
       if(!keep||!rel)p.hidden=!on||!rel;
       b.dataset.active=on;b.setAttribute('aria-expanded',p.hidden?'false':'true');
@@ -1583,6 +1580,7 @@ function initInstrument(){
       syncDotUI(true);};}
   makeDotLfo('p');makeDotLfo('l');makeDotLfo('a');makeDotLfo('s');makeDotLfo('t');
   function selectDot(x){sel=x;syncDotUI();}
+  window.__selectDot=(ri,d)=>selectDot({ri,d});   /* for the tests */
   $('#wheel').addEventListener('pointerdown',e=>{const b=$('#wheel').getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top;
     let best=null,bd=24*24;for(const h of wheelHits){const q=(h.x-x)*(h.x-x)+(h.y-y)*(h.y-y);if(q<bd){bd=q;best=h;}}
     selectDot(best?{ri:best.ri,d:best.d}:null);});
@@ -1752,11 +1750,11 @@ function initInstrument(){
   addEventListener('keyup',e=>{if(e.key==='Alt')document.body.classList.remove('alt');});
   addEventListener('blur',()=>document.body.classList.remove('alt'));
   document.addEventListener('click',e=>{if(!e.altKey)return;const host=e.target.closest('.ctl')||e.target.closest('#pSpeed'),b=host&&host.querySelector('.lfob');
-    if(b&&e.target!==b){e.preventDefault();e.stopPropagation();b.click();}},true);
+    if(b&&!b.hidden&&e.target!==b){e.preventDefault();e.stopPropagation();b.click();}},true);
   /* the tuning controls sit with Speed, and Volume in the top bar */
   for(const [id,key,host] of [['D','det','#tuneCtls'],['V','vib','#tuneCtls'],['O','vol','#tbVol']]){$(host).appendChild($('#'+id).closest('.ctl'));$(host).appendChild($('#lfo-'+key));}
   /* Sounds: one panel, three lists */
-  const showSnd=t=>{$$('#sndTabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t?'true':'false'));$('#sndShp').hidden=t!=='shp';$('#sndClk').hidden=t!=='clk';$('#sndSmp').hidden=t!=='smp';$('#sndInst').hidden=t!=='inst';};
+  const showSnd=t=>{$$('#sndTabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t?'true':'false'));$('#sndShp').hidden=t!=='shp';$('#sndClk').hidden=t!=='clk';$('#sndSmp').hidden=t!=='smp';$('#sndInst').hidden=t!=='inst';$('#sndSq').hidden=t!=='sq';if(t==='sq')syncSqLib();};
   $$('#sndTabs button').forEach(b=>b.onclick=()=>showSnd(b.dataset.t));
   $$('#dK button').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k;if(sel&&(k==='sample'||k==='inst'||k==='click'))showSnd(k==='sample'?'smp':k==='inst'?'inst':'clk');}));
   /* LFO shapes: eight slots, drawn here, usable in every LFO */
@@ -1874,7 +1872,6 @@ function initInstrument(){
     if(tag==='SELECT'||tag==='TEXTAREA'||(tag==='INPUT'&&!range&&t.type!=='checkbox'))return;
     switch(e.key){
       case ' ':if(tag==='BUTTON'||tag==='INPUT')return;e.preventDefault();toggleAudio();break;
-      case 'p':case 'P':setPlay(!state.seq.playing,true);break;
       case 'k':case 'K':setPause(!ui.paused);break;
       case 'Escape':if(sel)selectDot(null);else if(view.length)goTo(view.length-1);break;
       case 'n':case 'N':uiPrefs.notes=!uiPrefs.notes;savePrefs();syncPrefsUI();break;
@@ -1884,32 +1881,18 @@ function initInstrument(){
     }
   });
 
-  /* --- sequencer link --- */
-  let lastStatus=0;
-  function curStep(){return audio.running&&state.seq.playing&&audio.rep?audio.rep.step:-1;}
-  function postStatus(force){const now=performance.now();if(!force&&now-lastStatus<40)return;lastStatus=now;
-    bus.post({type:'status',running:audio.running,playing:!!state.seq.playing,step:curStep()});}
-  setInterval(()=>postStatus(true),700);
-  const postSync=origin=>bus.post({type:'seq-sync',seq:state.seq,origin});
-  function setPlay(play,local){state.seq.playing=!!play;
-    if(play&&!audio.running){if(local)toggleAudio();else toast('The sequencer pressed Play, but sound is off. Press Start sound.');}
-    sendState();postStatus(true);}
-  let seqWinSeen=false;
-  bus.on((m,local)=>{
-    if(m.type==='hello'){if(!local)seqWinSeen=true;postSync(null);postStatus(true);}
-    else if(m.type==='seq'){const playing=state.seq.playing;state.seq=sanitizeSeq(m.seq);state.seq.playing=playing;sendState();saveSoon();postSync(m.origin);}
-    else if(m.type==='transport')setPlay(m.play,local);
-  });
-  $('#tbPlay').onclick=()=>setPlay(!state.seq.playing,true);
-  let docked=false;
-  function showDock(show){const d=$('#dock');d.hidden=!show;$('#seqDock').setAttribute('aria-expanded',show);setText('#seqDock',show?'Undock':'Dock');
-    if(show&&!docked){docked=true;mountSequencer(d,{docked:true});}}
-  $('#seqDock').onclick=()=>showDock($('#dock').hidden);
-  $('#seqWin').onclick=()=>{
-    let w=null;try{w=window.open(location.href.split('#')[0]+'#sequencer','rit-sequencer','popup=yes,width=1040,height=780');}catch(e){}
-    if(!w){toast('The browser did not open a new window, so the sequencer is shown on this page instead.');showDock(true);return;}
-    bus.addPeer(w);seqWinSeen=false;
-    setTimeout(()=>{if(!seqWinSeen){toast('The sequencer window could not connect from here, so it is shown on this page instead.');showDock(true);}},5000);};
+  /* --- the old step sequencer: its saved data is kept but it no longer plays (state.seq.playing stays false) --- */
+  function curStep(){return -1;}
+  const postSync=()=>{};
+  /* --- the sequences window: it gets the rows (sq-rows) and where each sequence is (sq-pos), and asks the main window to open a dot (sq-open) --- */
+  let sqWinSeen=false,lastSqPos=0;
+  function postStatus(force){const now=performance.now();if(!sqWinSeen||(!force&&now-lastSqPos<80))return;lastSqPos=now;bus.post({type:'sq-pos',pos:sqPos(),running:audio.running});}
+  let sqRowsT=0;postRows=()=>{clearTimeout(sqRowsT);sqRowsT=setTimeout(()=>{if(sqWinSeen)bus.post({type:'sq-rows',rows:sqRows().map(sqRowOut)});},120);};
+  bus.on((m,local)=>{if(local)return;
+    if(m.type==='sq-hello'){sqWinSeen=true;bus.post({type:'sq-rows',rows:sqRows().map(sqRowOut)});postStatus(true);}
+    else if(m.type==='sq-open'&&Array.isArray(m.path))sqOpen(m.path);});
+  $('#sqWin').onclick=()=>{let w=null;try{w=window.open(location.href.split('#')[0]+'#sequencer','rit-sequences','popup=yes,width=900,height=620');}catch(e){}
+    if(!w){toast('The browser did not open a new window.');return;}bus.addPeer(w);};
 
   /* --- visual clock that mirrors the engine --- */
   const vis={master:0,rings:[0,0,0,0],f:state.base.speed,last:performance.now(),slowT:0,t:0,E:newEff()};
@@ -1930,9 +1913,10 @@ function initInstrument(){
   }
 
   /* --- Fourier coefficients of the current loop --- */
-  function coefs(E){const D=dotList(E,vis.t);let c0=0;for(const o of D)c0+=o.a;
+  const sqPos=()=>audio.rep&&audio.rep.sq||{};
+  function coefs(E){const D=dotList(E,vis.t,{S:state,pos:sqPos()});let c0=0;for(const o of D)c0+=o.a;
     return{D,c0,at(n){let re=0,im=0;for(const o of D){const a=2*Math.PI*n*o.p;re+=o.a*Math.cos(a);im-=o.a*Math.sin(a);}return[re,im];}};}
-  function hitsPerLoop(E){const D=dotList(E,0);if(Math.abs(E.det)>0.05)return D.length;
+  function hitsPerLoop(E){const D=dotList(E,0,{S:state,pos:sqPos()});if(Math.abs(E.det)>0.05)return D.length;
     const set=new Set();for(const o of D)set.add(Math.round(frac(o.p)*1e6)%1e6);return set.size;}
   function zoneOf(E){if(E.speed>=20)return'Tone';if(E.speed*hitsPerLoop(E)>=15)return'Blur';return'Rhythm';}
 
@@ -2104,35 +2088,35 @@ function initInstrument(){
     setText('#stF',f>=20?fmtHz(f):(f<1?f.toFixed(2):f.toFixed(1))+' /s');
     setText('#stWin',scope.win);setText('#stPeak',audio.an&&audio.running?scope.pk.toFixed(2):'—');
     setText('#tbVal',z==='Tone'?noteName(f,true)+' · '+fmtHz(f):big);
-    const tp=$('#tbPlay');tp.setAttribute('aria-pressed',!!state.seq.playing);setTextEl(tp,state.seq.playing?'Stop':'Play');
-    setText('#tbStep',state.seq.playing?(step>=0?`${step+1}/${state.seq.steps}`:'waiting for sound'):'');
   }
 
   let lastRO=0,lastSm=0;
   function frame(now){
     if(!document.hidden){const E=tick(now),C=coefs(E);
-      drawWheel(E);drawScope(E);drawTimeline(E,now);if(uiPrefs.circ)drawCirc(E,C);drawDotSample(E);
+      drawWheel(E);drawScope(E);drawTimeline(E,now);drawSq();if(uiPrefs.circ)drawCirc(E,C);drawDotSample(E);
       if(now-lastSm>700){lastSm=now;for(let i=0;i<SMPN;i++)drawSmp(i);}
-      if(now-lastRO>80){lastRO=now;updateReadouts(E,C);drawMap();}}
+      if(now-lastRO>80){lastRO=now;updateReadouts(E,C);drawMap();drawSqOv();}}
     requestAnimationFrame(frame);}
 
 
   /* --- timeline: the top wheel unrolled. Every item comes from the same walk of the rings that the engine makes when a dot fires. --- */
   const tlHits=[];let tlLast=0,tlCount=0;
-  function tlItems(E,t,f){const out=[],L=dotL;
-    const walk=(rings,depth,p0,span,amp,st0,ol0,top)=>{
+  function tlItems(E,t,f){const out=[],L=dotL,PS=sqPos();
+    const walk=(rings,depth,p0,span,amp,st0,ol0,top,pk0)=>{
       for(let i=0;i<4;i++){const r=rings[i];if(!r||!r.on||r.hits<=0||!(r.level>0))continue;const pos=ringPos(r),ids=ringDots(r),off=r.off||0;
-        for(let j=0;j<pos.length;j++){const d=ids[j],a=amp*r.level*dotAmp(r,i,d,t,L);if(!(a>0))continue;
-          const st=st0+dotPitch(r,i,d,t,L),ol=ol0+dotLen(r,i,d,t,L),p=p0+(pos[j]+off)*span,W=dotWheel(r,d,depth),T=depth?top:{ri:i,d},kd=r.dk?r.dk[d]:'click';
-          if(W){const sp=span*dotTurn(r,d,i,t,L);out.push({k:'wheel',ri:T.ri,d:T.d,p,len:sp,tail:0,a,depth});walk(W.rings,depth+1,p,sp,a,st,ol,T);continue;}
-          if(out.length>=1200){out.cut=true;return;}
-          let len=0,tail=0;
-          if(kd==='sample'){const sl=r.ds?r.ds[d]|0:0,x=samples[sl],I=state.smpp[sl];
-            if(x){if(I.mode==='one'||I.mode==='rev')len=dotSliceN(r,d,ol,x.d.length,i,t,L)/x.sr/Math.pow(2,st/12)*f;else{len=span*I.hold;tail=I.r*f;}}}
-          else if(kd==='inst'){const I=state.inst[r.di?r.di[d]|0:0];len=span*0.25*Math.pow(2,ol);tail=I?I.r*f:0;}
-          else if(kd==='click')len=6*dotS(E.sigma,ol)/1000*f;
-          out.push({k:kd,ri:T.ri,d:T.d,p,len,tail,a,depth});}}};
-    walk(E.rings,0,0,1,1,0,0,null);return out;}
+        for(let j=0;j<pos.length;j++){const d=ids[j],a0=amp*r.level*dotAmp(r,i,d,t,L);if(!(a0>0))continue;
+          const st0d=st0+dotPitch(r,i,d,t,L),ol=ol0+dotLen(r,i,d,t,L),pb=p0+(pos[j]+off)*span,W=dotWheel(r,d,depth),T=depth?top:{ri:i,d},kd=r.dk?r.dk[d]:'click',pk=sqKey(pk0,i,d),Q=sqResolve(state,r,d);
+          const hits=Q?sqNow(state,Q,PS[pk]===undefined?-1:PS[pk]).hits:[{f:0,st:0,lv:1}],gap=span/Math.max(1,r.hits);
+          for(const h of hits){const a=a0*h.lv,p=pb+h.f*gap,st=st0d+h.st;if(!(a>0))continue;
+            if(W){const sp=span*dotTurn(r,d,i,t,L);out.push({k:'wheel',ri:T.ri,d:T.d,p,len:sp,tail:0,a,depth,sq:!!Q});walk(W.rings,depth+1,p,sp,a,st,ol,T,pk);continue;}
+            if(out.length>=1200){out.cut=true;return;}
+            let len=0,tail=0;
+            if(kd==='sample'){const sl=r.ds?r.ds[d]|0:0,x=samples[sl],I=state.smpp[sl];
+              if(x){if(I.mode==='one'||I.mode==='rev')len=dotSliceN(r,d,ol,x.d.length,i,t,L)/x.sr/Math.pow(2,st/12)*f;else{len=span*I.hold;tail=I.r*f;}}}
+            else if(kd==='inst'){const I=state.inst[r.di?r.di[d]|0:0];len=span*0.25*Math.pow(2,ol);tail=I?I.r*f:0;}
+            else if(kd==='click')len=6*dotS(E.sigma,ol)/1000*f;
+            out.push({k:kd,ri:T.ri,d:T.d,p,len,tail,a,depth,st,sq:!!Q});}}}};
+    walk(E.rings,0,0,1,1,0,0,null,0);return out;}
   function drawTimeline(E,now){if(now-tlLast<33)return;tlLast=now;
     const {g,w,h}=fit($('#tl'));g.clearRect(0,0,w,h);tlHits.length=0;
     const sec=state.sections[state.cur],all=sec?sec.trips:1,rep=audio.running?audio.rep:null,f=Math.max(1e-6,vis.f);
@@ -2168,6 +2152,138 @@ function initInstrument(){
     cv.addEventListener('pointermove',e=>{if(!drag)return;const dy=drag.y-e.clientY;if(!drag.moved&&Math.abs(dy)<4)return;drag.moved=true;
       state.rings[drag.ri].da[drag.d]=Math.round(clamp(drag.a+dy/80,0.02,1)*100)/100;syncDotUI(true);changed();});
     const up=()=>{drag=null;};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);}
+
+
+  /* --- sequences: the dot editor's Sequence section, the Library's slots and patch scale, and the overview --- */
+  const SCN={major:'Major',minor:'Minor',dorian:'Dorian',phrygian:'Phrygian',lydian:'Lydian',mixo:'Mixolydian',hmin:'Harmonic minor',pmaj:'Pentatonic major',pmin:'Pentatonic minor',whole:'Whole tone',chrom:'Chromatic'};
+  const CDN={'':'—',tri:'triad',sev:'7th',s2:'sus2',s4:'sus4',oct:'octave'},CNN={all:'always','1:2':'1st of 2','2:2':'2nd of 2','1:3':'1st of 3','1:4':'1st of 4','4:4':'4th of 4',first:'first pass',nfirst:'not first'};
+  const sqClone=Q=>JSON.parse(JSON.stringify(Q));
+  let sqTab='nt',sqHover=-1;
+  /* the selected dot's key, the same key the engine uses: the path of dots down to the open wheel, then this dot */
+  function selKey(){let k=0;for(const v of view)k=sqKey(k,v.ri,v.d);return sel?sqKey(k,sel.ri,sel.d):0;}
+  const selEntry=()=>sel?VR()[sel.ri].sq[sel.d]:null;
+  const selSeq=()=>{if(!sel)return null;const r=VR()[sel.ri];return sqResolve(state,r,sel.d);};
+  const scaleOf=Q=>SCALES[Q.scl]||SCALES[state.scale.sc]||SCALES.minor;
+  /* what a step's note means for this dot, in words */
+  function sqLabel(Q,k,r,d,short){const kd=r.dk[d],nt=Q.nt[k];
+    if(kd==='sample'&&Q.sm==='slice')return(short?'s':'slice ')+(nt+1);
+    const semi=state.scale.root+degSemi(nt,scaleOf(Q));
+    if(kd==='inst'){const I=state.inst[r.di[d]];if(I&&I.src!=='smp'){const m=I.note+r.dp[d]+semi;return NOTES[((m%12)+12)%12]+(Math.floor(m/12)-1);}}
+    if(kd==='sample')return'×'+Math.pow(2,(r.dp[d]+semi)/12).toFixed(2);
+    return(semi>0?'+':'')+semi+(short?'':' st');}
+  function syncSq(){const r=sel&&VR()[sel.ri],x=r&&r.sq[sel.d],Q=selSeq(),on=!!(x&&x.on);
+    $$('#sqLink button').forEach(b=>{const v=b.dataset.v;b.setAttribute('aria-pressed',(v==='off'?!on:v==='own'?on&&x.link<0:on&&x.link===+v)?'true':'false');
+      if(v>='0'&&v<='7'){b.dataset.empty=!state.sqs[+v];b.title=state.sqs[+v]?'Slot '+(+v+1)+': '+state.sqs[+v].name:'Slot '+(+v+1)+' (empty: saves this sequence there)';}});
+    $('#sqOwn').hidden=!(on&&x.link>=0);$('#sqSave').hidden=!(on&&x.link<0);$('#sqBody').hidden=!(on&&Q);
+    if(!(on&&Q))return;
+    $$('#sqTab button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===sqTab?'true':'false'));
+    $$('#sqOrd button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===Q.ord?'true':'false'));
+    $$('#sqSm button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===Q.sm?'true':'false'));
+    $('#sqSmRow').hidden=r.dk[sel.d]!=='sample';$('#sqArp').checked=Q.arp;setText('#sqN',String(Q.n));
+    const sc=$('#sqScl');if(!sc.options.length){sc.add(new Option('',''));for(const k in SCN)sc.add(new Option(SCN[k],k));}
+    sc.options[0].text="Patch's ("+NOTES[state.scale.root]+' '+SCN[state.scale.sc].toLowerCase()+')';if(document.activeElement!==sc)sc.value=Q.scl;
+    drawSq();}
+  function sqRead(Q,k,r,d){return`Step ${k+1}${Q.on[k]?'':' (off)'} · ${sqLabel(Q,k,r,d)} · chance ${Math.round(Q.ch[k]*100)}%`+(Q.rp[k]>1?` · ×${Q.rp[k]}`:'')+(Q.lv[k]<1?` · level ${Math.round(Q.lv[k]*100)}%`:'')+(Q.cd[k]?' · '+CDN[Q.cd[k]]:'')+(Q.cn[k]!=='all'?' · '+CNN[Q.cn[k]]:'');}
+  const SQ_TOG=16;
+  function drawSq(){const cv=$('#sqCv');if(!sel||cv.offsetParent===null)return;const Q=selSeq();if(!Q)return;const r=VR()[sel.ri],d=sel.d,{g,w,h}=fit(cv);g.clearRect(0,0,w,h);
+    const cw=w/16,top=4,bot=h-SQ_TOG-14,col=T[RC[sel.ri]],sl=r.dk[d]==='sample'&&Q.sm==='slice',pos=sqPos()[selKey()],now=pos===undefined?-1:pos;
+    const Y=v=>{if(sqTab==='nt')return sl?bot-(clamp(v,0,15)/15)*(bot-top):top+(bot-top)/2-(clamp(v,-14,14)/14)*(bot-top)/2;return bot-v*(bot-top);};
+    for(let k=0;k<16;k++){const x=k*cw,inN=k<Q.n;
+      if(k===now&&audio.running){g.fillStyle=col;g.globalAlpha=0.16;g.fillRect(x,0,cw,bot+12);g.globalAlpha=1;}
+      g.strokeStyle=T['--soft'];g.lineWidth=1;g.beginPath();g.moveTo(Math.round(x)+0.5,0);g.lineTo(Math.round(x)+0.5,h);g.stroke();
+      g.globalAlpha=inN?(Q.on[k]?1:0.3):0.12;g.fillStyle=col;
+      if(sqTab==='nt'){const y=Y(Q.nt[k]);g.fillRect(x+3,y-3,cw-6,6);
+        if(!sl&&Q.cd[k]){const n=chordN(Q.cd[k]);for(let i=1;i<n;i++){const y2=Y(Q.nt[k]+chordDeg(Q.cd[k],i)+(Q.cd[k]==='oct'?7*i:0));g.globalAlpha*=0.6;g.fillRect(x+3,y2-2,cw-6,4);}}}
+      else if(sqTab==='ch'||sqTab==='lv'){const v=Q[sqTab][k],y=Y(v);g.fillRect(x+3,y,cw-6,bot-y);}
+      else if(sqTab==='rp'){const n=Q.rp[k],seg=(bot-top)/8;for(let i=0;i<n;i++)g.fillRect(x+3,bot-(i+1)*seg+1,cw-6,seg-2);}
+      else{g.fillStyle=T['--ink'];g.font=font(Math.min(11,cw/4.2));g.textAlign='center';g.fillText(sqTab==='cd'?CDN[Q.cd[k]]:CNN[Q.cn[k]].replace(' of ','/'),x+cw/2,(top+bot)/2+4);}
+      g.globalAlpha=1;
+      if(cw>=20){g.fillStyle=inN?T['--ink']:T['--muted'];g.font=font(Math.min(10,cw/3.4));g.textAlign='center';g.fillText(sqLabel(Q,k,r,d,true),x+cw/2,bot+11);}
+      g.strokeStyle=inN?col:T['--line'];g.fillStyle=col;const ty=h-SQ_TOG+3,ts=Math.min(cw-8,SQ_TOG-6);
+      if(Q.on[k]&&inN)g.fillRect(x+cw/2-ts/2,ty,ts,ts);else g.strokeRect(x+cw/2-ts/2+0.5,ty+0.5,ts-1,ts-1);}
+    if(sqTab==='nt'&&!sl){g.strokeStyle=T['--line'];g.setLineDash([3,3]);g.beginPath();g.moveTo(0,Y(0)+0.5);g.lineTo(w,Y(0)+0.5);g.stroke();g.setLineDash([]);}
+    setText('#sqRead',sqRead(Q,sqHover>=0?sqHover:now>=0?now:0,r,d));}
+  /* editing the steps on the strip */
+  {const cv=$('#sqCv');let drag=null;
+    const at=e=>{const b=cv.getBoundingClientRect();return{k:clamp(Math.floor((e.clientX-b.left)/b.width*16),0,15),y:e.clientY-b.top,h:b.height};};
+    const valAt=(Q,y,h,sl)=>{const top=4,bot=h-SQ_TOG-14,u=clamp((bot-y)/(bot-top),0,1);
+      if(sqTab==='nt')return sl?Math.round(u*15):Math.round((u*2-1)*14);if(sqTab==='rp')return clamp(Math.ceil(u*8),1,8);return Math.round(u*100)/100;};
+    cv.addEventListener('pointerdown',e=>{const Q=selSeq();if(!Q)return;const m=at(e),r=VR()[sel.ri],sl=r.dk[sel.d]==='sample'&&Q.sm==='slice';try{cv.setPointerCapture(e.pointerId);}catch(_){}
+      if(m.y>m.h-SQ_TOG-2){drag={tog:true,v:!Q.on[m.k]};Q.on[m.k]=drag.v;}
+      else if(sqTab==='cd'||sqTab==='cn'){const L=sqTab==='cd'?SQ_CD:SQ_CN,i=L.indexOf(Q[sqTab][m.k]);Q[sqTab][m.k]=L[((i+(e.shiftKey?-1:1))%L.length+L.length)%L.length];drag=null;}
+      else{drag={tog:false,sl};Q[sqTab][m.k]=valAt(Q,m.y,m.h,sl);}
+      sqHover=m.k;syncSq();changed();});
+    cv.addEventListener('pointermove',e=>{const Q=selSeq();if(!Q)return;const m=at(e);sqHover=m.k;
+      if(drag){if(drag.tog)Q.on[m.k]=drag.v;else Q[sqTab][m.k]=valAt(Q,m.y,m.h,drag.sl);changed();}drawSq();});
+    const up=()=>{drag=null;};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);cv.addEventListener('pointerleave',()=>{sqHover=-1;drawSq();});}
+  $$('#sqTab button').forEach(b=>b.onclick=()=>{sqTab=b.dataset.v;syncSq();});
+  $$('#sqOrd button').forEach(b=>b.onclick=()=>{const Q=selSeq();if(Q){Q.ord=b.dataset.v;syncSq();changed();}});
+  $$('#sqSm button').forEach(b=>b.onclick=()=>{const Q=selSeq();if(Q){Q.sm=b.dataset.v;syncSq();changed();}});
+  $('#sqArp').onchange=e=>{const Q=selSeq();if(Q){Q.arp=e.target.checked;changed();}};
+  $('#sqScl').onchange=e=>{const Q=selSeq();if(Q){Q.scl=e.target.value;syncSq();changed();}};
+  const sqLen=s=>{const Q=selSeq();if(Q){Q.n=clamp(Q.n+s,1,16);syncSq();changed();}};$('#sqNm').onclick=()=>sqLen(-1);$('#sqNp').onclick=()=>sqLen(1);
+  $('#sqRestart').onclick=()=>{audio.send({sqreset:true});toast('Every sequence starts again from its first step.');};
+  /* turning a sequence on, linking it to a slot, and copying */
+  function ensureEntry(){const r=VR()[sel.ri];if(!r.sq[sel.d])r.sq[sel.d]={on:true,link:-1,s:newSeq()};return r.sq[sel.d];}
+  $$('#sqLink button').forEach(b=>b.onclick=()=>{if(!sel)return;const v=b.dataset.v,r=VR()[sel.ri];
+    if(v==='off'){if(r.sq[sel.d])r.sq[sel.d].on=false;}
+    else if(v==='own'){const x=ensureEntry();x.on=true;x.link=-1;}
+    else{const i=+v,x=ensureEntry(),had=x.on;
+      if(!state.sqs[i]){state.sqs[i]=had&&x.link<0?Object.assign(sqClone(x.s),{name:'Sequence '+(i+1)}):newSeq('Sequence '+(i+1));toast(`Saved to slot ${i+1}. Other dots can now use it.`);}
+      x.on=true;x.link=i;}
+    syncSq();changed();syncSqLib();});
+  $('#sqOwn').onclick=()=>{const x=selEntry(),Q=selSeq();if(!x||!Q)return;x.s=Object.assign(sqClone(Q),{name:'Sequence'});x.link=-1;syncSq();changed();syncSqLib();};
+  $('#sqSave').onclick=()=>{const x=selEntry();if(!x)return;const i=state.sqs.findIndex(q=>!q);if(i<0){toast('All eight sequence slots are full. Clear one in the Library first.');return;}
+    state.sqs[i]=Object.assign(sqClone(x.s),{name:'Sequence '+(i+1)});x.link=i;toast(`Saved to slot ${i+1}. Other dots can now use it.`);syncSq();changed();syncSqLib();};
+  $('#sqCopy').onclick=()=>{const Q=selSeq();if(!Q){toast('This dot has no sequence to copy.');return;}try{localStorage.setItem('rit-sq-clip',JSON.stringify(Q));}catch(e){}toast('Sequence copied.');};
+  $('#sqPaste').onclick=()=>{if(!sel)return;let Q=null;try{Q=sanSeq(JSON.parse(localStorage.getItem('rit-sq-clip')));}catch(e){}if(!Q){toast('Nothing copied yet.');return;}
+    const x=ensureEntry(),L=x.on&&x.link>=0?state.sqs[x.link]:null;if(L)Object.assign(L,Q,{name:L.name});else{x.s=Q;x.link=-1;}x.on=true;syncSq();changed();syncSqLib();};
+  /* writers: they set the steps for you, and Undo is to write again */
+  const WR={
+    rand(Q,sl){for(let k=0;k<Q.n;k++){Q.on[k]=Math.random()<0.8;Q.nt[k]=sl?Math.floor(Math.random()*16):Math.floor(Math.random()*11)-3;}},
+    walk(Q,sl){let v=0;for(let k=0;k<Q.n;k++){if(k)v+=[-2,-1,-1,0,1,1,2][Math.floor(Math.random()*7)];v=clamp(v,sl?0:-7,sl?15:14);Q.nt[k]=v;Q.on[k]=true;}},
+    up(Q,sl){for(let k=0;k<Q.n;k++){Q.nt[k]=sl?k:[0,2,4][k%3]+7*(Math.floor(k/3)%2);Q.on[k]=true;}},
+    down(Q,sl){WR.up(Q,sl);WR.rev(Q);},
+    updown(Q,sl){const h=Math.ceil(Q.n/2);for(let k=0;k<Q.n;k++){const i=k<h?k:Q.n-1-k;Q.nt[k]=sl?i:[0,2,4][i%3]+7*(Math.floor(i/3)%2);Q.on[k]=true;}},
+    mut(Q,sl){for(let k=0;k<Q.n;k++){if(Math.random()<0.3)Q.nt[k]=clamp(Q.nt[k]+[-2,-1,1,2][Math.floor(Math.random()*4)],sl?0:-14,sl?15:14);if(Math.random()<0.1)Q.on[k]=!Q.on[k];}},
+    rev(Q){for(const f of['on','nt','ch','rp','lv','cd','cn']){const a=Q[f].slice(0,Q.n).reverse();for(let k=0;k<Q.n;k++)Q[f][k]=a[k];}},
+    shift(Q){for(const f of['on','nt','ch','rp','lv','cd','cn']){const a=Q[f].slice(0,Q.n);for(let k=0;k<Q.n;k++)Q[f][(k+1)%Q.n]=a[k];}},
+    clear(Q){const z=newSeq();for(const f of['on','nt','ch','rp','lv','cd','cn'])Q[f]=z[f];}};
+  $$('[data-w]').forEach(b=>b.onclick=()=>{const Q=selSeq();if(!Q)return;const r=VR()[sel.ri];WR[b.dataset.w](Q,r.dk[sel.d]==='sample'&&Q.sm==='slice');syncSq();changed();});
+  /* the Library: patch scale and the eight slots */
+  let sqCur=0;
+  {const R=$('#scRoot'),S=$('#scSc');NOTES.forEach((n,i)=>R.add(new Option(n,i)));for(const k in SCN)S.add(new Option(SCN[k],k));
+    R.onchange=()=>{state.scale.root=+R.value;syncSq();changed();};S.onchange=()=>{state.scale.sc=S.value;syncSq();changed();};
+    $('#sqSlots').innerHTML=[0,1,2,3,4,5,6,7].map(i=>`<button type="button" data-s="${i}" aria-pressed="false">${i+1}</button>`).join('');
+    $$('#sqSlots button').forEach(b=>b.onclick=()=>{sqCur=+b.dataset.s;syncSqLib();});
+    $('#sqName').oninput=e=>{const Q=state.sqs[sqCur];if(!Q)return;Q.name=e.target.value.slice(0,24)||'Sequence';saveSoon();syncSq();postRows();};
+    let arm=0;$('#sqDel').onclick=()=>{const b=$('#sqDel'),Q=state.sqs[sqCur];if(!Q)return;
+      if(!arm){b.textContent='Tap again to clear';arm=setTimeout(()=>{arm=0;b.textContent='Clear slot';},3000);return;}clearTimeout(arm);arm=0;b.textContent='Clear slot';
+      let n=0;eachRing(state.rings,r=>r.sq.forEach(x=>{if(x&&x.link===sqCur){x.s=Object.assign(sqClone(Q),{name:'Sequence'});x.link=-1;n++;}}));
+      state.sqs[sqCur]=null;toast(n?`Cleared. ${n} dot${n>1?'s':''} kept a copy of their own.`:'Cleared.');syncSq();syncSqLib();changed();};}
+  function sqUsers(i){let n=0;eachRing(state.rings,r=>r.sq.forEach(x=>{if(x&&x.on&&x.link===i)n++;}));return n;}
+  function syncSqLib(){$('#scRoot').value=state.scale.root;$('#scSc').value=state.scale.sc;
+    $$('#sqSlots button').forEach(b=>{const i=+b.dataset.s;b.setAttribute('aria-pressed',i===sqCur?'true':'false');b.style.color=state.sqs[i]||i===sqCur?'':'var(--muted)';b.title=state.sqs[i]?state.sqs[i].name:'empty';});
+    const Q=state.sqs[sqCur];$('#sqName').disabled=!Q;$('#sqDel').disabled=!Q;if(document.activeElement!==$('#sqName'))$('#sqName').value=Q?Q.name:'';
+    const u=Q?sqUsers(sqCur):0;setText('#sqSlotNote',!Q?'Empty. In a dot\'s Sequence, press a slot number to save its sequence here.':u?`Used by ${u} dot${u>1?'s':''} in this section. Open one of them to edit the steps.`:'Not used by any dot in this section.');
+    const cv=$('#sqPrev');if(cv.offsetParent===null)return;const {g,w,h}=fit(cv);g.clearRect(0,0,w,h);if(!Q)return;const cw=w/16;
+    for(let k=0;k<16;k++){g.globalAlpha=k<Q.n?(Q.on[k]?1:0.3):0.12;g.fillStyle=T['--accent'];const y=Q.sm==='slice'?h-4-clamp(Q.nt[k],0,15)/15*(h-8):h/2-clamp(Q.nt[k],-14,14)/14*(h/2-4);g.fillRect(k*cw+2,y-2,cw-4,4);}g.globalAlpha=1;}
+  /* the overview: every dot with a sequence, in the section on the wheel */
+  function sqRows(){const out=[],walk=(rings,path,pk0,depth)=>rings.forEach((r,ri)=>{if(!r||!r.on)return;
+      for(let d=0;d<r.hits;d++){const x=r.sq[d],pk=sqKey(pk0,ri,d),p=path.concat([{ri,d}]);
+        if(x&&x.on){const Q=sqResolve(state,r,d);if(Q)out.push({path:p,pk,ri,r,d,Q,link:x.link});}
+        if(depth<3&&r.dk[d]==='wheel'&&r.kids[d])walk(r.kids[d].rings,p,pk,depth+1);}});
+    walk(state.rings,[],0,0);return out;}
+  const sqPathName=p=>p.map(v=>`R${v.ri+1}·${v.d+1}`).join(' › ');
+  function sqRowOut(o){return{path:o.path,pk:o.pk,ri:o.ri,label:sqPathName(o.path),kind:o.r.dk[o.d],link:o.link,name:o.link>=0?o.Q.name:'',n:o.Q.n,on:o.Q.on,nt:o.Q.nt,sm:o.r.dk[o.d]==='sample'?o.Q.sm:'note'};}
+  function sqOpen(path){view.length=0;for(let i=0;i<path.length-1;i++){const rs=wheelAt(i),v=path[i];if(!rs||!rs[v.ri]||rs[v.ri].dk[v.d]!=='wheel'||!rs[v.ri].kids[v.d])break;view.push({ri:v.ri,d:v.d});}
+    syncView();const last=path[path.length-1];if(view.length===path.length-1)selectDot({ri:last.ri,d:last.d});}
+  let sqOvRows=[];
+  function drawSqOv(){const cv=$('#sqOv');if(cv.offsetParent===null)return;const rows=sqRows();sqOvRows=rows;
+    const want=Math.max(36,rows.length*28+4);if(Math.abs(cv.getBoundingClientRect().height-want)>1)cv.style.height=want+'px';
+    drawSqRows(cv,rows.map(sqRowOut),sqPos(),audio.running,sel?selKey():-1);
+    setText('#sqOvNote',rows.length?`${rows.length} dot${rows.length>1?'s':''} with a sequence. Click a row to open it.`:'No dot has a sequence yet. Select a dot and choose Own, or a slot number, under Sequence.');}
+  $('#sqOv').addEventListener('pointerdown',e=>{const b=$('#sqOv').getBoundingClientRect(),i=Math.floor((e.clientY-b.top-2)/28),o=sqOvRows[i];if(o)sqOpen(o.path);});
 
   /* --- sections, and sending them to the arranger as audio --- */
   const secCopy=()=>JSON.parse(JSON.stringify({base:state.base,rings:state.rings,lfo:state.lfo,seq:Object.assign({},state.seq,{playing:false})}));
@@ -2240,7 +2356,7 @@ function initInstrument(){
           made.push({id:'c'+stamp+'r'+ri,src,name:name+' · ring '+(ri+1),lane:ri,t:0,off:0,len:d.length/sr,gain:1,fi:0,fo:0,body});next(k+1);});});};
     next(0);};
   syncTrack();
-  syncAllUI();drawInsts();
+  syncAllUI();drawInsts();syncSqLib();
   requestAnimationFrame(frame);
   addEventListener('pagehide',saveNow);
 }
@@ -2806,9 +2922,7 @@ if(ROUTE_ARR){
 }else if(ROUTE_SEQ){
   $('#app').hidden=true;$('#seqOnly').hidden=false;
   try{if(window.opener)bus.addPeer(window.opener);}catch(e){}
-  mountSequencer($('#seqHost'),{docked:false});
-  addEventListener('keydown',e=>{if(e.key!==' '||e.metaKey||e.ctrlKey||e.altKey||e.repeat)return;const tag=e.target&&e.target.tagName;
-    if(tag==='BUTTON'||tag==='INPUT'||tag==='SELECT')return;e.preventDefault();$('#seqHost [data-r=play]').click();});
+  document.title='Sequences · Rhythm Into Tone';mountSeqWindow($('#seqHost'));
 }else{
   initInstrument();
 }
