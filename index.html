@@ -83,7 +83,7 @@ input[type=checkbox]{accent-color:var(--accent);margin:0}
 .bar label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .bar .grow{flex:1 1 0}
 
-.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr);gap:26px 36px;align-items:start}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr) minmax(0,1.12fr);gap:26px 28px;align-items:start}
 .col{display:grid;gap:26px;min-width:0}
 @media (max-width:1239px){
   .cols{grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:26px 28px}
@@ -167,13 +167,14 @@ canvas{display:block;width:100%}
 .iw .row{gap:8px 16px}
 .iw .lab{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .sqbox{grid-column:1/-1;display:grid;gap:8px;border-top:1px solid var(--soft);padding-top:8px;min-width:0}
-.sqbox .seg button{padding:4px 7px;font-size:10px}
+.sqbox .seg button{padding:4px 6px;font-size:10px}
+#sqRead{margin:0}
 .sqbox .seg,#sndTabs{flex-wrap:wrap;max-width:100%}
 #sndTabs button{padding:4px 8px}
 .sqbox .seg button[aria-pressed="true"]{background:var(--c,var(--accent));color:var(--bg)}
 #sqLink button[data-empty=true]{color:var(--muted)}
-#sqBody{display:grid;gap:8px;min-width:0}
-#sqCv{display:block;width:100%;height:150px;touch-action:none;cursor:ns-resize}
+#sqBody{display:grid;gap:6px;min-width:0}
+#sqCv{display:block;width:100%;height:128px;touch-action:none;cursor:ns-resize}
 .sqw{display:flex;flex-wrap:wrap;gap:4px}.sqw button{padding:3px 7px;font-size:10px}
 .sqbox .pair{display:inline-flex;align-items:center;gap:6px}
 .sqbox select{font:400 12px var(--mono);max-width:12em}
@@ -228,7 +229,8 @@ canvas{display:block;width:100%}
 .menu[open] summary{background:var(--soft)}
 .mbox{position:absolute;right:0;top:100%;z-index:40;display:grid;gap:8px;min-width:230px;max-width:88vw;padding:12px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
 .mbox label{display:flex;align-items:center;gap:6px;font-size:12px}
-.mbox p{margin:0}
+.mbox p{margin:0;max-width:250px}
+.mbox button{display:flex;justify-content:space-between;gap:14px;align-items:center}.mbox button kbd{font:400 10px var(--mono);color:var(--muted);border:0;padding:0}
 .sndb{display:grid;gap:12px;min-width:0}
 #shpCv{width:100%;height:150px;background:var(--panel);box-shadow:0 0 0 1px var(--line);touch-action:none;cursor:crosshair;display:block}
 #shpSlots button{padding:4px 9px;font-size:10px}
@@ -383,7 +385,12 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
       <p class="sub mono">Hold ⌥ (Alt) and click a control to give it an LFO. On a phone, the LFO buttons stay visible.</p>
       <button type="button" id="scatter">Scatter 4 random LFOs</button><button type="button" id="clearLfo">Clear all</button>
       <label><input type="checkbox" id="lfoBtns"> Always show LFO buttons</label></div></details>
-    <details class="menu" id="mPatch"><summary>Patch</summary><div class="mbox"><button type="button" id="reset">Reset patch</button></div></details>
+    <details class="menu" id="mPatch"><summary>Patch</summary><div class="mbox">
+      <button type="button" id="undo" disabled>Undo<kbd>⌘Z</kbd></button><button type="button" id="redo" disabled>Redo<kbd>⇧⌘Z</kbd></button>
+      <button type="button" id="projSave">Save project file<kbd>⌘S</kbd></button>
+      <button type="button" id="projOpen">Open project file<kbd>⌘O</kbd></button><input type="file" id="projFile" accept=".ritproject" hidden>
+      <button type="button" id="reset">Reset patch</button>
+      <p class="sub mono">A project file holds the patch, the samples and the arrangement. Use it as a backup, or to move your work to another browser or to the app.</p></div></details>
     <details class="menu" id="mView"><summary>View</summary><div class="mbox">
       <label><input type="checkbox" id="notes"> Notes</label><label><input type="checkbox" id="calm"> Calm visuals</label><label><input type="checkbox" id="showCirc"> Circles panel</label>
       <button type="button" id="theme" aria-label="Colour theme">Theme: Auto</button></div></details>
@@ -428,16 +435,8 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
     </div>
 
     <div class="col colB">
-      <section class="panel" id="pRings" aria-label="Rings">
-        <h2><b>03</b>Rings</h2>
-        <p class="where" id="ringsWhere" hidden></p>
-        <p class="hint">Each ring spreads its hits as evenly as possible over its steps (a Euclidean rhythm). A ring with equal steps and hits is a plain pulse. An LFO on Rotate turns the ring smoothly, between steps.</p>
-        <div class="ringhead" aria-hidden="true"><span></span><span>Steps</span><span>Hits</span><span>Rotate</span><span>Level</span></div>
-        <div class="rings" id="rings"></div>
-      </section>
-
       <section class="panel" id="pDot" aria-label="Dot">
-        <h2><b>04</b>Dot</h2>
+        <h2><b>03</b>Dot</h2>
         <div class="dotbox" id="dotBox">
           <p class="sub mono" id="dotNone">Click a dot to set its pitch, length and level, or to put a wheel or a sample inside it.</p>
           <div id="dotEd" hidden>
@@ -464,17 +463,17 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
               </div>
               <div class="sqbox" id="dSq">
                 <div class="row"><span class="lab2">Sequence</span><div class="seg" id="sqLink" role="group" aria-label="This dot's sequence: off, its own, or one of the patch's slots"><button type="button" data-v="off" aria-pressed="true">Off</button><button type="button" data-v="own" aria-pressed="false">Own</button><button type="button" data-v="0" aria-pressed="false" title="Slot 1">1</button><button type="button" data-v="1" aria-pressed="false" title="Slot 2">2</button><button type="button" data-v="2" aria-pressed="false" title="Slot 3">3</button><button type="button" data-v="3" aria-pressed="false" title="Slot 4">4</button><button type="button" data-v="4" aria-pressed="false" title="Slot 5">5</button><button type="button" data-v="5" aria-pressed="false" title="Slot 6">6</button><button type="button" data-v="6" aria-pressed="false" title="Slot 7">7</button><button type="button" data-v="7" aria-pressed="false" title="Slot 8">8</button></div>
-                  <button type="button" id="sqOwn" hidden>Make own copy</button><button type="button" id="sqSave" hidden>Save to a slot</button><button type="button" id="sqCopy">Copy</button><button type="button" id="sqPaste">Paste</button></div>
+                  <span class="sqw"><button type="button" id="sqCopy">Copy</button><button type="button" id="sqPaste">Paste</button></span></div>
                 <div id="sqBody" hidden>
-                  <div class="row"><div class="seg" id="sqTab" role="group" aria-label="Which value to draw"><button type="button" data-v="nt" aria-pressed="true">Note</button><button type="button" data-v="ch" aria-pressed="false">Chance</button><button type="button" data-v="rp" aria-pressed="false">Repeat</button><button type="button" data-v="lv" aria-pressed="false">Level</button><button type="button" data-v="cd" aria-pressed="false">Chord</button><button type="button" data-v="cn" aria-pressed="false">When</button></div>
-                    <span class="pair"><span class="lab2">Steps</span><button type="button" id="sqNm" aria-label="Fewer steps">−</button><output id="sqN" class="mono">8</output><button type="button" id="sqNp" aria-label="More steps">+</button></span></div>
+                  <div class="row spread"><div class="seg" id="sqTab" role="group" aria-label="Which value to draw"><button type="button" data-v="nt" aria-pressed="true">Note</button><button type="button" data-v="ch" aria-pressed="false">Chance</button><button type="button" data-v="rp" aria-pressed="false">Repeat</button><button type="button" data-v="lv" aria-pressed="false">Level</button><button type="button" data-v="cd" aria-pressed="false">Chord</button><button type="button" data-v="cn" aria-pressed="false">When</button></div>
+                    <span class="pair"><span class="lab2">Steps</span><span class="sqw"><button type="button" id="sqNm" aria-label="Fewer steps">−</button></span><output id="sqN" class="mono">8</output><span class="sqw"><button type="button" id="sqNp" aria-label="More steps">+</button></span></span></div>
                   <canvas id="sqCv" aria-label="The steps. Drag up and down to set the value shown; click the row of squares underneath to turn steps on and off."></canvas>
                   <p class="sub mono" id="sqRead"></p>
-                  <div class="row"><span class="lab2">Write</span><span class="sqw"><button type="button" data-w="rand">Random</button><button type="button" data-w="walk">Walk</button><button type="button" data-w="up">Arp up</button><button type="button" data-w="down">Arp down</button><button type="button" data-w="updown">Up-down</button><button type="button" data-w="mut">Mutate</button><button type="button" data-w="rev">Reverse</button><button type="button" data-w="shift">Shift ›</button><button type="button" data-w="clear">Clear</button></span></div>
+                  <div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="lab2" style="padding-top:5px">Write</span><span class="sqw"><button type="button" data-w="rand">Random</button><button type="button" data-w="walk">Walk</button><button type="button" data-w="up" title="Chord tones, going up">Arp ↑</button><button type="button" data-w="down" title="Chord tones, going down">Arp ↓</button><button type="button" data-w="updown" title="Chord tones, up then down">Arp ↑↓</button><button type="button" data-w="mut" title="Change a few steps a little">Mutate</button><button type="button" data-w="rev">Reverse</button><button type="button" data-w="shift" title="Move every step one place later">Shift ›</button><button type="button" data-w="clear">Clear</button></span></div>
                   <div class="row"><span class="lab2">Plays</span><div class="seg" id="sqOrd" role="group" aria-label="Order the steps play in"><button type="button" data-v="fwd">Forward</button><button type="button" data-v="back">Back</button><button type="button" data-v="ping">Ping-pong</button><button type="button" data-v="rand">Random</button><button type="button" data-v="drunk">Drunk</button></div>
-                    <label class="check"><input type="checkbox" id="sqArp"> Arp chords across repeats</label></div>
+                    <label class="check" title="Play a chord's notes one per repeat, not together"><input type="checkbox" id="sqArp"> Arp chords</label></div>
                   <div class="row"><label class="lab2" for="sqScl">Scale</label><select id="sqScl"></select><span class="pair" id="sqSmRow"><span class="lab2">A step sets</span><div class="seg" id="sqSm" role="group" aria-label="What a step's note does on a sample"><button type="button" data-v="note">Speed</button><button type="button" data-v="slice">Slice</button></div></span>
-                    <button type="button" id="sqRestart" title="Send every sequence back to its first step">Restart all</button></div>
+                    <span class="sqw"><button type="button" id="sqSave" hidden title="Put this sequence in a free slot so other dots can share it">Save to slot</button><button type="button" id="sqOwn" hidden title="Stop sharing: give this dot its own copy of the slot's sequence">Make own copy</button><button type="button" id="sqRestart" title="Send every sequence back to its first step">Restart all</button></span></div>
                 </div>
               </div>
               <div class="ctl" id="dTc" hidden><div class="top"><label for="dT">Turn</label><output id="dTv"></output><button type="button" class="lfob" id="dlb-t" aria-expanded="false" aria-label="LFO for this wheel's turn">LFO</button></div><input type="range" id="dT" min="0" max="600" step="1"></div>
@@ -482,18 +481,21 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
           </div>
         </div>
       </section>
+
       <section class="panel" id="pSeq" aria-label="Sequences">
-        <div class="row spread"><h2><b>09</b>Sequences</h2><button type="button" id="sqWin">Window</button></div>
+        <div class="row spread"><h2><b>04</b>Sequences</h2><button type="button" id="sqWin">Window</button></div>
         <canvas id="sqOv" aria-label="Every dot that has a sequence, one row each, with the step playing now marked. Click a row to open that dot."></canvas>
         <p class="sub mono" id="sqOvNote"></p>
       </section>
     </div>
 
     <div class="col colC">
-      <section class="panel" id="pMap" aria-label="Map of the wheels">
-        <h2><b>05</b>Map</h2>
-        <div class="map" id="map"></div>
-        <p class="hint">Every wheel in the patch, with the wheels inside its dots listed under it. Click one to open it on the wheel.</p>
+      <section class="panel" id="pRings" aria-label="Rings">
+        <h2><b>05</b>Rings</h2>
+        <p class="where" id="ringsWhere" hidden></p>
+        <p class="hint">Each ring spreads its hits as evenly as possible over its steps (a Euclidean rhythm). A ring with equal steps and hits is a plain pulse. An LFO on Rotate turns the ring smoothly, between steps.</p>
+        <div class="ringhead" aria-hidden="true"><span></span><span>Steps</span><span>Hits</span><span>Rotate</span><span>Level</span></div>
+        <div class="rings" id="rings"></div>
       </section>
 
       <section class="panel" id="pSounds" aria-label="Library: clicks, samples, instruments and LFO shapes">
@@ -538,8 +540,14 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
         <p class="hint">The top wheel unrolled: one lane per ring, left to right in time. A tick is a click, a bar is a sample or a note for as long as it sounds, and a bracket is a wheel inside a dot with its own sounds drawn small. The curves underneath are the LFOs over the same stretch of time. Pause (K) freezes it so you can read it. Click a sound to select its dot, and drag up or down to change its level.</p>
       </section>
 
+      <section class="panel" id="pMap" aria-label="Map of the wheels">
+        <h2><b>08</b>Map</h2>
+        <div class="map" id="map"></div>
+        <p class="hint">Every wheel in the patch, with the wheels inside its dots listed under it. Click one to open it on the wheel.</p>
+      </section>
+
       <section class="panel" id="pTrack" aria-label="Sections and the arranger">
-        <h2><b>08</b>Sections</h2>
+        <h2><b>09</b>Sections</h2>
         <div class="row"><span class="lab2">Sections</span><div class="seg" id="secList" role="group" aria-label="Sections"></div>
           <button type="button" id="secAdd">+ Save the wheel as a section</button><button type="button" id="secNew" hidden>+ Empty</button></div>
         <div class="row" id="secEd" hidden><input type="text" id="secName" maxlength="24" aria-label="Name of this section">
@@ -567,6 +575,7 @@ input[type=range]::-moz-range-thumb{width:8px;height:8px;border-radius:50%;backg
     <span><kbd>←</kbd><kbd>→</kbd>Semitone</span>
     <span><kbd>⇧←</kbd><kbd>⇧→</kbd>Octave</span>
     <span><kbd>K</kbd>Pause</span>
+    <span><kbd>⌘Z</kbd>Undo</span>
     <span><kbd>Esc</kbd>Close dot</span>
     <span><kbd>N</kbd>Notes</span><span><kbd>⌥</kbd>click a control: LFO</span>
   </footer>
@@ -1414,6 +1423,9 @@ function readTokens(){const cs=getComputedStyle(document.documentElement);
 readTokens();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readTokens);
 new MutationObserver(readTokens).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+/* Every extra window is opened here, so a native app shell has one place to take over. */
+function openWin(hash,name,w,h){let win=null;try{win=window.open(location.href.split('#')[0]+'#'+hash,name,`popup=yes,width=${w},height=${h}`);}catch(e){}if(win)bus.addPeer(win);return win;}
+function saveBlob(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);}
 function fit(c){const r=c.getBoundingClientRect(),d=Math.min(2,window.devicePixelRatio||1),w=Math.round(r.width*d),h=Math.round(r.height*d);
   if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext('2d');g.setTransform(d,0,0,d,0,0);return{g,w:r.width,h:r.height};}
 const font=(px,w)=>`${w||400} ${px}px ${T['--mono']||'monospace'}`;
@@ -1471,7 +1483,7 @@ function mountSeqWindow(host){
    Instrument view
    ===================================================================== */
 function initInstrument(){
-  const ui={view:'rhythm',nc:16,calm:matchMedia('(prefers-reduced-motion: reduce)').matches,snap:false};
+  const ui={ver:0,view:'rhythm',nc:16,calm:matchMedia('(prefers-reduced-motion: reduce)').matches,snap:false};
   $('#calm').checked=ui.calm;
   const audio={ctx:null,running:false,send:()=>{},rep:null,sr:48000,lastDrop:0,dropT:0,mode:''};
   window.__audio=audio;   /* for the tests */
@@ -1491,7 +1503,9 @@ function initInstrument(){
      A worklet gets its own copy from postMessage; only the fallback engine, which shares this thread, needs one made here. */
   function sendState(jump){secAlias(state);const S=Object.assign({},state,{sections:null,track:null});audio.send({S:audio.copy?JSON.parse(JSON.stringify(S)):S,jump:!!jump});}
   let postRows=()=>{};
-  function changed(){sendState();saveSoon();postRows();}
+  let undoSoon=()=>{};
+  /* every edit to the patch comes through here. ui.ver counts them, so drawing that only depends on the patch can skip its work when nothing changed. */
+  function changed(){ui.ver++;sendState();saveSoon();postRows();undoSoon();}
   function sendSample(i){const x=samples[i];audio.send({smp:{i,d:x?x.d:null,sr:x?x.sr:0}});}
   const fmtSec=t=>t>=1?t.toFixed(2)+' s':(t*1000).toFixed(t<0.01?2:1)+' ms';
   let toastT=0;function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,6000);}
@@ -1595,7 +1609,7 @@ function initInstrument(){
       syncDotUI(true);};}
   makeDotLfo('p');makeDotLfo('l');makeDotLfo('a');makeDotLfo('s');makeDotLfo('t');
   function selectDot(x){sel=x;syncDotUI();}
-  window.__selectDot=(ri,d)=>selectDot({ri,d});   /* for the tests */
+  window.__selectDot=(ri,d)=>selectDot({ri,d});window.__changed=()=>changed();   /* for the tests */
   $('#wheel').addEventListener('pointerdown',e=>{const b=$('#wheel').getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top;
     let best=null,bd=24*24;for(const h of wheelHits){const q=(h.x-x)*(h.x-x)+(h.y-y)*(h.y-y);if(q<bd){bd=q;best=h;}}
     selectDot(best?{ri:best.ri,d:best.d}:null);});
@@ -1611,11 +1625,9 @@ function initInstrument(){
   function postInst(origin){bus.post({type:'inst-sync',inst:state.inst,smpp:state.smpp,smp:samples.map(x=>x?x.name:null),shp:state.shapes.map(x=>x?x.name:null),origin});postSmpInfo();}
   let instWin=null;
   function openInst(i){needInst(i);changed();
-    const url=location.href.split('#')[0]+'#instrument-'+(i+1);
-    try{if(instWin&&!instWin.closed){instWin.location.href=url;instWin.location.reload();instWin.focus();return;}}catch(e){}
-    let w=null;try{w=window.open(url,'rit-instrument','popup=yes,width=1180,height=860');}catch(e){}
-    if(!w){toast('The browser did not open a new window. Allow pop-ups for this page, then press Edit again.');return;}
-    instWin=w;bus.addPeer(w);}
+    try{if(instWin&&!instWin.closed){bus.post({type:'win-show',win:'inst',i});instWin.focus();return;}}catch(e){}
+    instWin=openWin('instrument-'+(i+1),'rit-instrument',1180,860);
+    if(!instWin)toast('The browser did not open a new window. Allow pop-ups for this page, then press Edit again.');}
   function drawInsts(){const h=$('#insts');h.textContent='';
     for(let i=0;i<8;i++){const x=state.inst[i],d=document.createElement('div');d.className='instr';
       d.innerHTML=`<span class="n">${i+1}</span><span class="nm" data-empty="${!x}"></span><button type="button" data-e aria-label="${x?'Edit':'Make'} instrument ${i+1}">${x?'Edit ›':'New ›'}</button>`;
@@ -1663,11 +1675,10 @@ function initInstrument(){
   /* --- the sample window: it edits the recordings in the shared database and tells us which slot changed --- */
   const smpPut=i=>smpStore(i).then(()=>bus.post({type:'smp-changed',i,origin:bus.id}));
   let smpWin=null;
-  function openSmp(i){const url=location.href.split('#')[0]+'#sample-'+(i+1);
-    try{if(smpWin&&!smpWin.closed){smpWin.location.href=url;smpWin.location.reload();smpWin.focus();return;}}catch(e){}
-    let w=null;try{w=window.open(url,'rit-sample','popup=yes,width=1180,height=820');}catch(e){}
-    if(!w){toast('The browser did not open a new window. Allow pop-ups for this page, then press Edit again.');return;}
-    smpWin=w;bus.addPeer(w);}
+  function openSmp(i){
+    try{if(smpWin&&!smpWin.closed){bus.post({type:'win-show',win:'smp',i});smpWin.focus();return;}}catch(e){}
+    smpWin=openWin('sample-'+(i+1),'rit-sample',1180,820);
+    if(!smpWin)toast('The browser did not open a new window. Allow pop-ups for this page, then press Edit again.');}
   function postSmpInfo(){const U=Array.from({length:8},()=>[]);
     const walk=(rs,label,depth)=>rs.forEach((r,ri)=>{if(r.hits<=0)return;ringDots(Object.assign({},r,{on:true})).forEach(d=>{
       if(r.dk[d]==='sample')U[r.ds[d]].push(`${label} · Ring ${ri+1} · dot ${d+1}`);
@@ -1711,7 +1722,7 @@ function initInstrument(){
   for(let i=0;i<SMPN;i++)drawSmp(i);
   smpLoadAll();
 
-  function syncView(){const p=$('#path');p.hidden=!view.length;p.textContent='';
+  function syncView(){ui.ver++;const p=$('#path');p.hidden=!view.length;p.textContent='';
     if(view.length){const add=(t,n)=>{const b=document.createElement(n===view.length?'b':'button');if(n<view.length){b.type='button';b.onclick=()=>goTo(n);}b.textContent=t;p.appendChild(b);
         if(n<view.length)p.appendChild(document.createTextNode('›'));};
       add('Top',0);view.forEach((v,k)=>add(`Ring ${v.ri+1} · dot ${v.d+1}`,k+1));}
@@ -1906,8 +1917,7 @@ function initInstrument(){
   bus.on((m,local)=>{if(local)return;
     if(m.type==='sq-hello'){sqWinSeen=true;bus.post({type:'sq-rows',rows:sqRows().map(sqRowOut)});postStatus(true);}
     else if(m.type==='sq-open'&&Array.isArray(m.path))sqOpen(m.path);});
-  $('#sqWin').onclick=()=>{let w=null;try{w=window.open(location.href.split('#')[0]+'#sequencer','rit-sequences','popup=yes,width=900,height=620');}catch(e){}
-    if(!w){toast('The browser did not open a new window.');return;}bus.addPeer(w);};
+  $('#sqWin').onclick=()=>{if(!openWin('sequencer','rit-sequences',900,620))toast('The browser did not open a new window.');};
 
   /* --- visual clock that mirrors the engine --- */
   const vis={master:0,rings:[0,0,0,0],f:state.base.speed,last:performance.now(),slowT:0,t:0,E:newEff()};
@@ -2105,13 +2115,23 @@ function initInstrument(){
     setText('#tbVal',z==='Tone'?noteName(f,true)+' · '+fmtHz(f):big);
   }
 
-  let lastRO=0,lastSm=0;
+  /* The draw loop. A canvas that is scrolled out of sight is not drawn; the map and the list of sequences are only rebuilt when the patch
+     changed (ui.ver); and when another window is in front this one draws 20 times a second, which leaves the processor to the window in use. */
+  let lastRO=0,lastSm=0,lastDraw=0,mapVer=-1;
+  const offscreen=new Set(),io=window.IntersectionObserver?new IntersectionObserver(es=>{for(const e of es){if(e.isIntersecting)offscreen.delete(e.target.id);else offscreen.add(e.target.id);}}):null;
+  if(io)for(const id of['wheel','tl','sqCv','sqOv','circ'])io.observe($('#'+id));
   function frame(now){
-    if(!document.hidden){const E=tick(now),C=coefs(E);
-      drawWheel(E);drawScope(E);drawTimeline(E,now);drawSq();if(uiPrefs.circ)drawCirc(E,C);drawDotSample(E);
-      if(now-lastSm>700){lastSm=now;for(let i=0;i<SMPN;i++)drawSmp(i);}
-      if(now-lastRO>80){lastRO=now;updateReadouts(E,C);drawMap();drawSqOv();}}
-    requestAnimationFrame(frame);}
+    requestAnimationFrame(frame);
+    if(document.hidden||(!document.hasFocus()&&now-lastDraw<48))return;
+    lastDraw=now;const E=tick(now);
+    if(!offscreen.has('wheel'))drawWheel(E);
+    drawScope(E);
+    if(!offscreen.has('tl'))drawTimeline(E,now);
+    if(!offscreen.has('sqCv'))drawSq();
+    if(uiPrefs.circ&&!offscreen.has('circ'))drawCirc(E,coefs(E));
+    drawDotSample(E);
+    if(now-lastSm>700){lastSm=now;for(let i=0;i<SMPN;i++)drawSmp(i);}
+    if(now-lastRO>80){lastRO=now;updateReadouts(E);if(mapVer!==ui.ver){mapVer=ui.ver;drawMap();}if(!offscreen.has('sqOv'))drawSqOv();}}
 
 
   /* --- timeline: the top wheel unrolled. Every item comes from the same walk of the rings that the engine makes when a dot fires. --- */
@@ -2293,10 +2313,10 @@ function initInstrument(){
   function sqRowOut(o){return{path:o.path,pk:o.pk,ri:o.ri,label:sqPathName(o.path),kind:o.r.dk[o.d],link:o.link,name:o.link>=0?o.Q.name:'',n:o.Q.n,on:o.Q.on,nt:o.Q.nt,sm:o.r.dk[o.d]==='sample'?o.Q.sm:'note'};}
   function sqOpen(path){view.length=0;for(let i=0;i<path.length-1;i++){const rs=wheelAt(i),v=path[i];if(!rs||!rs[v.ri]||rs[v.ri].dk[v.d]!=='wheel'||!rs[v.ri].kids[v.d])break;view.push({ri:v.ri,d:v.d});}
     syncView();const last=path[path.length-1];if(view.length===path.length-1)selectDot({ri:last.ri,d:last.d});}
-  let sqOvRows=[];
-  function drawSqOv(){const cv=$('#sqOv');if(cv.offsetParent===null)return;const rows=sqRows();sqOvRows=rows;
+  let sqOvRows=[],sqOvOut=[],sqOvVer=-1;
+  function drawSqOv(){const cv=$('#sqOv');if(cv.offsetParent===null)return;if(sqOvVer!==ui.ver){sqOvVer=ui.ver;sqOvRows=sqRows();sqOvOut=sqOvRows.map(sqRowOut);}const rows=sqOvRows;
     const want=Math.max(36,rows.length*28+4);if(Math.abs(cv.getBoundingClientRect().height-want)>1)cv.style.height=want+'px';
-    drawSqRows(cv,rows.map(sqRowOut),sqPos(),audio.running,sel?selKey():-1);
+    drawSqRows(cv,sqOvOut,sqPos(),audio.running,sel?selKey():-1);
     setText('#sqOvNote',rows.length?`${rows.length} dot${rows.length>1?'s':''} with a sequence. Click a row to open it.`:'No dot has a sequence yet. Select a dot and choose Own, or a slot number, under Sequence.');}
   $('#sqOv').addEventListener('pointerdown',e=>{const b=$('#sqOv').getBoundingClientRect(),i=Math.floor((e.clientY-b.top-2)/28),o=sqOvRows[i];if(o)sqOpen(o.path);});
 
@@ -2351,8 +2371,8 @@ function initInstrument(){
       setText('#trkNote',`Bounced “${name}” to sample slot ${slot+1} · ${fmtSec(d.length/sr)}`);});};
   /* Send to the arranger: each ring that is on is rendered alone into a clip of its own, and the clips go at the end of the arrangement, one per lane. */
   let arrWin=null;
-  function openArr(){const url=location.href.split('#')[0]+'#arrange';let w=null;try{w=window.open(url,'rit-arrange','popup=yes,width=1280,height=760');}catch(e){}
-    if(!w){toast('The browser did not open a new window. Open '+url+' in a new tab.');return;}arrWin=w;bus.addPeer(w);}
+  function openArr(){try{if(arrWin&&!arrWin.closed){arrWin.focus();return;}}catch(e){}
+    arrWin=openWin('arrange','rit-arrange',1280,760);if(!arrWin)toast('The browser did not open a new window. Allow pop-ups for this page, then try again.');}
   $('#arrOpen').onclick=openArr;
   $('#arrSend').onclick=()=>{const c=state.sections[state.cur],name=c?c.name:'Wheel',rings=[0,1,2,3].filter(i=>state.rings[i].on&&state.rings[i].hits>0&&state.rings[i].level>0);
     if(!rings.length){toast('No ring is on, so there is nothing to send.');return;}if(ui.busy){toast('Still rendering. Wait for it to finish.');return;}
@@ -2371,6 +2391,58 @@ function initInstrument(){
           made.push({id:'c'+stamp+'r'+ri,src,name:name+' · ring '+(ri+1),lane:ri,t:0,off:0,len:d.length/sr,gain:1,fi:0,fo:0,body});next(k+1);});});};
     next(0);};
   syncTrack();
+
+  /* --- loading a whole patch (undo, redo, a project file). The state object stays the same one; its contents are replaced. --- */
+  function loadPatch(o){const n=sanitizeState(o);for(const k of Object.keys(state))delete state[k];Object.assign(state,n);
+    let ok=true;for(let k=0;k<view.length&&ok;k++){const rs=wheelAt(k),v=view[k];ok=!!(rs&&rs[v.ri]&&rs[v.ri].dk[v.d]==='wheel'&&rs[v.ri].kids[v.d]);}
+    if(!ok){view.length=0;sel=null;}                                   /* the open wheel is gone: back to the top */
+    if(sel){const r=VR()[sel.ri];if(!r||!r.on||sel.d>=r.hits)sel=null;}  /* so is the selected dot */
+    syncView();$$('.lfo').forEach(p=>p.hidden=true);syncAllUI();syncDotUI();drawInsts();syncSqLib();syncTrack();
+    ui.ver++;sendState();saveSoon();postInst(null);postRows();}
+  /* --- undo and redo: the patch as it was before each change. A drag of a slider is one step (changes closer than 350 ms are one). --- */
+  const UN={past:[],fut:[],cur:'',t:0},patchJSON=()=>{secAlias(state);return JSON.stringify(state);};
+  UN.cur=patchJSON();
+  function syncUndo(){$('#undo').disabled=!UN.past.length;$('#redo').disabled=!UN.fut.length;}
+  function undoMark(){clearTimeout(UN.t);UN.t=0;const j=patchJSON();if(j===UN.cur)return;UN.past.push(UN.cur);if(UN.past.length>60)UN.past.shift();UN.cur=j;UN.fut.length=0;syncUndo();}
+  undoSoon=()=>{clearTimeout(UN.t);UN.t=setTimeout(undoMark,350);};
+  function undoStep(from,to,none){if(UN.t)undoMark();if(!from.length){toast(none);return;}to.push(UN.cur);if(to.length>60)to.shift();UN.cur=from.pop();loadPatch(JSON.parse(UN.cur));syncUndo();}
+  const undo=()=>undoStep(UN.past,UN.fut,'Nothing to undo.'),redo=()=>undoStep(UN.fut,UN.past,'Nothing to redo.');
+  $('#undo').onclick=undo;$('#redo').onclick=redo;
+  /* --- project file: the patch, the samples and the arrangement with its audio, in one file.
+     Layout: 'RITP', version (uint32), length of the JSON (uint32), the JSON, padding to a multiple of 4 bytes, then each recording as raw 32-bit floats
+     in the order the JSON lists them (samples, then the arrangement's sources). --- */
+  async function saveProject(){
+    const A=arrLoad(),src=[],sm=[];
+    for(const id of new Set(A.clips.map(c=>c.src))){const x=await arrGet(id);if(x&&x.d)src.push({id,name:x.name,sr:x.sr,d:x.d});}
+    for(let i=0;i<SMPN;i++){const x=samples[i];if(x)sm.push({i,name:x.name,sr:x.sr,lp:x.lp||null,d:x.d});}
+    const head={app:'Rhythm Into Tone',v:1,saved:new Date().toISOString(),patch:JSON.parse(patchJSON()),
+      samples:sm.map(x=>({i:x.i,name:x.name,sr:x.sr,lp:x.lp,n:x.d.length})),arr:A,arrSrc:src.map(x=>({id:x.id,name:x.name,sr:x.sr,n:x.d.length}))};
+    const js=new TextEncoder().encode(JSON.stringify(head)),h=new DataView(new ArrayBuffer(12));h.setUint32(0,0x52495450);h.setUint32(4,1,true);h.setUint32(8,js.length,true);
+    const parts=[h.buffer,js,new Uint8Array((4-js.length%4)%4)];for(const x of sm)parts.push(x.d);for(const x of src)parts.push(x.d);
+    const blob=new Blob(parts,{type:'application/octet-stream'});saveBlob(blob,'rhythm-into-tone.ritproject');
+    toast(`Saved rhythm-into-tone.ritproject · ${(blob.size/1048576).toFixed(1)} MB · the patch, ${sm.length} sample${sm.length===1?'':'s'} and ${A.clips.length} arranger clip${A.clips.length===1?'':'s'}`);}
+  async function openProject(file){let buf,head;
+    try{buf=await file.arrayBuffer();const dv=new DataView(buf);if(buf.byteLength<12||dv.getUint32(0)!==0x52495450)throw 0;
+      const n=dv.getUint32(8,true);head=JSON.parse(new TextDecoder().decode(new Uint8Array(buf,12,n)));var off=12+n+(4-n%4)%4;
+      let need=off;for(const x of (head.samples||[]).concat(head.arrSrc||[]))need+=x.n*4;if(need>buf.byteLength||!head.patch)throw 0;
+    }catch(e){toast('That is not a Rhythm Into Tone project file, or it is damaged. Nothing was changed.');return;}
+    const take=k=>{const a=new Float32Array(buf.slice(off,off+k*4));off+=k*4;return a;};
+    if(UN.t)undoMark();
+    const got=Array(SMPN).fill(null);for(const x of head.samples||[]){const d=take(x.n);if(x.i>=0&&x.i<SMPN&&d.length>2)got[x.i]=smpMake(x.name,d,x.sr,x.lp);}
+    for(let i=0;i<SMPN;i++){samples[i]=got[i];smpChanged(i);smpPut(i);}
+    await arrWipe();for(const x of head.arrSrc||[])await arrPut(String(x.id),{name:x.name,d:take(x.n),sr:x.sr});
+    const A=arrSan(head.arr);arrSave(A);bus.post({type:'arr-changed',origin:bus.id});
+    UN.past.push(UN.cur);UN.fut.length=0;loadPatch(head.patch);UN.cur=patchJSON();syncUndo();
+    toast(`Opened ${file.name}: the patch, ${got.filter(Boolean).length} samples and ${A.clips.length} arranger clips. Undo brings back the patch you had, but not its samples or arrangement.`);}
+  $('#projSave').onclick=saveProject;$('#projOpen').onclick=()=>$('#projFile').click();
+  $('#projFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)openProject(f);};
+  /* --- commands by name, for the keyboard here and for a native app's menus later (window.RIT.cmd.undo() and so on) --- */
+  window.RIT={v:1,cmd:{sound:()=>toggleAudio(),pause:()=>setPause(!ui.paused),stopAll:()=>audio.send({stop:true}),undo,redo,saveProject,openProject:()=>$('#projFile').click(),
+    arranger:()=>openArr(),sendToArranger:()=>$('#arrSend').click(),sequences:()=>$('#sqWin').click(),restartSequences:()=>audio.send({sqreset:true})},loadProjectFile:openProject};
+  addEventListener('keydown',e=>{if(!(e.metaKey||e.ctrlKey)||e.altKey)return;const k=e.key.toLowerCase(),t=e.target,tag=t&&t.tagName;
+    if(k==='z'){if(tag==='TEXTAREA'||(tag==='INPUT'&&/^(text|number|search)$/.test(t.type)))return;e.preventDefault();(e.shiftKey?redo:undo)();}
+    else if(k==='s'&&!e.shiftKey){e.preventDefault();saveProject();}
+    else if(k==='o'&&!e.shiftKey){e.preventDefault();$('#projFile').click();}});
   syncAllUI();drawInsts();syncSqLib();
   requestAnimationFrame(frame);
   addEventListener('pagehide',saveNow);
@@ -2552,7 +2624,8 @@ function mountInstEditor(host,slot0,opt){
   q('#i-name').oninput=e=>{const x=I();if(!x)return;x.name=e.target.value.slice(0,40)||'Instrument';commit();};
   q('#i-preset').onchange=e=>{const k=e.target.value;e.target.value='';if(k==='')return;const [n,o]=INST_PRESETS[+k];inst[cur]=sanInst(Object.assign(newInst(n),JSON.parse(JSON.stringify(o))));sync();commit();q('#i-stat').textContent='Loaded the '+n+' preset into slot '+(cur+1)+'.';};
   q('#i-uselp').onclick=()=>{const x=I(),sm=x&&samples[x.ss];if(!sm||!sm.lp){q('#i-stat').textContent='That sample has no loop set. Set one in the sample window.';return;}x.ls=sm.lp[0];x.le=sm.lp[1];if(x.mode==='one'||x.mode==='held')x.mode='loop';sync();commit();};
-  bus.on(m=>{if(m.type==='smp-changed'&&m.i>=0&&m.i<8)smpLoadOne(m.i).then(()=>sync());});
+  bus.on(m=>{if(m.type==='smp-changed'&&m.i>=0&&m.i<8)smpLoadOne(m.i).then(()=>sync());
+    else if(m.type==='win-show'&&m.win==='inst'&&!emb){cur=clamp(m.i|0,0,7);try{history.replaceState(null,'','#instrument-'+(cur+1));}catch(e){}sync();}});
   q('#i-new').onclick=()=>{inst[cur]=newInst('Instrument '+(cur+1));sync();commit();};
   q('#i-clear').onclick=()=>{inst[cur]=null;sync();commit();};
   q('#i-copy').onclick=()=>{try{localStorage.setItem('rit-inst-clip',JSON.stringify(I()));q('#i-stat').textContent='Copied.';}catch(e){}};
@@ -2712,6 +2785,7 @@ function mountSampleEditor(host,slot0){
       const o=x.d.slice();for(let k=0;k<L;k++){const t=k/L;o[b-L+k]=o[b-L+k]*(1-t)+x.d[a-L+k]*t;}return[o,'Crossfaded '+sec(L/x.sr)+' at the loop end.',x.lp];}};
   qa('[data-op]').forEach(b=>b.onclick=()=>{const x=S();if(!x)return;const [a,e]=range(),r=OPS[b.dataset.op](x,a,e);if(r)put(r[0],r[1],r[2]);});
   /* ---- slots, clipboard, files */
+  bus.on(m=>{if(m.type==='win-show'&&m.win==='smp'){const b=qa('#s-slots button')[clamp(m.i|0,0,7)];if(b)b.click();}});
   qa('#s-slots button').forEach(b=>b.onclick=()=>{stop();cur=+b.dataset.s;sel=null;v0=0;v1=1;pitch=0;try{history.replaceState(null,'','#sample-'+(cur+1));}catch(e){}pb.setSlot(cur);refresh();stat('');});
   qa('#s-send button').forEach(b=>b.onclick=()=>{const x=S(),k=+b.dataset.s;if(!x||k===cur)return;const [a,e]=range();undo.push({i:k,x:samples[k]||null});if(undo.length>5)undo.shift();
     samples[k]=smpMake(x.name.replace(/\.[a-z0-9]+$/i,'')+(sel?' part':' copy'),x.d.slice(a,e),x.sr);persist(k);refresh();stat('Sent '+sec((e-a)/x.sr)+' to slot '+(k+1)+'.');});

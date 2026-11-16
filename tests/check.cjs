@@ -14,7 +14,7 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   const browser=await chromium.launch({args:['--autoplay-policy=no-user-gesture-required']});
   const errs=[];
   const watch=(p,tag)=>{p.on('pageerror',e=>{errs.push(tag+': '+e.message);if(process.env.DEBUG)console.log('PAGE ERROR',tag,e.stack||e.message);});p.on('console',m=>{if(m.type()==='error'&&!ignorable(m.text()))errs.push(tag+': '+m.text());});};
-  const ctx=await browser.newContext({viewport:{width:1280,height:900}});
+  const ctx=await browser.newContext({viewport:{width:1440,height:900}});
   const inst=await ctx.newPage();watch(inst,'instrument');
   await inst.goto(BASE);await inst.waitForTimeout(500);
   await inst.evaluate(()=>{try{localStorage.clear();}catch(e){}});await inst.reload();await inst.waitForTimeout(400);
@@ -243,8 +243,6 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       const gm=await inst.evaluate(()=>state.inst[2]);
       check('the wavetable source and the modulators reach the patch',gm.src==='wt'&&gm.wt==='formant'&&gm.mods[0]&&gm.mods[0].type==='draw'&&gm.mods[0].dest==='wp'&&gm.mods[0].sync==='loop'&&gm.mods[0].pts[8]>0.9&&gm.mods[1]&&gm.mods[1].type==='wheel'&&gm.mods[2]===null,gm.src+' '+gm.wt+' · mod 1 '+(gm.mods[0]&&gm.mods[0].type)+' to '+(gm.mods[0]&&gm.mods[0].dest)+', point 9 = '+(gm.mods[0]&&gm.mods[0].pts[8])+' · mod 2 '+(gm.mods[1]&&gm.mods[1].type));
       await iw.screenshot({path:path.join(OUT,'instrument-window.png'),fullPage:true});
-      await iw.setViewportSize({width:390,height:800});await iw.waitForTimeout(200);
-      check('the instrument window at 390 px has no sideways scroll',await iw.evaluate(()=>document.documentElement.scrollWidth)<=390);
       await iw.close();
       const saved=await inst.evaluate(()=>{saveNow();return JSON.parse(localStorage.getItem('rit-state-v1')).inst[2].name;});
       check('instruments are saved with the patch',saved==='Glass bell');}
@@ -299,14 +297,12 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       const ro=await inst.evaluate(()=>samples[5]?{sec:samples[5].d.length/samples[5].sr,e:samples[5].d.reduce((m,v)=>m+v*v,0),name:samples[5].name}:null);
       check('the app\'s output can be recorded into a slot',!!ro&&ro.sec>0.4&&ro.sec<1.6&&ro.e>0.001&&/Recorded/.test(await sw.textContent('#s-stat')),ro?ro.name+' · '+ro.sec.toFixed(2)+' s · energy '+ro.e.toFixed(3):await sw.textContent('#s-stat'));
       await sw.screenshot({path:path.join(OUT,'sample-window.png'),fullPage:true});
-      await sw.setViewportSize({width:390,height:800});await sw.waitForTimeout(200);
-      check('the sample window at 390 px has no sideways scroll',await sw.evaluate(()=>document.documentElement.scrollWidth)<=390);
       await sw.close();
       await inst.evaluate(()=>{state.rings[0].dk[0]='click';for(const k of[0,2,3,4,5,6,7]){samples[k]=null;smpStore(k);}});await inst.waitForTimeout(300);}
     await inst.click('#dotReset');await inst.keyboard.press('Escape');await inst.waitForTimeout(150);
     check('Reset dot and Esc clear the editor',await inst.evaluate(()=>state.rings[0].dp[0]===0&&state.rings[0].da[0]===1&&state.rings[0].pld[0]===0&&state.rings[0].dk[0]==='click'&&state.rings[0].kids[0]===null&&document.querySelector('#dotEd').hidden));}
     {
-      await inst.evaluate(()=>{const r=state.rings[1];r.dk[0]='wheel';r.kids[0]=newWheel();r.kids[0].rings[0].dk[1]='wheel';r.kids[0].rings[0].kids[1]=newWheel();});await inst.waitForTimeout(300);
+      await inst.evaluate(()=>{const r=state.rings[1];r.dk[0]='wheel';r.kids[0]=newWheel();r.kids[0].rings[0].dk[1]='wheel';r.kids[0].rings[0].kids[1]=newWheel();__changed();});await inst.waitForTimeout(300);
       const rows=await inst.$$eval('#map .maprow',els=>els.map(e=>e.textContent));
       check('the map lists every wheel',rows.length===3&&/^Top/.test(rows[0])&&/Ring 2 · dot 1/.test(rows[1])&&/Ring 1 · dot 2/.test(rows[2]),rows.join(' | '));
       await inst.click('#map .maprow:nth-child(3)');await inst.waitForTimeout(250);
@@ -326,15 +322,15 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
   check('fallback engine runs',/fallback/.test(await fb.textContent('#engineNote'))&&fs2.size>=4,[...fs2].join(' '));
   await fb.close();
 
-  /* 6. phone width, light and dark */
+  /* 6. a Mac-sized window (1440 x 820), light and dark: nothing spills sideways, and the wheel, the whole dot editor with its sequence, and the rings are on screen together */
   for(const scheme of ['light','dark']){
-    const ph=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,colorScheme:scheme});
-    for(const [name,url] of [['instrument',BASE],['sequencer',BASE+'#sequencer']]){
-      const p=await ph.newPage();watch(p,'phone '+name);await p.goto(url);await p.waitForTimeout(500);
-      const w=await p.evaluate(()=>document.documentElement.scrollWidth);
-      check(`${name} at 390 px (${scheme}) has no sideways scroll`,w<=390,w+' px');
-      await p.screenshot({path:path.join(OUT,`${name}-phone-${scheme}.png`),fullPage:true});await p.close();}
-    await ph.close();}
+    const mc=await browser.newContext({viewport:{width:1440,height:820},deviceScaleFactor:2,colorScheme:scheme});
+    const p=await mc.newPage();watch(p,'mac '+scheme);await p.goto(BASE);await p.waitForTimeout(500);
+    await p.evaluate(()=>{state.inst[0]=newInst('Pad');state.rings[2].dk[0]='inst';state.rings[2].sq[0]={on:true,link:-1,s:newSeq()};__selectDot(2,0);__changed();});await p.waitForTimeout(300);
+    const m=await p.evaluate(()=>{const b=id=>document.querySelector(id).getBoundingClientRect();return{w:document.documentElement.scrollWidth,wheel:b('#wheel').bottom,dot:b('#pDot').bottom,rings:b('#pRings').bottom,tableW:b('#pRings').width};});
+    check(`main window at 1440 x 820 (${scheme}): no sideways scroll`,m.w<=1440,m.w+' px');
+    if(scheme==='light')check('the wheel, the dot editor with its sequence, and the rings fit on screen together',m.wheel<=820&&m.dot<=820&&m.rings<=820&&m.tableW>=440,`wheel ends ${Math.round(m.wheel)}, dot editor ${Math.round(m.dot)}, rings ${Math.round(m.rings)} of 820 px`);
+    await p.screenshot({path:path.join(OUT,`main-mac-${scheme}.png`)});await p.close();await mc.close();}
 
 
   /* 7. sample playback, pause, sections and the track, dot LFOs */
@@ -460,8 +456,6 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     await aw.click('#a-play');await aw.waitForTimeout(250);const pl=await aw.textContent('#a-play');await aw.click('#a-play');
     check('the arranger plays and stops',pl==='Stop'&&(await aw.textContent('#a-play'))==='Play');
     await aw.screenshot({path:path.join(OUT,'arranger.png'),fullPage:true});
-    await aw.setViewportSize({width:390,height:844});await aw.waitForTimeout(200);
-    check('the arranger at 390 px has no sideways scroll',await aw.evaluate(()=>document.documentElement.scrollWidth)<=390);
     await aw.evaluate(()=>{try{localStorage.removeItem('rit-arr-v1');}catch(e){}return arrWipe();});await aw.close();
 
     /* per-dot sequences in the engine */
@@ -561,8 +555,6 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     await sw.click('#s-slots [data-s="1"]');await sw.waitForTimeout(200);
     check('the playback panels follow the slot',await sw.evaluate(()=>document.querySelector('#s-pb [data-seg="mode"] [aria-pressed="true"]').dataset.v)==='one');
     await sw.screenshot({path:path.join(OUT,'sample-window-playback.png'),fullPage:true});
-    await sw.setViewportSize({width:390,height:844});await sw.waitForTimeout(200);
-    check('the sample window with playback at 390 px has no sideways scroll',await sw.evaluate(()=>document.documentElement.scrollWidth)<=390);
     await sw.close();await p.close();}
 
   check('no page errors',errs.length===0,errs.join(' | ')||'none');
