@@ -1470,12 +1470,13 @@ function mountSeqWindow(host){
     <canvas id="sqWv" style="display:block;width:100%;height:60px;cursor:pointer" aria-label="Every dot that has a sequence, with the step playing now. Click a row to open that dot in the main window."></canvas>
     <p class="sub mono" id="sqWnote"></p>`;
   const cv=host.querySelector('#sqWv');
-  bus.on(m=>{if(m.type==='sq-rows'){rows=m.rows||[];seen=performance.now();}else if(m.type==='sq-pos'){pos=m.pos||{};running=!!m.running;seen=performance.now();}});
+  let dirty=true,wasLive=null;   /* draw only when something arrived from the main window */
+  bus.on(m=>{if(m.type==='sq-rows'){rows=m.rows||[];seen=performance.now();dirty=true;}else if(m.type==='sq-pos'){pos=m.pos||{};running=!!m.running;seen=performance.now();dirty=true;}});
+  addEventListener('resize',()=>{dirty=true;});
   cv.addEventListener('pointerdown',e=>{const b=cv.getBoundingClientRect(),o=rows[Math.floor((e.clientY-b.top-2)/28)];if(o)bus.post({type:'sq-open',path:o.path});});
-  function loop(){const live=performance.now()-seen<3000;host.querySelector('[data-r=conn]').textContent=live?'Connected':'Looking for the main window…';
+  function loop(){requestAnimationFrame(loop);const live=performance.now()-seen<3000;if(!dirty&&live===wasLive)return;dirty=false;wasLive=live;host.querySelector('[data-r=conn]').textContent=live?'Connected':'Looking for the main window…';
     const want=Math.max(36,rows.length*28+4);if(Math.abs(cv.getBoundingClientRect().height-want)>1)cv.style.height=want+'px';
-    drawSqRows(cv,rows,pos,running,-1);host.querySelector('#sqWnote').textContent=rows.length?'Click a row to open that dot in the main window.':'No dot has a sequence yet.';
-    requestAnimationFrame(loop);}
+    drawSqRows(cv,rows,pos,running,-1);host.querySelector('#sqWnote').textContent=rows.length?'Click a row to open that dot in the main window.':'No dot has a sequence yet.';}
   bus.post({type:'sq-hello'});setInterval(()=>{if(performance.now()-seen>2500)bus.post({type:'sq-hello'});},1500);requestAnimationFrame(loop);
 }
 
@@ -1576,7 +1577,7 @@ function initInstrument(){
     const isW=r.dk[sel.d]==='wheel';
     $$('#dK button').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.k===r.dk[sel.d]?'true':'false');if(b.dataset.k==='wheel')b.disabled=view.length>=3&&!isW;});
     {const kd=r.dk[sel.d];   /* Pitch and Length mean different things for each kind of dot */
-      $('label[for=dP]').textContent=kd==='inst'?'Note':kd==='sample'?'Speed':'Pitch';$('label[for=dL]').textContent=kd==='inst'?'Held for':kd==='sample'?'Slice length':kd==='wheel'?'Length (all inside)':'Length';
+      $('label[for=dP]').textContent=kd==='inst'?'Note':kd==='sample'?'Speed':'Pitch';$('label[for=dL]').textContent=kd==='inst'?'Held for':kd==='sample'?'Length':kd==='wheel'?'Length (all inside)':'Length';
       $('#dP').closest('.ctl').hidden=$('#dL').closest('.ctl').hidden=kd==='impulse';}
     const isS=r.dk[sel.d]==='sample',isI=r.dk[sel.d]==='inst';$('#dSc').hidden=!isS;$('#dSeRow').hidden=!isS;$('#dIc').hidden=!isI;
     $$('#dIl button').forEach(b=>{b.setAttribute('aria-pressed',+b.dataset.s===r.di[sel.d]?'true':'false');b.dataset.empty=!state.inst[+b.dataset.s];});

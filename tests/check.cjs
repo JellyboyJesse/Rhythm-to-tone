@@ -544,6 +544,41 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
     check('clicking a row in the window opens that dot in the main window',/Ring 3 · dot 1/.test(await p.textContent('#dotTitle')),await p.textContent('#dotTitle'));
     await qw.screenshot({path:path.join(OUT,'sequences-window.png')});await qw.close();
     await p.evaluate(()=>{state.rings.forEach(r=>r.sq.fill(null));state.sqs.fill(null);});await p.click('#start');
+
+    /* efficiency: the engine idles when nothing modulates, reports without making garbage, and the live engine is sent the wheel only */
+    const ef=await p.evaluate(()=>{const sr=48000,S=sanitizeState(null),e=new Engine(sr),buf=new Float32Array(128);applyMsg(e,{S,jump:true});
+      for(let i=0;i<40;i++)e.render(buf,128,i*128/sr);const still0=e.still,r1=e.report(),r2=e.report();
+      const S2=sanitizeState(null);S2.lfo.F={shape:'sine',rate:2,depth:1,seed:0};applyMsg(e,{S:S2});const F0=e.E.F;for(let i=40;i<200;i++)e.render(buf,128,i*128/sr);
+      let sent=null;const keep=__audio.send;__audio.send=d=>{sent=d;};__changed();__audio.send=keep;
+      const out={still0,same:r1===r2,still1:e.still,moved:Math.abs(e.E.F-F0)>1,sentSec:sent&&sent.S?sent.S.sections:'none',kept:state.sections.length};return out;});
+    check('the engine skips its control updates while nothing modulates, and wakes when an LFO starts',ef.still0===true&&ef.still1===false&&ef.moved,JSON.stringify(ef));
+    check('the engine reuses one report object',ef.same);
+    check('the live engine is sent the wheel only, not every section',ef.sentSec===null&&ef.kept>=1,ef.kept+' section(s) in the patch');
+    /* undo and redo */
+    await p.evaluate(()=>{state.base.F=1234;__changed();});await p.waitForTimeout(450);
+    await p.evaluate(()=>{state.base.F=2345;__changed();});await p.waitForTimeout(450);
+    await p.keyboard.press('Control+z');await p.waitForTimeout(150);const u1=await p.evaluate(()=>state.base.F);
+    await p.keyboard.press('Control+Shift+z');await p.waitForTimeout(150);const u2=await p.evaluate(()=>state.base.F);
+    check('Undo and Redo step through changes to the patch',u1===1234&&u2===2345&&await p.evaluate(()=>!document.querySelector('#undo').disabled),`${u1}, ${u2}`);
+    /* a project file: the patch, a sample and the arrangement go out in one file and come back */
+    await p.evaluate(async()=>{samples[5]=smpMake('proj',new Float32Array(1000).fill(0.25),44100,[0.1,0.5]);await smpStore(5);
+      await arrPut('srcA',{name:'a',d:new Float32Array(500).fill(0.5),sr:44100});const A=arrNew();A.lanes[2].pan=-0.5;A.clips.push({id:'c1',src:'srcA',name:'a',lane:2,t:1,off:0,len:0.01,gain:1,fi:0,fo:0,body:0});arrSave(A);
+      state.base.speed=7.5;state.rings[1].sq[0]={on:true,link:-1,s:newSeq()};state.rings[1].sq[0].s.nt[3]=5;__changed();});
+    const pdl=p.waitForEvent('download',{timeout:15000}).catch(()=>null);await p.click('#mPatch summary');await p.click('#projSave');const pf=await pdl;const pfp=pf?await pf.path():null;
+    check('Save project file downloads one file',!!pfp&&fs.statSync(pfp).size>6000&&fs.readFileSync(pfp).subarray(0,4).toString()==='RITP',pfp?fs.statSync(pfp).size+' bytes':'no file');
+    await p.evaluate(async()=>{samples[5]=null;await smpStore(5);await arrWipe();localStorage.removeItem('rit-arr-v1');state.base.speed=1;state.rings[1].sq[0]=null;__changed();});await p.waitForTimeout(450);
+    if(pfp){await p.setInputFiles('#projFile',{name:'rhythm-into-tone.ritproject',mimeType:'application/octet-stream',buffer:fs.readFileSync(pfp)});await p.waitForTimeout(900);}
+    const pj=await p.evaluate(async()=>{const x=samples[5],A=arrLoad(),g=await arrGet('srcA');return{sp:state.base.speed,nt:state.rings[1].sq[0]?state.rings[1].sq[0].s.nt[3]:-1,smp:x?x.name+':'+x.d.length+':'+x.d[10]+':'+(x.lp||[]).join('-'):'none',clips:A.clips.length,pan:A.lanes[2].pan,src:g?g.d.length+':'+g.d[3]:'none'};});
+    check('Open project file brings back the patch, the samples and the arrangement',pj.sp===7.5&&pj.nt===5&&pj.smp==='proj:1000:0.25:0.1-0.5'&&pj.clips===1&&pj.pan===-0.5&&pj.src==='500:0.5',JSON.stringify(pj));
+    await p.keyboard.press('Escape');await p.keyboard.press('Control+z');await p.waitForTimeout(150);
+    check('opening a project can be undone for the patch',await p.evaluate(()=>state.base.speed)===1);
+    await p.setInputFiles('#projFile',{name:'x.ritproject',mimeType:'application/octet-stream',buffer:Buffer.from('not a project')});await p.waitForTimeout(300);
+    check('a file that is not a project is refused and nothing changes',/not a Rhythm Into Tone project/.test(await p.textContent('#toast'))&&await p.evaluate(()=>state.base.speed)===1);
+    await p.evaluate(async()=>{samples[5]=null;await smpStore(5);await arrWipe();localStorage.removeItem('rit-arr-v1');state.rings.forEach(r=>r.sq.fill(null));__changed();});
+    /* the instrument window changes slot on a message, without loading again */
+    const iw2=await ctx.newPage();watch(iw2,'instrument window 2');await iw2.goto(BASE+'#instrument-1');await iw2.waitForTimeout(700);await iw2.evaluate(()=>{window.__mark=1;});
+    await p.evaluate(()=>bus.post({type:'win-show',win:'inst',i:2}));await iw2.waitForTimeout(300);
+    check('the instrument window switches slot without reloading',await iw2.evaluate(()=>window.__mark===1&&location.hash==='#instrument-3'));await iw2.close();
     /* sample window: the playback settings */
     const sw=await ctx.newPage();watch(sw,'sample playback');await sw.goto(BASE+'#sample-3');await sw.waitForTimeout(900);
     await sw.click('#s-pb [data-seg="mode"] [data-v="loop"]');await sw.click('#s-pb [data-seg="cut"] [data-v="false"]');

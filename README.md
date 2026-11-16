@@ -4,7 +4,7 @@ Build a loop as a rhythm, then speed it up until it fuses into a single tone. Th
 
 **Live site:** https://jellyboyjesse.github.io/Rhythm-to-tone/ (once GitHub Pages is turned on, see below)
 
-It is one HTML file with no build step and no libraries. It runs in a desktop or phone browser.
+It is one HTML file with no build step and no libraries. It is built for a desktop browser on a Mac, in a window about 1440 px wide.
 
 ## Using it
 
@@ -26,13 +26,17 @@ Press **Start sound** in the bar at the top. Everything else works without sound
 - **LFOs.** Every control has an **LFO** tag. Tap it to open its drawer. There are six shapes (sine, triangle, saw, square, random steps, smooth drift), with a rate from about one cycle a minute to 20 Hz and a depth. **Scatter** puts four random LFOs on; **Clear all** removes them. **Calm visuals** stops the flashing playheads at speed.
 - **Sequences.** Every dot can have a sequence of its own, under **Sequence** in the dot editor. It moves one step each time the dot fires.
   - Each step has a note in the scale, on or off, a chance, repeats (a roll of up to 8), a level, a chord, and a condition (always, 1st of 2, first pass only, and so on). Choose which one to draw with the tabs above the strip; click the squares underneath to turn steps on and off.
-  - **Write** fills the steps for you: Random, Walk, Arp up, down and up-down, Mutate, Reverse, Shift and Clear. **Plays** sets the order: forward, back, ping-pong, random or drunk. **Arp chords across repeats** plays a chord's notes one per repeat.
+  - **Write** fills the steps for you: Random, Walk, Arp ↑, ↓ and ↑↓, Mutate, Reverse, Shift and Clear. **Plays** sets the order: forward, back, ping-pong, random or drunk. **Arp chords** plays a chord's notes one per repeat.
   - What a note means depends on the dot: a note on an instrument, the playback speed of a sample (or, with **A step sets: Slice**, which slice of it plays), the click pitch, or a transposition of a whole inner wheel.
   - **Own** gives the dot its own sequence. A number saves it to one of eight slots in the patch, which other dots can share: edit it from any of them and they all change, while each keeps its own place. **Make own copy**, **Copy** and **Paste** move sequences between dots. The patch scale and the slots are in the Library's **Sequences** tab.
-  - Panel 09 lists every dot with a sequence and the step each is on; **Window** shows the same list in its own window. Click a row to open that dot.
+  - Panel 04 lists every dot with a sequence and the step each is on; **Window** shows the same list in its own window. Click a row to open that dot.
   - The old step sequencer (lanes that changed controls for the whole wheel) has been removed. Patches that used it still load, but its steps no longer play.
 
-Your patch and sequence are saved in your browser and come back next time. **Reset patch** (tap twice) restores the defaults.
+Your patch is saved in your browser and comes back next time. In the **Patch** menu:
+
+- **Undo** (⌘Z) and **Redo** (⇧⌘Z) step through the last 60 changes to the patch. A drag of a slider is one step.
+- **Save project file** (⌘S) writes one file with the patch, the samples and the arrangement with its audio. **Open project file** (⌘O) loads one. Use it as a backup, or to move your work to another browser or to the app.
+- **Reset patch** (tap twice) restores the defaults.
 
 ## The maths
 
@@ -90,7 +94,8 @@ The checks cover:
 - the main window and the sequences window staying in step
 - reset and saved settings
 - the fallback engine
-- no sideways scroll at phone width in light and dark
+- a Mac-sized window (1440 × 820) in light and dark: no sideways scroll, and the wheel, the dot editor with its sequence, and the rings on screen together
+- undo and redo, project files, and the engine idling when nothing modulates
 
 Screenshots go to `tests/out/`. The tests can't judge how it sounds, so listen too.
 
@@ -163,4 +168,4 @@ Changes are heard in the main window straight away. Recording the app's output n
 
 ## Using it as a Mac app
 
-In Chrome use the install button in the address bar. In Safari on macOS Sonoma or later, choose File → Add to Dock. It then runs in its own window with its own Dock icon. Keyboard: Space starts and stops the sound, K pauses, 1–4 switch rings, ← and → move the speed by a semitone (with Shift, an octave), N shows the notes.
+In Chrome use the install button in the address bar. In Safari on macOS Sonoma or later, choose File → Add to Dock. It then runs in its own window with its own Dock icon. Keyboard: Space starts and stops the sound, K pauses, ⌘Z undoes, ⌘S saves a project file, 1–4 switch rings, ← and → move the speed by a semitone (with Shift, an octave), N shows the notes.
