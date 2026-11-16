@@ -746,7 +746,10 @@ class Engine{
   constructor(sr){
     this.sr=sr;this.S=null;this.E=newEff();this.ready=false;
     this.lf=Math.log(0.5);this.lt=this.lf;this.kFast=1-Math.exp(-1/(0.03*sr));this.kS=this.kFast;
-    this.vibPh=0;this.spread=[0,1,-1,0.5];this.L={shape:'sine',rate:1,seed:0};
+    this.vibPh=0;this.spread=[0,1,-1,0.5];
+    /* still: no LFO and no step sequencer is running, so update() has nothing to do between messages. dr: each ring's detune ratio, set in update().
+       lfc/fc: the last log-speed and its exp, so a steady speed costs no exp per sample. rp: the one report object, reused. */
+    this.still=false;this.dr=[1,1,1,1];this.lfc=NaN;this.fc=1;this.rp=null;this.sqD=true;this.sqF=(v,k)=>{this.rp.sq[k]=v.pos;};this.L={shape:'sine',rate:1,seed:0};
     this.rings=[];for(let i=0;i<4;i++)this.rings.push({key:-1,pos:[],dot:[],ph:0,base:0,next:0,off:0,amp:0});
     const M=this.MAX=768;this.gN=0;
     this.gG=new Float64Array(M);this.gQ=new Float64Array(M);this.gQQ=new Float64Array(M);
@@ -767,7 +770,7 @@ class Engine{
     this.SP0={src:'smp',wave:'saw',ss:0,note:60,fine:0,mode:'one',st:0,ls:0,le:1,a:0.003,d:0.2,s:1,r:0.005,vel:1,ft:'off',fc:1800,fq:0.3,fe:0,fk:0,fa:0.005,fd:0.5,fs:0.3,fr:0.3,
       vm:'poly',vn:8,glide:0,level:1,wt:'saw',wp:0,mods:null,uni:1,udet:0,o2l:0,o2w:'sine',o2s:0,o2f:0,fm:0,ring:0,sub:0,nz:0,drive:0,elin:false,eloop:false,cut:true,hold:0.25};
     /* P = the patch now playing: S itself, or one section of it while the track plays. tz is taken off the clock, so LFOs restart with each section and stand still in a pause. */
-    this.solo=-1;this.raw=false;this.ssc=null;   /* solo: only this top ring sounds; raw: no limiter. Both are for rendering each ring to its own clip. */
+    this.solo=-1;this.raw=false;this.vAny=false;   /* solo: only this top ring sounds; raw: no limiter. Both are for rendering each ring to its own clip. */
     this.P=null;this.secS=null;this.paused=false;this.tz=0;this.tOn=false;this.tI=0;this.tL=0;this.tLoop=true;this.done=false;
     /* impulses: each is written into this short ring as a band-limited spike (a windowed sinc, 8 samples late) */
     this.ib=new Float32Array(64);this.ip=0;
@@ -798,14 +801,14 @@ class Engine{
     if(!m.play){this.tOn=false;this.P=this.S;this.dirty=true;if(this.S)this.update(this.t);return;}
     this.tOn=true;this.tI=m.from|0;this.tL=-1;this.tLoop=m.loop!==false;this.done=false;this.paused=false;
     const V=this.tView();if(!V){this.tOn=false;return;}
-    this.P=V;this.tz+=this.t;this.t=0;this.seqOn=false;this.dirty=true;this.stopAll();this.sqm.clear();this.update(0);this.lf=this.lt;
+    this.P=V;this.tz+=this.t;this.t=0;this.seqOn=false;this.dirty=true;this.stopAll();this.sqReset();this.update(0);this.lf=this.lt;
     this.master=1-1e-9;for(const r of this.rings){r.ph=this.master-r.off;this.seek(r);}}
   /* the top playhead has come round: count the trip, and move to the next section when this one has had all its trips */
   trip(){this.tL++;const T=this.S.track,it=T.items[this.tI],V=this.P;
     if(!it||this.tL<Math.max(1,it.rep|0)*Math.max(1,V.trips|0))return;
     this.tL=0;this.tI++;
     if(this.tI>=T.items.length){if(this.tLoop)this.tI=0;else{this.tI=T.items.length-1;this.tOn=false;this.done=true;this.paused=true;return;}}
-    const N=this.tView();if(!N){this.tOn=false;this.P=this.S;return;}
+    const N=this.tView();if(!N){this.tOn=false;this.P=this.S;this.still=false;return;}
     this.P=N;this.tz+=this.t;this.t=0;this.seqOn=false;this.dirty=true;this.update(0);this.lf=this.lt;}   /* the new section's speed starts at once, with no glide from the last */
   /* an inner ring's hit positions and dot numbers, worked out once and kept until its pattern changes */
   pat(r){let c=this.pc.get(r);if(!c){c={k:-1,p:[],d:[]};this.pc.set(r,c);}
@@ -828,8 +831,10 @@ class Engine{
     const E=effParams(S,t,step,this.E);this.ready=true;
     this.lt=Math.log(E.speed);
     this.kS=(E.glide&&q)?1-Math.exp(-1/(Math.max(0.005,q.glideTime||0.12)*this.sr)):this.kFast;
+    let still=step<0&&!(q&&q.playing);const LF=S.lfo;if(still&&LF)for(const k in LF){const l=LF[k];if(l&&l.depth>0){still=false;break;}}
+    this.still=still;
     for(let i=0;i<4;i++){
-      const er=E.rings[i],r=this.rings[i];r.amp=er.level;
+      const er=E.rings[i],r=this.rings[i];r.amp=er.level;this.dr[i]=E.det?Math.pow(2,E.det*this.spread[i]/1200):1;
       const key=er.on?((er.steps*17+er.hits)*17+er.rot):-2;
       if(key!==r.key){r.key=key;r.pos=ringPos(er);r.dot=ringDots(er);this.seek(r);this.dirty=true;}
       const d=er.off-r.off;
@@ -850,7 +855,8 @@ class Engine{
   /* the sequence a dot plays: its own, or the patch's slot it is linked to (null: none) */
   sqOf(r,d){const x=r.sq?r.sq[d]:null;if(!x||!x.on)return null;if(x.link>=0){const P=this.P;return P&&P.sqs?P.sqs[x.link]||null:null;}return x.s||null;}
   /* move a dot's sequence on by one step and remember where it is (pos), which pass round it is on (pass), and how many times it has moved */
-  sqAdv(Q,pk){let s=this.sqm.get(pk);if(!s){s={pos:-1,dir:1,pass:-1,cnt:0};this.sqm.set(pk,s);}
+  sqReset(){this.sqm.clear();this.sqD=true;if(this.rp)this.rp.sq={};}
+  sqAdv(Q,pk){let s=this.sqm.get(pk);if(!s){s={pos:-1,dir:1,pass:-1,cnt:0};this.sqm.set(pk,s);}this.sqD=true;
     const n=Math.max(1,Q.n|0),o=Q.ord;if(s.pos>=n)s.pos=n-1;
     if(o==='rand'){s.pos=Math.floor(this.rnd()*n);s.pass=Math.floor(s.cnt/n);}
     else if(o==='drunk'){s.pos=s.pos<0?0:((s.pos+(this.rnd()<0.5?-1:1))%n+n)%n;s.pass=Math.floor(s.cnt/n);}
@@ -930,7 +936,7 @@ class Engine{
     else{for(let q=0;q<this.NV;q++)if(!VO[q].on){v=VO[q];break;}if(!v){this.dropped++;return;}}
     const was=v.on,slide=mono&&was&&I.glide>0&&!d;
     v.slot=slot;v.I=I;v.d=d;v.tinc=inc;if(!slide)v.inc=inc;v.gl=slide?1-Math.exp(-1/(I.glide*sr)):1;
-    v.xf=0;v.n0=this.n;v.t=age;v.gate=d&&I.mode==='one'?Infinity:Math.max(1,gate);v.stg=0;v.fst=0;v.st=semi;v.g=0;v.es=I.s;v.efs=I.fs;
+    this.vAny=true;v.xf=0;v.n0=this.n;v.t=age;v.gate=d&&I.mode==='one'?Infinity:Math.max(1,gate);v.stg=0;v.fst=0;v.st=semi;v.g=0;v.es=I.s;v.efs=I.fs;
     if(!was){v.env=0;v.fen=0;v.ic1=0;v.ic2=0;v.ic3=0;v.ic4=0;v.ph=0;v.ph2=0;v.phs=0;if(I.ft==='cb')v.cb.fill(0);
       v.up[0]=0;for(let u=1;u<7;u++){v.seed=(Math.imul(v.seed,1664525)+1013904223)>>>0;v.up[u]=v.seed/4294967296;}}           /* a re-used voice carries on from its level, so there is no click */
     v.w=W;v.nf=nf;v.fresh=true;v.glen=dot&&(I.mode==='one'||I.mode==='rev')?N/inc:v.gate<Infinity?v.gate:d?d.length/inc:sr;
@@ -991,7 +997,7 @@ class Engine{
     const sr=this.sr,G=this.gG,Q=this.gQ,QQ=this.gQQ,C=this.gC,Sn=this.gS,Cr=this.gCr,Sr=this.gSr,A=this.gA,R=this.gR;
     for(let i=0;i<N;i++){
       const run=!this.paused;if(!run)this.tz+=1/sr;
-      if((i&15)===0){this.t=t0+i/sr-this.tz;this.update(this.t);}
+      if((i&15)===0){this.t=t0+i/sr-this.tz;if(!this.still)this.update(this.t);}
       if(run)this.n++;
       if(!this.ready){out[i]=0;continue;}
       if(run&&this.n>=this.pMin){let mn=Infinity;   /* inner dots that are due */
@@ -1002,12 +1008,12 @@ class Engine{
           else{if(tm<mn)mn=tm;q++;}}
         this.pMin=mn;}
       const E=this.E;
-      this.lf+=(this.lt-this.lf)*this.kS;let f=Math.exp(this.lf);
+      this.lf+=(this.lt-this.lf)*this.kS;if(this.lf!==this.lfc){this.lfc=this.lf;this.fc=Math.exp(this.lf);}let f=this.fc;
       if(E.vib>0){this.vibPh+=5.5/sr;if(this.vibPh>=1)this.vibPh-=1;f*=Math.pow(2,E.vib/1200*Math.sin(2*Math.PI*this.vibPh));}
       const minc=f/sr;if(run){this.master+=minc;if(this.master>=1){this.master-=1;this.loops++;if(this.tOn)this.trip();}}
       if(!this.paused)for(let ri=0;ri<4;ri++){
         const r=this.rings[ri],P=r.pos;
-        const inc=E.det?minc*Math.pow(2,E.det*this.spread[ri]/1200):minc;
+        const inc=minc*this.dr[ri];
         r.ph+=inc;
         if(!P.length){if(r.ph>=1)r.ph-=1;continue;}
         let tg=r.base+P[r.next];
@@ -1029,7 +1035,8 @@ class Engine{
       let s2=this.ib[this.ip];this.ib[this.ip]=0;this.ip=(this.ip+1)&63;   /* impulses */
       /* instrument voices: source -> filter -> envelope */
       let s3=0;
-      for(let q=0;q<this.NV;q++){const o=this.vo[q];if(!o.on)continue;const I=o.I;
+      if(this.vAny){let any=false;   /* vAny: some voice may be sounding; when a pass finds none, the loop is skipped until the next note */
+      for(let q=0;q<this.NV;q++){const o=this.vo[q];if(!o.on)continue;any=true;const I=o.I;
         if(o.xf>0){o.env-=o.xf;if(o.env<=0){o.on=false;o.d=null;o.xf=0;continue;}}   /* being cut: a straight 4 ms fade */
         else if(o.stg<3&&o.t>=o.gate){o.stg=3;o.rl=o.env*o.rs;}
         if(o.xf>0);else if(o.stg===0){o.env+=o.ka;if(o.env>=1){o.env=1;o.stg=1;}}
@@ -1084,6 +1091,7 @@ class Engine{
             else x=ft==='lp'?v2:ft==='bp'?v1:ft==='nt'?x-k*v1:x-k*v1-v2;}}
         if(o.dg>1)x=Math.tanh(x*o.dg)*o.dn;                                   /* drive */
         s3+=x*o.env*o.amp*I.level*o.mL;o.t++;}
+      if(!any)this.vAny=false;}
       let v=(s*this.comp+s2+s3*0.6)*E.vol*0.5;const av=v<0?-v:v;
       if(av>0.8&&!this.raw)v=(v<0?-1:1)*(0.8+0.2*Math.tanh((av-0.8)/0.2));   /* safety limiter: untouched below 0.8 */
       out[i]=v;
@@ -1091,11 +1099,15 @@ class Engine{
     if(this.ready){if(this.dirty){this.dirty=false;this.nl=this.leaves(this.E.rings,0);}const hits=this.nl;
       const overlap=Math.exp(this.lf)*hits*6*this.E.sigma/1000;this.comp+=(1/Math.sqrt(1+overlap)-this.comp)*0.3;}
   }
-  report(){const r=[];for(const x of this.rings)r.push(frac(x.ph+x.off));const sq={};for(const [k,v] of this.sqm)sq[k]=v.pos;   /* where each sequence is, for the page to draw */
-    return{sq,m:this.master,r,f:Math.exp(this.lf),d:this.dropped,t:this.t,step:this.step,l:this.loops,p:this.paused,ti:this.tOn?this.tI:-1,tl:this.tL,done:this.done};}
+  /* what the page needs to draw: playheads, speed, where each sequence is. One object, filled in place, so the audio thread makes no garbage. */
+  report(){const R=this.rp||(this.rp={sq:{},m:0,r:[0,0,0,0],f:0,d:0,t:0,step:-1,l:0,p:false,ti:-1,tl:0,done:false});
+    for(let i=0;i<4;i++){const x=this.rings[i];R.r[i]=frac(x.ph+x.off);}
+    if(this.sqD){this.sqD=false;this.sqm.forEach(this.sqF);}
+    R.m=this.master;R.f=this.fc===this.fc&&this.lfc===this.lf?this.fc:Math.exp(this.lf);R.d=this.dropped;R.t=this.t;R.step=this.step;R.l=this.loops;R.p=this.paused;R.ti=this.tOn?this.tI:-1;R.tl=this.tL;R.done=this.done;
+    return R;}
 }
 function applyMsg(e,d){if(d.smp)e.setSample(d.smp.i,d.smp.d,d.smp.sr);if(d.note&&e.ready){if(d.note.i>=8)e.shot(d.note.i-8,d.note.gate*e.sr);else e.note(d.note.i,0,d.note.amp,d.note.st,d.note.gate*e.sr);}
-  if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();if(d.stop)e.stopAll();if(d.sqreset)e.sqm.clear();if(d.pause!==undefined){e.paused=!!d.pause;if(!e.paused)e.done=false;}if(d.track&&e.S)e.setTrack(d.track);}
+  if(d.S)e.setState(d.S,d.jump);if(d.resync)e.resync();if(d.stop)e.stopAll();if(d.sqreset)e.sqReset();if(d.pause!==undefined){e.paused=!!d.pause;if(!e.paused)e.done=false;}if(d.track&&e.S)e.setTrack(d.track);}
 
 const WORKLET_SRC='const USHAPES=[null,null,null,null,null,null,null,null];\nconst SCALES='+JSON.stringify(SCALES)+';\n'+[frac,clamp,rnd,setShapes,lfoVal,lfoAmt,lockVal,newEff,effParams,euclidPattern,ringPos,ringDots,dotF,dotS,dotWheel,dotSliceA,dotSliceN,wtMake,degSemi,chordN,chordDeg,sqHits,sqKey,dotSeed,dotLv,dotAmp,dotTurn,dotPitch,dotLen,seqStep,applyMsg].map(f=>f.toString()).join('\n')
  +'\n'+Engine.toString()+`
@@ -1305,7 +1317,8 @@ function smpDecode(buf){const OC=window.OfflineAudioContext||window.webkitOfflin
 /* The page's view of a dot's sequence: the same choice the engine makes (sqOf), and what its current step plays. SQ = {S: the patch, pos: where
    each sequence is, from the engine's report}. A step that is off plays nothing; chance and conditions are left out (they are decided as it plays). */
 function sqResolve(S,r,d){const x=r.sq?r.sq[d]:null;if(!x||!x.on)return null;return x.link>=0?(S&&S.sqs?S.sqs[x.link]||null:null):x.s||null;}
-function sqNow(S,Q,pos){const k=pos>=0&&pos<Q.n?pos:0;if(!Q.on[k])return{k,hits:[]};const sc=SCALES[Q.scl]||SCALES[S&&S.scale?S.scale.sc:'']||SCALES.minor,H=new Float64Array(160),m=sqHits(Q,k,sc,S&&S.scale?S.scale.root|0:0,H),hits=[];
+const SQH=new Float64Array(160);
+function sqNow(S,Q,pos){const k=pos>=0&&pos<Q.n?pos:0;if(!Q.on[k])return{k,hits:[]};const sc=SCALES[Q.scl]||SCALES[S&&S.scale?S.scale.sc:'']||SCALES.minor,H=SQH,m=sqHits(Q,k,sc,S&&S.scale?S.scale.root|0:0,H),hits=[];
   for(let h=0;h<m;h++)hits.push({f:H[h*4],st:H[h*4+1],lv:H[h*4+2],sk:H[h*4+3]});return{k,hits};}
 function dotList(E,t,SQ){const out=[],L={shape:'sine',rate:1,seed:0};t=t||0;out.mod=false;out.cut=false;
   SQ=SQ||{};const SS=SQ.S||(typeof state!=='undefined'?state:null),PS=SQ.pos||{};
@@ -1474,7 +1487,9 @@ function initInstrument(){
   const VR=()=>wheelAt(view.length)||state.rings;
   const eachRing=(rs,f)=>rs.forEach(r=>{f(r);r.kids.forEach(w=>{if(w)eachRing(w.rings,f);});});
   let drawMap=()=>{},syncShapesAll=()=>{};
-  function sendState(jump){secAlias(state);audio.send({S:JSON.parse(JSON.stringify(state)),jump:!!jump});}
+  /* The live engine plays the wheel on screen, so it is not sent the other sections (rendering builds its own engine with all of them).
+     A worklet gets its own copy from postMessage; only the fallback engine, which shares this thread, needs one made here. */
+  function sendState(jump){secAlias(state);const S=Object.assign({},state,{sections:null,track:null});audio.send({S:audio.copy?JSON.parse(JSON.stringify(S)):S,jump:!!jump});}
   let postRows=()=>{};
   function changed(){sendState();saveSoon();postRows();}
   function sendSample(i){const x=samples[i];audio.send({smp:{i,d:x?x.d:null,sr:x?x.sr:0}});}
@@ -1849,8 +1864,8 @@ function initInstrument(){
     }catch(err){
       const eng=new Engine(ctx.sampleRate);
       const sp=ctx.createScriptProcessor(1024,1,1);
-      sp.onaudioprocess=ev=>{const o=ev.outputBuffer.getChannelData(0);eng.render(o,o.length,ctx.currentTime);audio.rep=Object.assign(eng.report(),{pt:performance.now()});postStatus(false);};
-      sp.connect(comp);audio.send=d=>applyMsg(eng,d);audio.mode='fallback engine';
+      sp.onaudioprocess=ev=>{const o=ev.outputBuffer.getChannelData(0);eng.render(o,o.length,ctx.currentTime);audio.rep=Object.assign({},eng.report(),{pt:performance.now()});postStatus(false);};
+      sp.connect(comp);audio.send=d=>applyMsg(eng,d);audio.copy=true;audio.mode='fallback engine';
     }
     audio.sr=ctx.sampleRate;sendState(true);for(let i=0;i<SMPN;i++)if(samples[i])sendSample(i);if(ui.paused)audio.send({pause:true});
     try{await resumed;}catch(e){}
