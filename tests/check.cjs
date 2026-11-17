@@ -275,6 +275,14 @@ const ignorable=t=>/fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME|net::ERR_/.t
       const wb=await (await sw.$('#s-wave')).boundingBox();
       await sw.mouse.move(wb.x+wb.width*0.25,wb.y+40);await sw.mouse.down();await sw.mouse.move(wb.x+wb.width*0.75,wb.y+60,{steps:5});await sw.mouse.up();await sw.waitForTimeout(200);
       check('dragging on the waveform selects a part',/\(5\d\d\.\d ms\)/.test(await sw.textContent('#s-sel')),await sw.textContent('#s-sel'));
+      {const pl=await sw.evaluate(()=>{const r={};const o=AudioBufferSourceNode.prototype.start;window.__pl=[];AudioBufferSourceNode.prototype.start=function(...a){window.__pl.push(this.buffer.length);return o.apply(this,a);};
+          document.querySelector('#s-play').click();document.querySelector('#s-psel').click();return window.__pl;});
+        check('Play plays the whole recording and Play selection only the selection',pl.length===2&&Math.abs(pl[1]/pl[0]-0.5)<0.02,pl.join(', '));
+        await sw.click('#s-play');await sw.waitForTimeout(150);await sw.click('[data-op="fin"]');await sw.waitForTimeout(200);
+        const pl2=await sw.evaluate(()=>window.__pl.slice(2));
+        check('an edit made while playing carries on playing the whole recording',pl2.length===2&&pl2[0]===pl[0]&&pl2[1]>pl[0]*0.5&&pl2[1]<pl[0],pl2.join(', '));
+        await sw.click('#s-undo');await sw.click('#s-stop');await sw.waitForTimeout(300);
+        await sw.mouse.move(wb.x+wb.width*0.25,wb.y+40);await sw.mouse.down();await sw.mouse.move(wb.x+wb.width*0.75,wb.y+60,{steps:5});await sw.mouse.up();await sw.waitForTimeout(200);}
       await sw.click('[data-op="loop"]');await sw.waitForTimeout(400);mh=await mainHas();
       check('a loop set from the selection is stored with the sample',!!mh.lp&&Math.abs(mh.lp[0]-0.25)<0.02&&Math.abs(mh.lp[1]-0.75)<0.02,mh.lp?mh.lp.map(v=>v.toFixed(3)).join(' – '):'none');
       await sw.click('[data-op="trim"]');await sw.waitForTimeout(400);mh=await mainHas();

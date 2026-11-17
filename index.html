@@ -2666,7 +2666,7 @@ function mountSampleEditor(host,slot0){
   host.innerHTML=`<header class="iw-top"><h1>Rhythm Into Tone</h1><span class="tag">Sample</span>
       <div class="fld"><span class="lab">Slot</span>${slotBtns('s-slots')}</div>
       <div class="fld grow"><label class="lab" for="s-name">Name</label><input type="text" id="s-name" maxlength="40"></div>
-      <div class="row"><button type="button" id="s-play" class="btn-on" data-need="smp">Play</button><button type="button" id="s-stop">Stop</button><button type="button" id="s-undo">Undo</button>
+      <div class="row"><button type="button" id="s-play" class="btn-on" data-need="smp">Play</button><button type="button" id="s-psel" data-need="sel">Play selection</button><button type="button" id="s-stop">Stop</button><button type="button" id="s-undo">Undo</button>
         <button type="button" id="s-copy" data-need="smp">Copy</button><button type="button" id="s-paste">Paste</button><button type="button" id="s-clear" data-need="smp">Clear</button><button type="button" id="s-close">Close window</button></div>
       <span class="sub mono" id="s-stat" role="status"></span></header>
     <div class="scols">
@@ -2706,7 +2706,7 @@ function mountSampleEditor(host,slot0){
   function put(d,msg,lp,name){const x=S();undo.push({i:cur,x:x||null});if(undo.length>5)undo.shift();
     samples[cur]=d?smpMake(name||(x?x.name:'Sample '+(cur+1)),d,x&&!name?x.sr:put.sr||44100,lp||null):null;put.sr=0;
     if(sel&&d){sel=[clamp(sel[0],0,d.length),clamp(sel[1],0,d.length)];if(sel[1]-sel[0]<2)sel=null;}else sel=null;
-    pitch=0;persist(cur);refresh();stat(msg);}
+    pitch=0;persist(cur);refresh();replay();stat(msg);}
   /* ---- drawing */
   const X=(i,w,n)=>((i/n)-v0)/(v1-v0)*w,I=(px,w,n)=>clamp(Math.round((v0+px/w*(v1-v0))*n),0,n);
   function draw(){const {g,w,h}=fit(q('#s-wave'));g.clearRect(0,0,w,h);const x=S(),m=h/2;
@@ -2752,9 +2752,15 @@ function mountSampleEditor(host,slot0){
   /* ---- playing */
   function stop(){if(node){try{node.onended=null;node.stop();}catch(e){}node=null;}play=null;over();}
   q('#s-stop').onclick=stop;
-  q('#s-play').onclick=()=>{const x=S();if(!x)return;stop();try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume();}catch(e){stat('This browser could not start audio here.');return;}
-    const [a,b]=range(),buf=actx.createBuffer(1,Math.max(1,b-a),x.sr);buf.getChannelData(0).set(x.d.subarray(a,b));
-    node=actx.createBufferSource();node.buffer=buf;node.connect(actx.destination);node.onended=()=>{node=null;play=null;};node.start();play={t0:actx.currentTime,a,b};requestAnimationFrame(over);};
+  /* Play is always the whole recording; Play selection is only the selection. Start at sample `from` (default: the start). */
+  function playFrom(a,b,from){const x=S();if(!x)return;stop();try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume();}catch(e){stat('This browser could not start audio here.');return;}
+    a=clamp(a|0,0,x.d.length);b=clamp(b|0,a+1,x.d.length);const f=clamp(from===undefined?a:from|0,a,b-1),buf=actx.createBuffer(1,Math.max(1,b-f),x.sr);buf.getChannelData(0).set(x.d.subarray(f,b));
+    node=actx.createBufferSource();node.buffer=buf;node.connect(actx.destination);node.onended=()=>{node=null;play=null;};node.start();play={t0:actx.currentTime,a:f,b,all:a===0&&b===x.d.length,slot:cur};requestAnimationFrame(over);}
+  q('#s-play').onclick=()=>{const x=S();if(x)playFrom(0,x.d.length);};
+  q('#s-psel').onclick=()=>{if(sel)playFrom(sel[0],sel[1]);};
+  /* an edit made while the window is playing is heard at once: playback carries on from the same point in the new recording */
+  function replay(){const x=S();if(!play||!node||!actx||play.slot!==cur)return;if(!x){stop();return;}
+    const t=Math.round((actx.currentTime-play.t0)*x.sr+play.a);if(play.all||!sel)playFrom(0,x.d.length,Math.min(t,x.d.length-1));else playFrom(sel[0],sel[1],t);}
   /* ---- edits */
   const resample=(d,ratio)=>{const n=Math.max(2,Math.floor(d.length/ratio)),o=new Float32Array(n);for(let i=0;i<n;i++){const p=i*ratio,i0=p|0,i1=i0+1<d.length?i0+1:i0;o[i]=d[i0]+(d[i1]-d[i0])*(p-i0);}return o;};
   function detect(){const x=S();if(!x)return 0;const [a,b]=range(),d=x.d,N=Math.min(8192,b-a);if(N<512)return 0;
@@ -2794,7 +2800,7 @@ function mountSampleEditor(host,slot0){
     if(free.length<N){stat('That needs '+N+' empty slots and only '+free.length+' are empty.');return;}const [a,e]=range(),len=Math.floor((e-a)/N);if(len<8)return;
     for(let k=0;k<N;k++){samples[free[k]]=smpMake(x.name.replace(/\.[a-z0-9]+$/i,'')+' '+(k+1)+'/'+N,x.d.slice(a+k*len,a+(k+1)*len),x.sr);persist(free[k]);}
     refresh();stat('Split into slots '+free.slice(0,N).map(k=>k+1).join(', ')+'.');});
-  q('#s-undo').onclick=()=>{const u=undo.pop();if(!u)return;samples[u.i]=u.x;sel=null;pitch=0;persist(u.i);refresh();stat('Undone'+(u.i!==cur?' in slot '+(u.i+1):'')+'.');};
+  q('#s-undo').onclick=()=>{const u=undo.pop();if(!u)return;samples[u.i]=u.x;sel=null;pitch=0;persist(u.i);refresh();replay();stat('Undone'+(u.i!==cur?' in slot '+(u.i+1):'')+'.');};
   q('#s-copy').onclick=()=>{const x=S();if(x){clip={name:x.name,d:x.d.slice(),sr:x.sr,lp:x.lp};refresh();stat('Copied.');}};
   q('#s-paste').onclick=()=>{if(!clip)return;put.sr=clip.sr;sel=null;put(clip.d.slice(),'Pasted into slot '+(cur+1)+'.',clip.lp,clip.name);};
   q('#s-clear').onclick=()=>{stop();put(null,'Slot cleared. Undo brings it back.');};
